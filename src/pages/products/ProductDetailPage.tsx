@@ -9,16 +9,22 @@ import {
   ProductHeaderBar,
   ProductParamConfigSection,
   ProductPriceRuleSection,
+  ProductReferenceRecordSection,
+  ProductReferenceRecordsDrawer,
   ProductProductionRefSection,
-  ProductSummaryCard
+  ProductSummaryCard,
+  ProductVersionHistoryDrawer,
+  ProductVersionHistorySection
 } from '@/components/business/product'
 import { EmptyState, PageContainer } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { useDrawerState } from '@/hooks/useDrawerState'
 
 export const ProductDetailPage = () => {
   const { productId } = useParams()
   const { getProduct } = useAppData()
   const product = getProduct(productId)
+  const drawer = useDrawerState()
 
   const anchors = useMemo(
     () => [
@@ -27,7 +33,9 @@ export const ProductDetailPage = () => {
       { id: 'pricing', label: '价格规则' },
       { id: 'custom', label: '定制规则' },
       { id: 'production', label: '生产参考' },
-      { id: 'assets', label: '图片与文件' }
+      { id: 'assets', label: '图片与文件' },
+      { id: 'references', label: '引用记录' },
+      { id: 'versions', label: '版本记录' }
     ],
     []
   )
@@ -60,8 +68,12 @@ export const ProductDetailPage = () => {
           <ProductCustomRuleSection product={product} />
           <ProductProductionRefSection product={product} />
           <ProductAssetsSection product={product} />
+          <ProductReferenceRecordSection product={product} onOpen={() => drawer.open('reference-records')} />
+          <ProductVersionHistorySection product={product} onOpen={() => drawer.open('version-history')} />
         </div>
       </div>
+      <ProductReferenceRecordsDrawer open={drawer.current === 'reference-records'} product={product} onClose={drawer.close} />
+      <ProductVersionHistoryDrawer open={drawer.current === 'version-history'} product={product} onClose={drawer.close} />
     </PageContainer>
   )
 }

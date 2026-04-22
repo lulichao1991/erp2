@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import { PageContainer } from '@/components/common'
-import { ProductFilterBar, ProductListHeader, ProductQuickStats, ProductTable } from '@/components/business/product'
+import { ProductFieldDictionaryDrawer, ProductFilterBar, ProductListHeader, ProductQuickStats, ProductTable } from '@/components/business/product'
 import { useAppData } from '@/hooks/useAppData'
 
 export const ProductListPage = () => {
-  const { products } = useAppData()
+  const appData = useAppData()
+  const { products } = appData
+  const [dictionaryOpen, setDictionaryOpen] = useState(false)
   const [filters, setFilters] = useState({
     keyword: '',
     category: 'all',
@@ -30,13 +31,20 @@ export const ProductListPage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '产品管理' }]} />
-      <ProductListHeader />
+      <ProductListHeader onOpenDictionary={() => setDictionaryOpen(true)} />
       <div className="stack">
         <ProductQuickStats products={products} />
         <ProductFilterBar value={filters} onChange={setFilters} />
         <ProductTable products={filteredProducts} />
       </div>
+      <ProductFieldDictionaryDrawer
+        open={dictionaryOpen}
+        fieldOptions={appData.productFieldOptions}
+        onClose={() => setDictionaryOpen(false)}
+        onAdd={appData.addGlobalProductFieldOption}
+        onRemove={appData.removeGlobalProductFieldOption}
+        onSaveSizeParameters={appData.saveGlobalSizeParameterDefinitions}
+      />
     </PageContainer>
   )
 }

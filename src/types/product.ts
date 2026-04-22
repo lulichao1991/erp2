@@ -75,6 +75,34 @@ export type ProductAssets = {
   otherFiles: ProductAssetFile[]
 }
 
+export type ProductReferenceRecordStatus = 'referenced' | 'adjusted' | 'closed'
+
+export type ProductReferenceRecord = {
+  id: string
+  orderId: string
+  orderNo: string
+  customerName: string
+  orderItemName: string
+  sourceVersion: string
+  selectedSpecValue?: string
+  referencedAt: string
+  status: ProductReferenceRecordStatus
+  note?: string
+}
+
+export type ProductVersionRecordStatus = 'published' | 'draft'
+
+export type ProductVersionRecord = {
+  id: string
+  version: string
+  updatedAt: string
+  operatorName: string
+  summary: string
+  changes: string[]
+  relatedFiles: string[]
+  status: ProductVersionRecordStatus
+}
+
 export type Product = {
   id: string
   code: string
@@ -104,4 +132,6 @@ export type Product = {
   customRules: ProductCustomRules
   productionReference: ProductProductionReference
   assets: ProductAssets
+  referenceRecords: ProductReferenceRecord[]
+  versionHistory: ProductVersionRecord[]
 }

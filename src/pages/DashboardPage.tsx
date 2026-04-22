@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
-import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import { PageContainer, PageHeader, SummaryCard } from '@/components/common'
 
 export const DashboardPage = () => (
   <PageContainer>
-    <AppBreadcrumb items={[{ label: '工作台' }]} />
-    <PageHeader title="工作台" subtitle="首轮前端当前只把订单中心和产品管理主链路打通，工作台先保留轻量入口。" />
+    <PageHeader title="协同概览" subtitle="首轮前端当前先聚焦订单中心和产品管理主链路，工作台保留轻量入口。" className="compact-page-header" />
     <div className="hero-placeholder">
       <h2>产品维护 → 订单引用 → 规格选择 → 自动带价</h2>
       <p>从这里可以快速进入订单中心和产品管理，演示首轮核心业务链路。</p>

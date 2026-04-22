@@ -8,10 +8,11 @@ type PageHeaderProps = {
   title: string
   subtitle?: string
   actions?: ReactNode
+  className?: string
 }
 
-export const PageHeader = ({ title, subtitle, actions }: PageHeaderProps) => (
-  <div className="page-header">
+export const PageHeader = ({ title, subtitle, actions, className }: PageHeaderProps) => (
+  <div className={cx('page-header', className)}>
     <div>
       <h1 className="page-header-title">{title}</h1>
       {subtitle ? <p className="page-header-subtitle">{subtitle}</p> : null}
@@ -26,10 +27,11 @@ type SectionCardProps = {
   actions?: ReactNode
   children: ReactNode
   id?: string
+  className?: string
 }
 
-export const SectionCard = ({ title, description, actions, children, id }: SectionCardProps) => (
-  <section className="section-card" id={id}>
+export const SectionCard = ({ title, description, actions, children, id, className }: SectionCardProps) => (
+  <section className={cx('section-card', className)} id={id}>
     <div className="section-card-header">
       <div>
         <h2 className="section-card-title">{title}</h2>
@@ -171,6 +173,35 @@ export const FileList = ({ title, files }: { title: string; files: FileItem[] })
     )}
   </div>
 )
+
+type RecordTimelineItem = {
+  id: string
+  title: ReactNode
+  meta?: ReactNode
+  description?: ReactNode
+  extra?: ReactNode
+}
+
+export const RecordTimeline = ({ items }: { items: RecordTimelineItem[] }) =>
+  items.length > 0 ? (
+    <ol className="timeline-list list-reset">
+      {items.map((item) => (
+        <li key={item.id} className="timeline-item">
+          <div className="timeline-dot" aria-hidden="true" />
+          <div className="timeline-content">
+            <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+              <strong>{item.title}</strong>
+              {item.meta}
+            </div>
+            {item.description ? <div className="spacer-top">{item.description}</div> : null}
+            {item.extra ? <div className="spacer-top">{item.extra}</div> : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <div className="placeholder-block">暂无记录</div>
+  )
 
 export const EmptyState = ({
   title,

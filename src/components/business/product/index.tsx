@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import type { Dispatch, SetStateAction } from 'react'
+import { useEffect, useState } from 'react'
+import type { Dispatch, KeyboardEvent, SetStateAction } from 'react'
 import {
   FileList,
   ImageGallery,
@@ -7,13 +8,17 @@ import {
   InfoField,
   InfoGrid,
   PageHeader,
+  RecordTimeline,
   ReferenceTag,
+  RiskTag,
   SectionCard,
+  SideDrawer,
   StatusTag,
   SummaryCard,
   VersionBadge
 } from '@/components/common'
-import type { Product, ProductPriceRule, ProductSpecRow } from '@/types/product'
+import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
+import type { Product, ProductPriceRule, ProductReferenceRecord, ProductSpecRow, ProductVersionRecord } from '@/types/product'
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
@@ -29,12 +34,481 @@ const updateSpecAt = (specs: ProductSpecRow[], index: number, next: ProductSpecR
 const updateRuleAt = (rules: ProductPriceRule[], index: number, next: ProductPriceRule) =>
   rules.map((item, currentIndex) => (currentIndex === index ? next : item))
 
-export const ProductListHeader = () => (
+const buildSpecDraft = (product: Product): ProductSpecRow => {
+  const sizeFieldTemplate = product.specs[0]?.sizeFields ?? []
+
+  return {
+    id: `spec-${Date.now()}`,
+    productId: product.id,
+    specValue: '',
+    sortOrder: product.specs.length + 1,
+    status: 'enabled',
+    basePrice: 0,
+    referenceWeight: 0,
+    sizeFields: sizeFieldTemplate.map((field, index) => ({
+      key: field.key || field.label || '',
+      label: field.label,
+      value: '',
+      unit: field.unit ?? ''
+    }))
+  }
+}
+
+const mergeUniqueValues = (...groups: Array<string[] | undefined>) =>
+  Array.from(new Set(groups.flatMap((group) => group ?? []).map((item) => item.trim()).filter(Boolean)))
+
+const toggleArrayValue = (values: string[], target: string) =>
+  values.includes(target) ? values.filter((item) => item !== target) : [...values, target]
+
+const buildSelectOptions = (defaults: string[], selected: string[]) => mergeUniqueValues(defaults, selected)
+
+const productCategoryOptions: Array<{ value: Product['category']; label: string }> = [
+  { value: 'ring', label: '戒指' },
+  { value: 'pendant', label: '吊坠' },
+  { value: 'necklace', label: '项链' },
+  { value: 'earring', label: '耳饰' },
+  { value: 'bracelet', label: '手链' },
+  { value: 'other', label: '其他' }
+]
+
+const referenceRecordStatusLabel: Record<ProductReferenceRecord['status'], string> = {
+  referenced: '已引用',
+  adjusted: '已调整',
+  closed: '已关闭'
+}
+
+const versionRecordStatusLabel: Record<ProductVersionRecord['status'], string> = {
+  published: '已发布',
+  draft: '草稿'
+}
+
+const renderReferenceStatus = (status: ProductReferenceRecord['status']) =>
+  status === 'adjusted' ? <RiskTag value={referenceRecordStatusLabel[status]} /> : <StatusTag value={referenceRecordStatusLabel[status]} />
+
+const ProductOptionSelectorField = ({
+  label,
+  values,
+  defaultOptions,
+  onChange,
+  onAddToGlobalDictionary,
+  fieldKey,
+  addLabel,
+  triggerPlaceholder
+}: {
+  label: string
+  values: string[]
+  defaultOptions: string[]
+  onChange: (next: string[]) => void
+  onAddToGlobalDictionary: (field: ProductFieldOptionKey, value: string) => void
+  fieldKey: ProductFieldOptionKey
+  addLabel: string
+  triggerPlaceholder: string
+}) => {
+  const [customValue, setCustomValue] = useState('')
+  const [open, setOpen] = useState(false)
+  const optionPool = buildSelectOptions(defaultOptions, values)
+
+  const handleAddCustom = () => {
+    const nextValues = mergeUniqueValues(values, splitValues(customValue))
+    onChange(nextValues)
+    setCustomValue('')
+  }
+
+  const handleAddToGlobalDictionary = () => {
+    const additions = splitValues(customValue)
+
+    if (additions.length === 0) {
+      return
+    }
+
+    onChange(mergeUniqueValues(values, additions))
+    additions.forEach((item) => onAddToGlobalDictionary(fieldKey, item))
+    setCustomValue('')
+  }
+
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleAddCustom()
+    }
+  }
+
+  return (
+    <div className="field-control multi-select-field">
+      <label className="field-label">{label}</label>
+      <button
+        type="button"
+        className={`select multi-select-trigger${open ? ' open' : ''}`}
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <div className="multi-select-trigger-values">
+          {values.length > 0 ? (
+            values.map((value) => (
+              <span key={value} className="multi-select-tag">
+                {value}
+              </span>
+            ))
+          ) : (
+            <span className="multi-select-placeholder">{triggerPlaceholder}</span>
+          )}
+        </div>
+        <span className="multi-select-caret">{open ? '▴' : '▾'}</span>
+      </button>
+      {open ? (
+        <div className="multi-select-panel">
+          <div className="multi-select-add-row">
+            <input
+              className="input"
+              aria-label={`${label}自定义补充`}
+              value={customValue}
+              onChange={(event) => setCustomValue(event.target.value)}
+              onKeyDown={handleInputKeyDown}
+              placeholder={addLabel}
+            />
+            <button
+              type="button"
+              className="button secondary small"
+              aria-label={`仅添加${label}到当前产品`}
+              onClick={handleAddCustom}
+              disabled={splitValues(customValue).length === 0}
+            >
+              仅当前产品
+            </button>
+            <button
+              type="button"
+              className="button primary small"
+              aria-label={`加入${label}到全局字典`}
+              onClick={handleAddToGlobalDictionary}
+              disabled={splitValues(customValue).length === 0}
+            >
+              加入全局字典
+            </button>
+          </div>
+          <div className="text-muted">加入全局字典后，本机后续新建或编辑其他产品时也能看到这个选项。</div>
+          <div className="multi-select-options">
+            {optionPool.map((option) => {
+              const selected = values.includes(option)
+
+              return (
+                <label key={option} className={`multi-select-option${selected ? ' active' : ''}`}>
+                  <input type="checkbox" checked={selected} onChange={() => onChange(toggleArrayValue(values, option))} />
+                  <span>{option}</span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+const optionSelectorProps = {
+  styleTags: {
+    addLabel: '补充风格标签，例如：先锋感、复古机能',
+    triggerPlaceholder: '请选择风格标签，可多选'
+  },
+  sceneTags: {
+    addLabel: '补充场景标签，例如：周年礼物、直播选品',
+    triggerPlaceholder: '请选择场景标签，可多选'
+  },
+  supportedMaterials: {
+    addLabel: '补充材质，例如：玫瑰金、925 银',
+    triggerPlaceholder: '请选择支持材质，可多选'
+  },
+  supportedProcesses: {
+    addLabel: '补充工艺，例如：手工錾刻、局部磨砂',
+    triggerPlaceholder: '请选择支持工艺，可多选'
+  },
+  supportedSpecialOptions: {
+    addLabel: '补充特殊需求，例如：附加祝福卡、加长链尾',
+    triggerPlaceholder: '请选择支持特殊需求，可多选'
+  }
+} as const
+
+const productFieldDictionaryMeta: Array<{
+  key: ProductFieldOptionKey
+  label: string
+  description: string
+  placeholder: string
+}> = [
+  {
+    key: 'styleTags',
+    label: '风格标签',
+    description: '用于产品风格分类和快速筛选，适合由管理员统一维护。',
+    placeholder: '例如：学院风、未来感'
+  },
+  {
+    key: 'sceneTags',
+    label: '场景标签',
+    description: '用于礼赠、婚礼、节庆等使用场景，建议统一口径。',
+    placeholder: '例如：生日礼物、情侣纪念'
+  },
+  {
+    key: 'supportedMaterials',
+    label: '支持材质',
+    description: '用于产品可选材质，后续接后端时建议升级成共享材质字典。',
+    placeholder: '例如：玫瑰金、925 银'
+  },
+  {
+    key: 'supportedProcesses',
+    label: '支持工艺',
+    description: '用于产品可选工艺，建议由管理员维护常用工艺词库。',
+    placeholder: '例如：手工錾刻、局部磨砂'
+  },
+  {
+    key: 'supportedSpecialOptions',
+    label: '特殊需求',
+    description: '用于客服与订单协同的特殊需求选项，后续可扩展到订单侧字典。',
+    placeholder: '例如：附加祝福卡、延保服务'
+  }
+]
+
+const ProductFieldDictionarySection = ({
+  label,
+  description,
+  placeholder,
+  values,
+  onAdd,
+  onRemove
+}: {
+  label: string
+  description: string
+  placeholder: string
+  values: string[]
+  onAdd: (value: string) => void
+  onRemove: (value: string) => void
+}) => {
+  const [draftValue, setDraftValue] = useState('')
+
+  const handleAdd = () => {
+    const additions = splitValues(draftValue)
+
+    if (additions.length === 0) {
+      return
+    }
+
+    additions.forEach((item) => onAdd(item))
+    setDraftValue('')
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleAdd()
+    }
+  }
+
+  return (
+    <div className="subtle-panel stack" style={{ gap: 12 }}>
+      <div>
+        <strong>{label}</strong>
+        <div className="text-muted spacer-top">{description}</div>
+      </div>
+      <div className="dictionary-chip-list">
+        {values.length > 0 ? (
+          values.map((value) => (
+            <div key={value} className="dictionary-chip">
+              <span>{value}</span>
+              <button type="button" className="button ghost small" onClick={() => onRemove(value)}>
+                删除
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="placeholder-block">当前还没有维护字典项。</div>
+        )}
+      </div>
+      <div className="dictionary-add-row">
+        <input
+          className="input"
+          aria-label={`${label}字典新增`}
+          value={draftValue}
+          onChange={(event) => setDraftValue(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+        />
+        <button type="button" className="button primary" onClick={handleAdd} disabled={splitValues(draftValue).length === 0}>
+          加入字典
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const ProductSizeParameterDictionarySection = ({
+  values,
+  onChange
+}: {
+  values: ProductSizeParameterDefinition[]
+  onChange: (next: ProductSizeParameterDefinition[]) => void
+}) => {
+  const [draftValues, setDraftValues] = useState(values)
+
+  useEffect(() => {
+    setDraftValues(values)
+  }, [values])
+
+  return (
+    <div className="subtle-panel stack" style={{ gap: 12 }}>
+      <div>
+        <strong>尺寸参数字典</strong>
+        <div className="text-muted spacer-top">用于规格明细里的参数名称下拉，并可按品类筛选、自动带默认单位。</div>
+      </div>
+      <div className="stack" style={{ gap: 12 }}>
+        {draftValues.map((item, index) => (
+          <div key={`size-param-${index}`} className="subtle-panel stack" style={{ gap: 12 }}>
+            <div className="field-grid three">
+              <div className="field-control">
+                <label className="field-label">显示名称</label>
+                <input
+                  className="input"
+                  aria-label={`尺寸参数显示名称-${index + 1}`}
+                  value={item.label}
+                  onChange={(event) =>
+                    setDraftValues(
+                      draftValues.map((entry, currentIndex) => (currentIndex === index ? { ...entry, label: event.target.value } : entry))
+                    )
+                  }
+                />
+              </div>
+              <div className="field-control">
+                <label className="field-label">默认单位</label>
+                <input
+                  className="input"
+                  aria-label={`尺寸参数默认单位-${index + 1}`}
+                  value={item.unit}
+                  onChange={(event) =>
+                    setDraftValues(
+                      draftValues.map((entry, currentIndex) => (currentIndex === index ? { ...entry, unit: event.target.value } : entry))
+                    )
+                  }
+                />
+              </div>
+              <div className="field-control">
+                <label className="field-label">操作</label>
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => setDraftValues(draftValues.filter((_, currentIndex) => currentIndex !== index))}
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+            <div className="field-control">
+              <label className="field-label">适用品类</label>
+              <div className="row wrap">
+                {productCategoryOptions.map((category) => {
+                  const selected = item.categories.includes(category.value)
+
+                  return (
+                    <label key={`size-param-${index}-${category.value}`} className={`tag ${selected ? 'status-enabled' : 'reference-off'}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() =>
+                          setDraftValues(
+                            draftValues.map((entry, currentIndex) => {
+                              if (currentIndex !== index) {
+                                return entry
+                              }
+
+                              return {
+                                ...entry,
+                                categories: selected
+                                  ? entry.categories.filter((value) => value !== category.value)
+                                  : [...entry.categories, category.value]
+                              }
+                            })
+                          )
+                        }
+                      />
+                      <span>{category.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="row wrap">
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() =>
+            setDraftValues([
+              ...draftValues,
+              {
+                label: '',
+                unit: '',
+                categories: ['ring']
+              }
+            ])
+          }
+        >
+          新增尺寸参数
+        </button>
+        <button type="button" className="button primary" onClick={() => onChange(draftValues)}>
+          保存尺寸参数字典
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export const ProductFieldDictionaryDrawer = ({
+  open,
+  fieldOptions,
+  onClose,
+  onAdd,
+  onRemove,
+  onSaveSizeParameters
+}: {
+  open: boolean
+  fieldOptions: ProductFieldOptions
+  onClose: () => void
+  onAdd: (field: ProductFieldOptionKey, value: string) => void
+  onRemove: (field: ProductFieldOptionKey, value: string) => void
+  onSaveSizeParameters: (next: ProductSizeParameterDefinition[]) => void
+}) => (
+  <SideDrawer
+    open={open}
+    title="字典配置"
+    subtitle="当前先在产品管理里维护业务型字典。mock 阶段使用本机持久化，后续接后端后升级为多人共享字典。"
+    onClose={onClose}
+  >
+    <div className="stack">
+      <ProductSizeParameterDictionarySection values={fieldOptions.sizeParameterDefinitions} onChange={onSaveSizeParameters} />
+      {productFieldDictionaryMeta.map((group) => (
+        <ProductFieldDictionarySection
+          key={group.key}
+          label={group.label}
+          description={group.description}
+          placeholder={group.placeholder}
+          values={fieldOptions[group.key]}
+          onAdd={(value) => onAdd(group.key, value)}
+          onRemove={(value) => onRemove(group.key, value)}
+        />
+      ))}
+    </div>
+  </SideDrawer>
+)
+
+export const ProductListHeader = ({ onOpenDictionary }: { onOpenDictionary?: () => void }) => (
   <PageHeader
-    title="产品管理"
-    subtitle="首轮先聚焦产品模板查看、规格维护和固定加价规则维护。"
+    title="产品列表"
+    className="compact-page-header"
     actions={
       <>
+        {onOpenDictionary ? (
+          <button type="button" className="button secondary" onClick={onOpenDictionary}>
+            字典配置
+          </button>
+        ) : null}
         <Link to="/products/new" className="button primary">
           新建产品
         </Link>
@@ -57,9 +531,9 @@ export const ProductQuickStats = ({ products }: { products: Product[] }) => {
   ]
 
   return (
-    <div className="stats-grid">
+    <div className="stats-grid compact-stats">
       {stats.map((item) => (
-        <div key={item.label} className="stat-card">
+        <div key={item.label} className="stat-card compact-stat">
           <div className="stat-card-label">{item.label}</div>
           <div className="stat-card-value">{item.value}</div>
         </div>
@@ -82,7 +556,7 @@ export const ProductFilterBar = ({
   value: ProductFilterValue
   onChange: (next: ProductFilterValue) => void
 }) => (
-  <SectionCard title="搜索与筛选" description="先支持名称 / 编号搜索，以及品类、状态、引用状态筛选。">
+  <SectionCard title="搜索与筛选" className="compact-card">
     <div className="field-grid four">
       <div className="field-control">
         <label className="field-label">搜索产品名称 / 编号</label>
@@ -386,6 +860,241 @@ export const ProductAssetsSection = ({ product }: { product: Product }) => (
   </SectionCard>
 )
 
+export const ProductReferenceRecordSection = ({
+  product,
+  onOpen
+}: {
+  product: Product
+  onOpen: () => void
+}) => (
+  <SectionCard
+    id="references"
+    title="引用记录"
+    description="查看哪些订单引用了当前模板，以及订单侧是否已经在模板基础上做过调整。"
+    actions={
+      <button type="button" className="button secondary small" onClick={onOpen}>
+        查看全部引用记录
+      </button>
+    }
+  >
+    {product.referenceRecords.length > 0 ? (
+      <div className="stack">
+        {product.referenceRecords.slice(0, 2).map((record) => (
+          <div key={record.id} className="subtle-panel">
+            <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+              <div className="row wrap">
+                <Link to={`/orders/${record.orderId}`} className="text-price">
+                  {record.orderNo}
+                </Link>
+                <VersionBadge value={record.sourceVersion} />
+                {renderReferenceStatus(record.status)}
+              </div>
+              <span className="text-caption">{record.referencedAt}</span>
+            </div>
+            <div className="spacer-top">
+              <InfoGrid columns={2}>
+                <InfoField label="客户" value={record.customerName} />
+                <InfoField label="订单商品" value={record.orderItemName} />
+                <InfoField label="引用规格" value={record.selectedSpecValue || '—'} />
+                <InfoField label="备注" value={record.note || '—'} />
+              </InfoGrid>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="placeholder-block">当前产品还没有被订单引用。</div>
+    )}
+  </SectionCard>
+)
+
+export const ProductVersionHistorySection = ({
+  product,
+  onOpen
+}: {
+  product: Product
+  onOpen: () => void
+}) => (
+  <SectionCard
+    id="versions"
+    title="版本记录"
+    description="查看产品模板版本演进、更新摘要和相关文件，首轮先做查看态。"
+    actions={
+      <button type="button" className="button secondary small" onClick={onOpen}>
+        查看版本记录
+      </button>
+    }
+  >
+    {product.versionHistory.length > 0 ? (
+      <div className="stack">
+        {product.versionHistory.slice(0, 2).map((record) => (
+          <div key={record.id} className="subtle-panel">
+            <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+              <div className="row wrap">
+                <VersionBadge value={record.version} />
+                <StatusTag value={versionRecordStatusLabel[record.status]} />
+              </div>
+              <span className="text-caption">
+                {record.updatedAt} · {record.operatorName}
+              </span>
+            </div>
+            <div className="spacer-top stack" style={{ gap: 10 }}>
+              <div>{record.summary}</div>
+              <div className="row wrap">
+                {record.relatedFiles.map((file) => (
+                  <span key={file} className="tag version">
+                    {file}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="placeholder-block">当前产品还没有版本记录。</div>
+    )}
+  </SectionCard>
+)
+
+export const ProductReferenceRecordsDrawer = ({
+  open,
+  product,
+  onClose
+}: {
+  open: boolean
+  product: Product
+  onClose: () => void
+}) => {
+  const adjustedCount = product.referenceRecords.filter((record) => record.status === 'adjusted').length
+
+  return (
+    <SideDrawer
+      open={open}
+      title="产品引用记录"
+      subtitle="用于从产品模块回看哪些订单引用了当前模板，并快速核对订单侧是否已调整模板参数。"
+      onClose={onClose}
+    >
+      <div className="stack">
+        <div className="field-grid three">
+          <div className="subtle-panel">
+            <div className="text-caption">累计引用次数</div>
+            <div className="quote-value">{product.referenceRecords.length}</div>
+          </div>
+          <div className="subtle-panel">
+            <div className="text-caption">待重点核对</div>
+            <div className="quote-value">{adjustedCount}</div>
+          </div>
+          <div className="subtle-panel">
+            <div className="text-caption">当前模板版本</div>
+            <div className="row wrap spacer-top">
+              <VersionBadge value={product.version} />
+            </div>
+          </div>
+        </div>
+        {product.referenceRecords.length > 0 ? (
+          product.referenceRecords.map((record) => (
+            <div key={record.id} className="subtle-panel">
+              <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+                <div className="row wrap">
+                  <Link to={`/orders/${record.orderId}`} className="text-price">
+                    {record.orderNo}
+                  </Link>
+                  <VersionBadge value={record.sourceVersion} />
+                  {renderReferenceStatus(record.status)}
+                </div>
+                <Link to={`/orders/${record.orderId}`} className="button ghost small">
+                  查看订单
+                </Link>
+              </div>
+              <div className="spacer-top">
+                <InfoGrid columns={2}>
+                  <InfoField label="客户" value={record.customerName} />
+                  <InfoField label="订单商品" value={record.orderItemName} />
+                  <InfoField label="引用规格" value={record.selectedSpecValue || '—'} />
+                  <InfoField label="引用时间" value={record.referencedAt} />
+                </InfoGrid>
+              </div>
+              {record.note ? <div className="spacer-top text-muted">{record.note}</div> : null}
+            </div>
+          ))
+        ) : (
+          <div className="placeholder-block">当前产品还没有引用记录。</div>
+        )}
+      </div>
+    </SideDrawer>
+  )
+}
+
+export const ProductVersionHistoryDrawer = ({
+  open,
+  product,
+  onClose
+}: {
+  open: boolean
+  product: Product
+  onClose: () => void
+}) => (
+  <SideDrawer
+    open={open}
+    title="产品版本记录"
+    subtitle="按时间查看模板版本演进、更新摘要和相关文件，首轮只做查看态，不做回滚。"
+    onClose={onClose}
+  >
+    <div className="stack">
+      <div className="field-grid three">
+        <div className="subtle-panel">
+          <div className="text-caption">当前版本</div>
+          <div className="row wrap spacer-top">
+            <VersionBadge value={product.version} />
+          </div>
+        </div>
+        <div className="subtle-panel">
+          <div className="text-caption">版本数</div>
+          <div className="quote-value">{product.versionHistory.length}</div>
+        </div>
+        <div className="subtle-panel">
+          <div className="text-caption">最近更新</div>
+          <div className="spacer-top">{product.versionHistory[0]?.updatedAt || '—'}</div>
+        </div>
+      </div>
+      <RecordTimeline
+        items={product.versionHistory.map((record) => ({
+          id: record.id,
+          title: `${record.version} · ${record.operatorName}`,
+          meta: (
+            <div className="row wrap">
+              <StatusTag value={versionRecordStatusLabel[record.status]} />
+              <span className="text-caption">{record.updatedAt}</span>
+            </div>
+          ),
+          description: (
+            <div className="stack" style={{ gap: 8 }}>
+              <div>{record.summary}</div>
+              <ul className="list-reset stack" style={{ gap: 8 }}>
+                {record.changes.map((change) => (
+                  <li key={change} className="text-muted">
+                    {change}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+          extra: (
+            <div className="row wrap">
+              {record.relatedFiles.map((file) => (
+                <span key={file} className="tag version">
+                  {file}
+                </span>
+              ))}
+            </div>
+          )
+        }))}
+      />
+    </div>
+  </SideDrawer>
+)
+
 export const ProductEditHeader = ({
   mode,
   onSave,
@@ -426,10 +1135,14 @@ export const ProductEditSideNav = ({ activeSection }: { activeSection: string })
 
 export const ProductBasicFormSection = ({
   product,
-  setProduct
+  setProduct,
+  fieldOptions,
+  onAddGlobalOption
 }: {
   product: Product
   setProduct: Dispatch<SetStateAction<Product>>
+  fieldOptions: ProductFieldOptions
+  onAddGlobalOption: (field: ProductFieldOptionKey, value: string) => void
 }) => (
   <SectionCard id="basic-form" title="基础信息">
     <div className="field-grid two">
@@ -447,7 +1160,12 @@ export const ProductBasicFormSection = ({
       </div>
       <div className="field-control">
         <label className="field-label">品类</label>
-        <select className="select" value={product.category} onChange={(event) => setProduct((current) => ({ ...current, category: event.target.value as Product['category'] }))}>
+        <select
+          className="select"
+          aria-label="品类"
+          value={product.category}
+          onChange={(event) => setProduct((current) => ({ ...current, category: event.target.value as Product['category'] }))}
+        >
           <option value="ring">戒指</option>
           <option value="pendant">吊坠</option>
           <option value="necklace">项链</option>
@@ -476,14 +1194,24 @@ export const ProductBasicFormSection = ({
         <label className="field-label">版本</label>
         <input className="input" value={product.version} onChange={(event) => setProduct((current) => ({ ...current, version: event.target.value }))} />
       </div>
-      <div className="field-control">
-        <label className="field-label">风格标签（逗号分隔）</label>
-        <input className="input" value={product.styleTags.join(', ')} onChange={(event) => setProduct((current) => ({ ...current, styleTags: splitValues(event.target.value) }))} />
-      </div>
-      <div className="field-control">
-        <label className="field-label">场景标签（逗号分隔）</label>
-        <input className="input" value={product.sceneTags.join(', ')} onChange={(event) => setProduct((current) => ({ ...current, sceneTags: splitValues(event.target.value) }))} />
-      </div>
+      <ProductOptionSelectorField
+        label="风格标签"
+        values={product.styleTags}
+        defaultOptions={fieldOptions.styleTags}
+        fieldKey="styleTags"
+        {...optionSelectorProps.styleTags}
+        onAddToGlobalDictionary={onAddGlobalOption}
+        onChange={(next) => setProduct((current) => ({ ...current, styleTags: next }))}
+      />
+      <ProductOptionSelectorField
+        label="场景标签"
+        values={product.sceneTags}
+        defaultOptions={fieldOptions.sceneTags}
+        fieldKey="sceneTags"
+        {...optionSelectorProps.sceneTags}
+        onAddToGlobalDictionary={onAddGlobalOption}
+        onChange={(next) => setProduct((current) => ({ ...current, sceneTags: next }))}
+      />
       <div className="field-control">
         <label className="field-label">是否可引用</label>
         <select className="select" value={product.isReferable ? 'yes' : 'no'} onChange={(event) => setProduct((current) => ({ ...current, isReferable: event.target.value === 'yes' }))}>
@@ -501,174 +1229,235 @@ export const ProductBasicFormSection = ({
 
 export const ProductParamFormSection = ({
   product,
-  setProduct
+  setProduct,
+  fieldOptions,
+  onAddGlobalOption
 }: {
   product: Product
   setProduct: Dispatch<SetStateAction<Product>>
-}) => (
-  <SectionCard id="param-form" title="参数配置">
-    <div className="field-grid three">
-      <div className="field-control">
-        <label className="field-label">支持材质</label>
-        <input className="input" value={product.supportedMaterials.join(', ')} onChange={(event) => setProduct((current) => ({ ...current, supportedMaterials: splitValues(event.target.value) }))} />
+  fieldOptions: ProductFieldOptions
+  onAddGlobalOption: (field: ProductFieldOptionKey, value: string) => void
+}) => {
+  const materialOptions = product.supportedMaterials
+  const processOptions = product.supportedProcesses
+
+  return (
+    <SectionCard id="param-form" title="参数配置">
+      <div className="field-grid two">
+        <ProductOptionSelectorField
+          label="支持材质"
+          values={product.supportedMaterials}
+          defaultOptions={fieldOptions.supportedMaterials}
+          fieldKey="supportedMaterials"
+          {...optionSelectorProps.supportedMaterials}
+          onAddToGlobalDictionary={onAddGlobalOption}
+          onChange={(next) =>
+            setProduct((current) => ({
+              ...current,
+              supportedMaterials: next,
+              defaultMaterial: next.includes(current.defaultMaterial || '') ? current.defaultMaterial : next[0] || ''
+            }))
+          }
+        />
+        <div className="field-control">
+          <label className="field-label">默认材质</label>
+          <select
+            className="select"
+            aria-label="默认材质"
+            value={product.defaultMaterial || ''}
+            onChange={(event) => setProduct((current) => ({ ...current, defaultMaterial: event.target.value }))}
+          >
+            <option value="">未设置默认材质</option>
+            {materialOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <ProductOptionSelectorField
+          label="支持工艺"
+          values={product.supportedProcesses}
+          defaultOptions={fieldOptions.supportedProcesses}
+          fieldKey="supportedProcesses"
+          {...optionSelectorProps.supportedProcesses}
+          onAddToGlobalDictionary={onAddGlobalOption}
+          onChange={(next) =>
+            setProduct((current) => ({
+              ...current,
+              supportedProcesses: next,
+              defaultProcess: next.includes(current.defaultProcess || '') ? current.defaultProcess : next[0] || ''
+            }))
+          }
+        />
+        <div className="field-control">
+          <label className="field-label">默认工艺</label>
+          <select
+            className="select"
+            aria-label="默认工艺"
+            value={product.defaultProcess || ''}
+            onChange={(event) => setProduct((current) => ({ ...current, defaultProcess: event.target.value }))}
+          >
+            <option value="">未设置默认工艺</option>
+            {processOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <ProductOptionSelectorField
+          label="支持特殊需求"
+          values={product.supportedSpecialOptions}
+          defaultOptions={fieldOptions.supportedSpecialOptions}
+          fieldKey="supportedSpecialOptions"
+          {...optionSelectorProps.supportedSpecialOptions}
+          onAddToGlobalDictionary={onAddGlobalOption}
+          onChange={(next) => setProduct((current) => ({ ...current, supportedSpecialOptions: next }))}
+        />
+        <div className="field-control">
+          <label className="field-label">规格模式</label>
+          <select className="select" value={product.specMode} onChange={(event) => setProduct((current) => ({ ...current, specMode: event.target.value as Product['specMode'] }))}>
+            <option value="none">无规格</option>
+            <option value="single_axis">单轴规格</option>
+          </select>
+        </div>
       </div>
-      <div className="field-control">
-        <label className="field-label">默认材质</label>
-        <input className="input" value={product.defaultMaterial || ''} onChange={(event) => setProduct((current) => ({ ...current, defaultMaterial: event.target.value }))} />
+      <div className="spacer-top">
+        <div className="field-grid three">
+        <div className="field-control">
+          <label className="field-label">规格名称</label>
+          <input className="input" value={product.specName || ''} onChange={(event) => setProduct((current) => ({ ...current, specName: event.target.value }))} />
+        </div>
+        <div className="field-control">
+          <label className="field-label">规格展示方式</label>
+          <select className="select" value={product.specDisplayType || 'tags'} onChange={(event) => setProduct((current) => ({ ...current, specDisplayType: event.target.value as Product['specDisplayType'] }))}>
+            <option value="tags">标签</option>
+            <option value="select">下拉</option>
+          </select>
+        </div>
+        <div className="field-control">
+          <label className="field-label">是否必选规格</label>
+          <select className="select" value={product.isSpecRequired ? 'yes' : 'no'} onChange={(event) => setProduct((current) => ({ ...current, isSpecRequired: event.target.value === 'yes' }))}>
+            <option value="yes">是</option>
+            <option value="no">否</option>
+          </select>
+        </div>
+        </div>
       </div>
-      <div className="field-control">
-        <label className="field-label">支持工艺</label>
-        <input className="input" value={product.supportedProcesses.join(', ')} onChange={(event) => setProduct((current) => ({ ...current, supportedProcesses: splitValues(event.target.value) }))} />
+      <div className="spacer-top">
+        <div className="field-grid four">
+          {[
+            ['canResize', '支持改圈'],
+            ['canChangeMaterial', '支持换材质'],
+            ['canEngrave', '支持刻字'],
+            ['canChangeProcess', '支持改工艺'],
+            ['canRevise', '允许修订'],
+            ['requiresRemodeling', '需重新建模'],
+            ['requiresMeasureTool', '需测量工具']
+          ].map(([key, label]) => (
+            <label key={key} className="subtle-panel row">
+              <input
+                type="checkbox"
+                checked={Boolean(product.customRules[key as keyof Product['customRules']])}
+                onChange={(event) =>
+                  setProduct((current) => ({
+                    ...current,
+                    customRules: {
+                      ...current.customRules,
+                      [key]: event.target.checked
+                    }
+                  }))
+                }
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
       </div>
-      <div className="field-control">
-        <label className="field-label">默认工艺</label>
-        <input className="input" value={product.defaultProcess || ''} onChange={(event) => setProduct((current) => ({ ...current, defaultProcess: event.target.value }))} />
-      </div>
-      <div className="field-control">
-        <label className="field-label">支持特殊需求</label>
-        <input className="input" value={product.supportedSpecialOptions.join(', ')} onChange={(event) => setProduct((current) => ({ ...current, supportedSpecialOptions: splitValues(event.target.value) }))} />
-      </div>
-      <div className="field-control">
-        <label className="field-label">规格模式</label>
-        <select className="select" value={product.specMode} onChange={(event) => setProduct((current) => ({ ...current, specMode: event.target.value as Product['specMode'] }))}>
-          <option value="none">无规格</option>
-          <option value="single_axis">单轴规格</option>
-        </select>
-      </div>
-      <div className="field-control">
-        <label className="field-label">规格名称</label>
-        <input className="input" value={product.specName || ''} onChange={(event) => setProduct((current) => ({ ...current, specName: event.target.value }))} />
-      </div>
-      <div className="field-control">
-        <label className="field-label">规格展示方式</label>
-        <select className="select" value={product.specDisplayType || 'tags'} onChange={(event) => setProduct((current) => ({ ...current, specDisplayType: event.target.value as Product['specDisplayType'] }))}>
-          <option value="tags">标签</option>
-          <option value="select">下拉</option>
-        </select>
-      </div>
-      <div className="field-control">
-        <label className="field-label">是否必选规格</label>
-        <select className="select" value={product.isSpecRequired ? 'yes' : 'no'} onChange={(event) => setProduct((current) => ({ ...current, isSpecRequired: event.target.value === 'yes' }))}>
-          <option value="yes">是</option>
-          <option value="no">否</option>
-        </select>
-      </div>
-    </div>
-    <div className="spacer-top">
-      <div className="field-grid four">
-        {[
-          ['canResize', '支持改圈'],
-          ['canChangeMaterial', '支持换材质'],
-          ['canEngrave', '支持刻字'],
-          ['canChangeProcess', '支持改工艺'],
-          ['canRevise', '允许修订'],
-          ['requiresRemodeling', '需重新建模'],
-          ['requiresMeasureTool', '需测量工具']
-        ].map(([key, label]) => (
-          <label key={key} className="subtle-panel row">
+      <div className="spacer-top">
+        <div className="field-grid four">
+          <div className="field-control">
+            <label className="field-label">标准材质</label>
             <input
-              type="checkbox"
-              checked={Boolean(product.customRules[key as keyof Product['customRules']])}
+              className="input"
+              value={product.productionReference.standardMaterial || ''}
               onChange={(event) =>
                 setProduct((current) => ({
                   ...current,
-                  customRules: {
-                    ...current.customRules,
-                    [key]: event.target.checked
-                  }
+                  productionReference: { ...current.productionReference, standardMaterial: event.target.value }
                 }))
               }
             />
-            <span>{label}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-    <div className="spacer-top">
-      <div className="field-grid four">
-        <div className="field-control">
-          <label className="field-label">标准材质</label>
-          <input
-            className="input"
-            value={product.productionReference.standardMaterial || ''}
-            onChange={(event) =>
-              setProduct((current) => ({
-                ...current,
-                productionReference: { ...current.productionReference, standardMaterial: event.target.value }
-              }))
-            }
-          />
-        </div>
-        <div className="field-control">
-          <label className="field-label">默认工期（天）</label>
-          <input
-            className="input"
-            type="number"
-            value={product.productionReference.defaultLeadTimeDays ?? 0}
-            onChange={(event) =>
-              setProduct((current) => ({
-                ...current,
-                productionReference: { ...current.productionReference, defaultLeadTimeDays: Number(event.target.value) }
-              }))
-            }
-          />
-        </div>
-        <div className="field-control">
-          <label className="field-label">建议工期（天）</label>
-          <input
-            className="input"
-            type="number"
-            value={product.productionReference.suggestedLeadTimeDays ?? 0}
-            onChange={(event) =>
-              setProduct((current) => ({
-                ...current,
-                productionReference: { ...current.productionReference, suggestedLeadTimeDays: Number(event.target.value) }
-              }))
-            }
-          />
-        </div>
-        <div className="field-control">
-          <label className="field-label">参考人工费</label>
-          <input
-            className="input"
-            type="number"
-            value={product.productionReference.referenceLaborCost ?? 0}
-            onChange={(event) =>
-              setProduct((current) => ({
-                ...current,
-                productionReference: { ...current.productionReference, referenceLaborCost: Number(event.target.value) }
-              }))
-            }
-          />
+          </div>
+          <div className="field-control">
+            <label className="field-label">默认工期（天）</label>
+            <input
+              className="input"
+              type="number"
+              value={product.productionReference.defaultLeadTimeDays ?? 0}
+              onChange={(event) =>
+                setProduct((current) => ({
+                  ...current,
+                  productionReference: { ...current.productionReference, defaultLeadTimeDays: Number(event.target.value) }
+                }))
+              }
+            />
+          </div>
+          <div className="field-control">
+            <label className="field-label">建议工期（天）</label>
+            <input
+              className="input"
+              type="number"
+              value={product.productionReference.suggestedLeadTimeDays ?? 0}
+              onChange={(event) =>
+                setProduct((current) => ({
+                  ...current,
+                  productionReference: { ...current.productionReference, suggestedLeadTimeDays: Number(event.target.value) }
+                }))
+              }
+            />
+          </div>
+          <div className="field-control">
+            <label className="field-label">参考人工费</label>
+            <input
+              className="input"
+              type="number"
+              value={product.productionReference.referenceLaborCost ?? 0}
+              onChange={(event) =>
+                setProduct((current) => ({
+                  ...current,
+                  productionReference: { ...current.productionReference, referenceLaborCost: Number(event.target.value) }
+                }))
+              }
+            />
+          </div>
         </div>
       </div>
-    </div>
-  </SectionCard>
-)
+    </SectionCard>
+  )
+}
 
 export const ProductSpecSection = ({
   product,
-  setProduct
+  setProduct,
+  sizeParameterDefinitions
 }: {
   product: Product
   setProduct: Dispatch<SetStateAction<Product>>
+  sizeParameterDefinitions: ProductSizeParameterDefinition[]
 }) => {
+  const availableSizeParameterDefinitions = sizeParameterDefinitions.filter((item) => item.categories.includes(product.category))
+  const getParameterDefinition = (label: string) => availableSizeParameterDefinitions.find((item) => item.label === label)
+  const sizeParameterOptionPool = mergeUniqueValues(
+    availableSizeParameterDefinitions.map((item) => item.label),
+    product.specs.flatMap((item) => item.sizeFields.map((field) => field.label))
+  )
+
   const addSpec = () =>
     setProduct((current) => ({
       ...current,
-      specs: [
-        ...current.specs,
-        {
-          id: `spec-${Date.now()}`,
-          productId: current.id,
-          specValue: '',
-          sortOrder: current.specs.length + 1,
-          status: 'enabled',
-          basePrice: 0,
-          referenceWeight: 0,
-          sizeFields: []
-        }
-      ]
+      specs: [...current.specs, buildSpecDraft(current)]
     }))
 
   return (
@@ -725,6 +1514,7 @@ export const ProductSpecSection = ({
                 <label className="field-label">规格值</label>
                 <input
                   className="input"
+                  aria-label={`规格行${index + 1}-规格值`}
                   value={spec.specValue}
                   onChange={(event) =>
                     setProduct((current) => ({
@@ -739,6 +1529,7 @@ export const ProductSpecSection = ({
                 <input
                   className="input"
                   type="number"
+                  aria-label={`规格行${index + 1}-基础价格`}
                   value={spec.basePrice ?? 0}
                   onChange={(event) =>
                     setProduct((current) => ({
@@ -753,6 +1544,7 @@ export const ProductSpecSection = ({
                 <input
                   className="input"
                   type="number"
+                  aria-label={`规格行${index + 1}-参考重量`}
                   value={spec.referenceWeight ?? 0}
                   onChange={(event) =>
                     setProduct((current) => ({
@@ -766,6 +1558,7 @@ export const ProductSpecSection = ({
                 <label className="field-label">状态</label>
                 <select
                   className="select"
+                  aria-label={`规格行${index + 1}-状态`}
                   value={spec.status}
                   onChange={(event) =>
                     setProduct((current) => ({
@@ -789,7 +1582,7 @@ export const ProductSpecSection = ({
                       ...current,
                       specs: updateSpecAt(current.specs, index, {
                         ...spec,
-                        sizeFields: [...spec.sizeFields, { key: `field-${Date.now()}`, label: '', value: '', unit: '' }]
+                        sizeFields: [...spec.sizeFields, { key: '', label: '', value: '', unit: '' }]
                       })
                     }))
                   }
@@ -799,43 +1592,47 @@ export const ProductSpecSection = ({
               </div>
               <div className="stack">
                 {spec.sizeFields.map((field, fieldIndex) => (
-                  <div key={field.key} className="field-grid four">
+                  <div key={`${spec.id}-${fieldIndex}`} className="field-grid four">
                     <div className="field-control">
-                      <label className="field-label">字段标识</label>
-                      <input
-                        className="input"
-                        value={field.key}
-                        onChange={(event) =>
-                          setProduct((current) => {
-                            const nextFields = spec.sizeFields.map((item, currentIndex) => (currentIndex === fieldIndex ? { ...field, key: event.target.value } : item))
-                            return {
-                              ...current,
-                              specs: updateSpecAt(current.specs, index, { ...spec, sizeFields: nextFields })
-                            }
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="field-control">
-                      <label className="field-label">显示名称</label>
-                      <input
-                        className="input"
+                      <label className="field-label">参数名称</label>
+                      <select
+                        className="select"
+                        aria-label={`规格行${index + 1}-参数名称-${fieldIndex + 1}`}
                         value={field.label}
                         onChange={(event) =>
                           setProduct((current) => {
-                            const nextFields = spec.sizeFields.map((item, currentIndex) => (currentIndex === fieldIndex ? { ...field, label: event.target.value } : item))
+                            const nextLabel = event.target.value
+                            const matchedDefinition = getParameterDefinition(nextLabel)
+                            const nextFields = spec.sizeFields.map((item, currentIndex) =>
+                              currentIndex === fieldIndex
+                                ? {
+                                    ...field,
+                                    label: nextLabel,
+                                    key: nextLabel,
+                                    unit: matchedDefinition?.unit || field.unit || ''
+                                  }
+                                : item
+                            )
                             return {
                               ...current,
                               specs: updateSpecAt(current.specs, index, { ...spec, sizeFields: nextFields })
                             }
                           })
                         }
-                      />
+                      >
+                        <option value="">请选择参数名称</option>
+                        {sizeParameterOptionPool.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="field-control">
                       <label className="field-label">值</label>
                       <input
                         className="input"
+                        aria-label={`规格行${index + 1}-值-${fieldIndex + 1}`}
                         value={field.value}
                         onChange={(event) =>
                           setProduct((current) => {
@@ -850,38 +1647,41 @@ export const ProductSpecSection = ({
                     </div>
                     <div className="field-control">
                       <label className="field-label">单位</label>
-                      <div className="row">
-                        <input
-                          className="input"
-                          value={field.unit || ''}
-                          onChange={(event) =>
-                            setProduct((current) => {
-                              const nextFields = spec.sizeFields.map((item, currentIndex) => (currentIndex === fieldIndex ? { ...field, unit: event.target.value } : item))
-                              return {
-                                ...current,
-                                specs: updateSpecAt(current.specs, index, { ...spec, sizeFields: nextFields })
-                              }
-                            })
-                          }
-                        />
-                        <button
-                          className="button secondary small"
-                          onClick={() =>
-                            setProduct((current) => {
-                              const nextFields = spec.sizeFields.filter((_, currentIndex) => currentIndex !== fieldIndex)
-                              return {
-                                ...current,
-                                specs: updateSpecAt(current.specs, index, { ...spec, sizeFields: nextFields })
-                              }
-                            })
-                          }
-                        >
-                          删除
-                        </button>
-                      </div>
+                      <input
+                        className="input"
+                        aria-label={`规格行${index + 1}-单位-${fieldIndex + 1}`}
+                        value={field.unit || ''}
+                        onChange={(event) =>
+                          setProduct((current) => {
+                            const nextFields = spec.sizeFields.map((item, currentIndex) => (currentIndex === fieldIndex ? { ...field, unit: event.target.value } : item))
+                            return {
+                              ...current,
+                              specs: updateSpecAt(current.specs, index, { ...spec, sizeFields: nextFields })
+                            }
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="field-control">
+                      <label className="field-label">操作</label>
+                      <button
+                        className="button secondary small"
+                        onClick={() =>
+                          setProduct((current) => {
+                            const nextFields = spec.sizeFields.filter((_, currentIndex) => currentIndex !== fieldIndex)
+                            return {
+                              ...current,
+                              specs: updateSpecAt(current.specs, index, { ...spec, sizeFields: nextFields })
+                            }
+                          })
+                        }
+                      >
+                        删除
+                      </button>
                     </div>
                   </div>
                 ))}
+                {spec.sizeFields.length > 0 ? <div className="text-muted">参数名称来自产品管理里的“字典配置”，字段标识已隐藏为系统内部字段。</div> : null}
                 {spec.sizeFields.length === 0 ? <div className="placeholder-block">当前规格还没有尺寸参数，请先新增。</div> : null}
               </div>
             </div>

@@ -91,8 +91,8 @@ export const recalculateOrderItem = (item: OrderItem, product?: Product): OrderI
 
 export const OrderListHeader = () => (
   <PageHeader
-    title="订单中心"
-    subtitle="首轮先把订单列表、订单详情骨架和商品卡主链路打通。"
+    title="订单列表"
+    className="compact-page-header"
     actions={
       <Link to="/orders/new" className="button primary">
         新建订单
@@ -112,9 +112,9 @@ export const OrderQuickStats = ({ orders }: { orders: Order[] }) => {
   ]
 
   return (
-    <div className="stats-grid">
+    <div className="stats-grid compact-stats">
       {stats.map((item) => (
-        <div key={item.label} className="stat-card">
+        <div key={item.label} className="stat-card compact-stat">
           <div className="stat-card-label">{item.label}</div>
           <div className="stat-card-value">{item.value}</div>
         </div>
@@ -136,7 +136,7 @@ export const OrderFilterBar = ({
   value: OrderFilterValue
   onChange: (next: OrderFilterValue) => void
 }) => (
-  <SectionCard title="搜索与筛选" description="首轮先支持订单编号 / 客户姓名搜索，以及状态和负责人筛选。">
+  <SectionCard title="搜索与筛选" className="compact-card">
     <div className="field-grid three">
       <div className="field-control">
         <label className="field-label">搜索订单编号 / 客户姓名</label>
@@ -360,8 +360,8 @@ export const CustomerSpecBlock = ({
       </div>
       <div className="field-control">
         <label className="field-label">特殊需求（逗号分隔）</label>
-        <input
-          className="input"
+        <textarea
+          className="textarea"
           value={(item.actualRequirements?.specialNotes || []).join('，')}
           onChange={(event) =>
             onChange({

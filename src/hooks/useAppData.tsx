@@ -1,18 +1,30 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import { getOrderList } from '@/services/order/orderQueries'
+import {
+  addProductFieldOption,
+  getProductFieldOptions,
+  removeProductFieldOption,
+  saveProductFieldOptions,
+  saveSizeParameterDefinitions
+} from '@/services/product/productFieldOptions'
 import { createEmptyProduct, getProductList } from '@/services/product/productQueries'
 import { buildQuoteResult } from '@/services/quote/quoteService'
 import type { Order, OrderItem } from '@/types/order'
 import type { Product } from '@/types/product'
+import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
 
 type AppDataContextValue = {
   products: Product[]
   orders: Order[]
+  productFieldOptions: ProductFieldOptions
   getProduct: (productId?: string) => Product | undefined
   getOrder: (orderId?: string) => Order | undefined
   saveProduct: (payload: Product) => Product
   updateProduct: (productId: string, updater: (current: Product) => Product) => Product | undefined
   createEmptyProduct: () => Product
+  addGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
+  removeGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
+  saveGlobalSizeParameterDefinitions: (definitions: ProductSizeParameterDefinition[]) => void
   saveOrder: (payload: Order) => Order
   updateOrder: (orderId: string, updater: (current: Order) => Order) => Order | undefined
   updateOrderItem: (orderId: string, itemId: string, updater: (current: OrderItem) => OrderItem) => Order | undefined
@@ -23,11 +35,13 @@ const AppDataContext = createContext<AppDataContextValue | null>(null)
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(() => getProductList())
   const [orders, setOrders] = useState<Order[]>(() => getOrderList())
+  const [productFieldOptions, setProductFieldOptions] = useState<ProductFieldOptions>(() => getProductFieldOptions())
 
   const value = useMemo<AppDataContextValue>(
     () => ({
       products,
       orders,
+      productFieldOptions,
       getProduct: (productId) => products.find((item) => item.id === productId),
       getOrder: (orderId) => orders.find((item) => item.id === orderId),
       saveProduct: (payload) => {
@@ -50,6 +64,15 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         return next
       },
       createEmptyProduct: () => createEmptyProduct(),
+      addGlobalProductFieldOption: (field, rawValue) => {
+        setProductFieldOptions((current) => saveProductFieldOptions(addProductFieldOption(current, field, rawValue)))
+      },
+      removeGlobalProductFieldOption: (field, rawValue) => {
+        setProductFieldOptions((current) => saveProductFieldOptions(removeProductFieldOption(current, field, rawValue)))
+      },
+      saveGlobalSizeParameterDefinitions: (definitions) => {
+        setProductFieldOptions((current) => saveProductFieldOptions(saveSizeParameterDefinitions(current, definitions)))
+      },
       saveOrder: (payload) => {
         setOrders((current) => {
           const exists = current.some((item) => item.id === payload.id)
@@ -103,7 +126,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         return nextOrder
       }
     }),
-    [orders, products]
+    [orders, productFieldOptions, products]
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

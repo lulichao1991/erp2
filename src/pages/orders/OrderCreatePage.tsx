@@ -20,6 +20,12 @@ import { useDrawerState } from '@/hooks/useDrawerState'
 import { useModalState } from '@/hooks/useModalState'
 import { createOrderDraft } from '@/services/order/orderQueries'
 
+const defaultOrderTypeOptions = ['平台定制', '门店定制', '私域定制']
+
+const toDateTimeInputValue = (value?: string) => (value ? value.replace(' ', 'T').slice(0, 16) : '')
+
+const fromDateTimeInputValue = (value: string) => (value ? value.replace('T', ' ') : '')
+
 export const OrderCreatePage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -35,6 +41,14 @@ export const OrderCreatePage = () => {
   const drawerProduct = appData.getProduct(drawerOrderItem?.sourceProduct?.sourceProductId)
 
   const referableProducts = useMemo(() => appData.products.filter((item) => item.isReferable), [appData.products])
+  const orderTypeOptions = useMemo(
+    () => Array.from(new Set([...defaultOrderTypeOptions, ...appData.orders.map((item) => item.orderType), order.orderType].filter(Boolean))),
+    [appData.orders, order.orderType]
+  )
+  const ownerOptions = useMemo(
+    () => Array.from(new Set(['待分配', ...appData.orders.map((item) => item.ownerName), order.ownerName].filter(Boolean))),
+    [appData.orders, order.ownerName]
+  )
 
   const updateOrderField = (
     key:
@@ -140,16 +154,52 @@ export const OrderCreatePage = () => {
         <SectionCard title="基础信息区">
           <div className="field-grid three">
             <div className="field-control">
-              <label className="field-label">订单类型</label>
-              <input className="input" value={order.orderType} onChange={(event) => updateOrderField('orderType', event.target.value)} />
+              <label className="field-label" htmlFor="order-type">
+                订单类型
+              </label>
+              <select
+                id="order-type"
+                className="select"
+                value={order.orderType}
+                onChange={(event) => updateOrderField('orderType', event.target.value)}
+              >
+                {orderTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <span className="text-caption text-muted">先提供常用订单类型，后续可继续补平台字典。</span>
             </div>
             <div className="field-control">
-              <label className="field-label">平台订单编号</label>
-              <input className="input" value={order.platformOrderNo || ''} onChange={(event) => updateOrderField('platformOrderNo', event.target.value)} />
+              <label className="field-label" htmlFor="platform-order-no">
+                平台订单编号
+              </label>
+              <input
+                id="platform-order-no"
+                className="input"
+                value={order.platformOrderNo || ''}
+                onChange={(event) => updateOrderField('platformOrderNo', event.target.value)}
+                placeholder="例如：AMZ-9938201 / SHOP-001293"
+              />
             </div>
             <div className="field-control">
-              <label className="field-label">客服负责人</label>
-              <input className="input" value={order.ownerName} onChange={(event) => updateOrderField('ownerName', event.target.value)} />
+              <label className="field-label" htmlFor="order-owner">
+                客服负责人
+              </label>
+              <select
+                id="order-owner"
+                className="select"
+                value={order.ownerName}
+                onChange={(event) => updateOrderField('ownerName', event.target.value)}
+              >
+                {ownerOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <span className="text-caption text-muted">当前先用常用负责人列表，后续再升级为可搜索选择。</span>
             </div>
           </div>
         </SectionCard>
@@ -157,20 +207,53 @@ export const OrderCreatePage = () => {
         <SectionCard title="客户信息区">
           <div className="field-grid two">
             <div className="field-control">
-              <label className="field-label">客户姓名</label>
-              <input className="input" value={order.customerName || ''} onChange={(event) => updateOrderField('customerName', event.target.value)} />
+              <label className="field-label" htmlFor="customer-name">
+                客户姓名
+              </label>
+              <input
+                id="customer-name"
+                className="input"
+                value={order.customerName || ''}
+                onChange={(event) => updateOrderField('customerName', event.target.value)}
+                placeholder="例如：林小姐"
+              />
             </div>
             <div className="field-control">
-              <label className="field-label">联系方式</label>
-              <input className="input" value={order.customerPhone || ''} onChange={(event) => updateOrderField('customerPhone', event.target.value)} />
+              <label className="field-label" htmlFor="customer-phone">
+                联系方式
+              </label>
+              <input
+                id="customer-phone"
+                className="input"
+                type="tel"
+                value={order.customerPhone || ''}
+                onChange={(event) => updateOrderField('customerPhone', event.target.value)}
+                placeholder="例如：13800001234"
+              />
             </div>
             <div className="field-control">
-              <label className="field-label">平台原始地址</label>
-              <input className="input" value={order.customerAddress || ''} onChange={(event) => updateOrderField('customerAddress', event.target.value)} />
+              <label className="field-label" htmlFor="customer-address">
+                平台原始地址
+              </label>
+              <input
+                id="customer-address"
+                className="input"
+                value={order.customerAddress || ''}
+                onChange={(event) => updateOrderField('customerAddress', event.target.value)}
+                placeholder="可直接粘贴平台同步过来的原始地址"
+              />
             </div>
             <div className="field-control">
-              <label className="field-label">客户备注</label>
-              <input className="input" value={order.customerRemark || ''} onChange={(event) => updateOrderField('customerRemark', event.target.value)} />
+              <label className="field-label" htmlFor="customer-remark">
+                客户备注
+              </label>
+              <input
+                id="customer-remark"
+                className="input"
+                value={order.customerRemark || ''}
+                onChange={(event) => updateOrderField('customerRemark', event.target.value)}
+                placeholder="例如：礼盒卡片、加急、先确认尺寸"
+              />
             </div>
           </div>
         </SectionCard>
@@ -178,16 +261,40 @@ export const OrderCreatePage = () => {
         <SectionCard title="时间信息区">
           <div className="field-grid three">
             <div className="field-control">
-              <label className="field-label">付款时间</label>
-              <input className="input" value={order.paymentDate || ''} onChange={(event) => updateOrderField('paymentDate', event.target.value)} />
+              <label className="field-label" htmlFor="payment-date">
+                付款时间
+              </label>
+              <input
+                id="payment-date"
+                className="input"
+                type="datetime-local"
+                value={toDateTimeInputValue(order.paymentDate)}
+                onChange={(event) => updateOrderField('paymentDate', fromDateTimeInputValue(event.target.value))}
+              />
             </div>
             <div className="field-control">
-              <label className="field-label">客户期望时间</label>
-              <input className="input" value={order.expectedDate || ''} onChange={(event) => updateOrderField('expectedDate', event.target.value)} />
+              <label className="field-label" htmlFor="expected-date">
+                客户期望时间
+              </label>
+              <input
+                id="expected-date"
+                className="input"
+                type="date"
+                value={order.expectedDate || ''}
+                onChange={(event) => updateOrderField('expectedDate', event.target.value)}
+              />
             </div>
             <div className="field-control">
-              <label className="field-label">承诺交期</label>
-              <input className="input" value={order.promisedDate || ''} onChange={(event) => updateOrderField('promisedDate', event.target.value)} />
+              <label className="field-label" htmlFor="promised-date">
+                承诺交期
+              </label>
+              <input
+                id="promised-date"
+                className="input"
+                type="date"
+                value={order.promisedDate || ''}
+                onChange={(event) => updateOrderField('promisedDate', event.target.value)}
+              />
             </div>
           </div>
         </SectionCard>

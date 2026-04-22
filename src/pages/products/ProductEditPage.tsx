@@ -65,9 +65,23 @@ export const ProductEditPage = () => {
       <div className="editor-shell">
         <ProductEditSideNav activeSection="basic-form" />
         <div className="section-stack">
-          <ProductBasicFormSection product={product} setProduct={setDraftProduct} />
-          <ProductParamFormSection product={product} setProduct={setDraftProduct} />
-          <ProductSpecSection product={product} setProduct={setDraftProduct} />
+          <ProductBasicFormSection
+            product={product}
+            setProduct={setDraftProduct}
+            fieldOptions={appData.productFieldOptions}
+            onAddGlobalOption={appData.addGlobalProductFieldOption}
+          />
+          <ProductParamFormSection
+            product={product}
+            setProduct={setDraftProduct}
+            fieldOptions={appData.productFieldOptions}
+            onAddGlobalOption={appData.addGlobalProductFieldOption}
+          />
+          <ProductSpecSection
+            product={product}
+            setProduct={setDraftProduct}
+            sizeParameterDefinitions={appData.productFieldOptions.sizeParameterDefinitions}
+          />
           <ProductPriceRuleFormSection product={product} setProduct={setDraftProduct} />
         </div>
       </div>

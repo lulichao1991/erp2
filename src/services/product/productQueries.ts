@@ -58,5 +58,7 @@ export const createEmptyProduct = (): Product => ({
     craftFiles: [],
     sizeFiles: [],
     otherFiles: []
-  }
+  },
+  referenceRecords: [],
+  versionHistory: []
 })

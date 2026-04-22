@@ -101,7 +101,55 @@ export const mockProducts: Product[] = [
       craftFiles: [{ id: 'craft-ring-1', name: '抛光工艺说明.pdf', type: 'craft', version: 'v1', url: '#' }],
       sizeFiles: [{ id: 'size-ring-1', name: '圈号尺寸参考.pdf', type: 'size', version: 'v2', url: '#' }],
       otherFiles: [{ id: 'other-ring-1', name: '包装备注.docx', type: 'other', url: '#' }]
-    }
+    },
+    referenceRecords: [
+      {
+        id: 'ref-ring-001',
+        orderId: 'o-202604-001',
+        orderNo: 'SO-202604-001',
+        customerName: '林小姐',
+        orderItemName: '山形素圈戒指',
+        sourceVersion: 'v3',
+        selectedSpecValue: '16号',
+        referencedAt: '2026-04-21 10:46',
+        status: 'referenced',
+        note: '当前订单沿用模板规格，追加了 18K 金和微镶需求。'
+      },
+      {
+        id: 'ref-ring-002',
+        orderId: 'o-202603-118',
+        orderNo: 'SO-202603-118',
+        customerName: '赵女士',
+        orderItemName: '山形纪念戒',
+        sourceVersion: 'v2',
+        selectedSpecValue: '10号',
+        referencedAt: '2026-03-28 14:20',
+        status: 'adjusted',
+        note: '订单侧追加内圈加厚，已偏离模板默认底厚。'
+      }
+    ],
+    versionHistory: [
+      {
+        id: 'ver-ring-003',
+        version: 'v3',
+        updatedAt: '2026-04-20 18:20',
+        operatorName: '陈设计',
+        summary: '补齐 16 号规格基础价，并同步最新抛光工艺说明。',
+        changes: ['新增 16 号规格基础价格', '修正 16 号参考重量', '更新建模文件为 ring-v3.stl'],
+        relatedFiles: ['ring-v3.stl', '抛光工艺说明.pdf'],
+        status: 'published'
+      },
+      {
+        id: 'ver-ring-002',
+        version: 'v2',
+        updatedAt: '2026-04-11 09:30',
+        operatorName: '张工艺',
+        summary: '增加刻字加价规则并补充圈号尺寸文件。',
+        changes: ['新增刻字固定加价 50 元', '上传圈号尺寸参考 v2'],
+        relatedFiles: ['圈号尺寸参考.pdf'],
+        status: 'published'
+      }
+    ]
   },
   {
     id: 'p-pendant-001',
@@ -199,6 +247,42 @@ export const mockProducts: Product[] = [
       craftFiles: [{ id: 'craft-pendant-1', name: '珐琅工艺卡.pdf', type: 'craft', version: 'v1', url: '#' }],
       sizeFiles: [{ id: 'size-pendant-1', name: '档位尺寸图.pdf', type: 'size', version: 'v1', url: '#' }],
       otherFiles: [{ id: 'other-pendant-1', name: '质检提醒.txt', type: 'other', url: '#' }]
-    }
+    },
+    referenceRecords: [
+      {
+        id: 'ref-pendant-001',
+        orderId: 'o-202604-001',
+        orderNo: 'SO-202604-001',
+        customerName: '林小姐',
+        orderItemName: '如意吊坠',
+        sourceVersion: 'v2',
+        selectedSpecValue: '小号',
+        referencedAt: '2026-04-21 10:48',
+        status: 'referenced',
+        note: '订单沿用小号规格，订单侧增加了加急和礼盒要求。'
+      }
+    ],
+    versionHistory: [
+      {
+        id: 'ver-pendant-002',
+        version: 'v2',
+        updatedAt: '2026-04-18 11:10',
+        operatorName: '王设计',
+        summary: '发布如意吊坠第二版，补齐中大号规格与珐琅加价。',
+        changes: ['新增中号和大号规格', '新增珐琅固定加价', '更新建模文件为 pendant-v2.obj'],
+        relatedFiles: ['pendant-v2.obj', '珐琅工艺卡.pdf'],
+        status: 'published'
+      },
+      {
+        id: 'ver-pendant-001',
+        version: 'v1',
+        updatedAt: '2026-04-08 16:40',
+        operatorName: '苏琳',
+        summary: '首版吊坠模板建档，先录入小号规格和银版价格。',
+        changes: ['创建产品模板', '录入小号基础价格', '上传档位尺寸图'],
+        relatedFiles: ['档位尺寸图.pdf'],
+        status: 'published'
+      }
+    ]
   }
 ]

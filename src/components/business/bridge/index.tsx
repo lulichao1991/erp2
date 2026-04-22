@@ -5,7 +5,6 @@ import {
   InfoField,
   InfoGrid,
   LargeModal,
-  PageHeader,
   ReferenceTag,
   SideDrawer,
   StatusTag,
@@ -17,6 +16,36 @@ import type { OrderItem } from '@/types/order'
 import type { Product } from '@/types/product'
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
+
+const formatPriceRange = (values: number[]) => {
+  if (values.length === 0) {
+    return '—'
+  }
+
+  const sorted = [...values].sort((a, b) => a - b)
+
+  return sorted[0] === sorted[sorted.length - 1]
+    ? formatPrice(sorted[0])
+    : `${formatPrice(sorted[0])} ~ ${formatPrice(sorted[sorted.length - 1])}`
+}
+
+const buildSpecColumns = (product: Product) => {
+  const columns: Array<{ key: string; label: string; unit?: string }> = []
+  const seen = new Set<string>()
+
+  product.specs.forEach((spec) => {
+    spec.sizeFields.forEach((field) => {
+      if (seen.has(field.key)) {
+        return
+      }
+
+      seen.add(field.key)
+      columns.push({ key: field.key, label: field.label, unit: field.unit })
+    })
+  })
+
+  return columns
+}
 
 export const ProductPickerModal = ({
   open,
@@ -48,8 +77,8 @@ export const ProductPickerModal = ({
         </>
       }
     >
-      <div className="editor-shell" style={{ gridTemplateColumns: '260px 1fr' }}>
-        <div className="stack">
+      <div className="product-picker-layout">
+        <div className="stack product-picker-filters">
           <div className="field-control">
             <label className="field-label">搜索产品</label>
             <input className="input" value={picker.keyword} onChange={(event) => picker.setKeyword(event.target.value)} placeholder="产品名称 / 编号 / 系列" />
@@ -83,61 +112,80 @@ export const ProductPickerModal = ({
           </div>
         </div>
 
-        <div className="stack">
-          <div className="field-grid two">
-            <div className="subtle-panel">
-              <PageHeader title="可引用产品" subtitle={`当前共 ${picker.filteredProducts.length} 个结果`} />
-              <div className="card-grid">
-                {picker.filteredProducts.map((product) => (
-                  <button key={product.id} className={`product-card${picker.selectedProductId === product.id ? ' selected' : ''}`} onClick={() => picker.setSelectedProductId(product.id)}>
-                    <img src={product.coverImage} alt={product.name} className="cover" />
-                    <div className="stack spacer-top" style={{ gap: 6 }}>
+        <div className="product-picker-content">
+          <div className="subtle-panel product-picker-results">
+            <div className="product-picker-panel-header">
+              <div>
+                <div className="section-card-title">可引用产品</div>
+                <div className="text-muted">当前共 {picker.filteredProducts.length} 个结果</div>
+              </div>
+            </div>
+            <div className="card-grid product-picker-grid">
+              {picker.filteredProducts.length > 0 ? (
+                picker.filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    className={`product-card product-picker-card${picker.selectedProductId === product.id ? ' selected' : ''}`}
+                    onClick={() => picker.setSelectedProductId(product.id)}
+                  >
+                    <img src={product.coverImage} alt={product.name} className="cover product-picker-cover" />
+                    <div className="stack product-picker-card-body">
                       <strong>{product.name}</strong>
                       <span className="text-caption">{product.code}</span>
-                      <div className="row wrap">
+                      <div className="row wrap product-picker-card-tags">
                         <ReferenceTag active={product.isReferable} />
                         <VersionBadge value={product.version} />
                       </div>
-                      <span className="text-price">{formatPrice(product.specs[0]?.basePrice)}</span>
+                      <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+                        <span className="text-price">{formatPrice(product.specs[0]?.basePrice)}</span>
+                        <span className="text-caption">{product.specs.length} 个规格</span>
+                      </div>
                     </div>
                   </button>
-                ))}
-              </div>
-            </div>
-            <div className="subtle-panel">
-              {picker.selectedProduct ? (
-                <div className="stack">
-                  <PageHeader title="快速预览" subtitle="右侧先看核心信息，再决定是否引用到当前商品卡。" />
-                  <img src={picker.selectedProduct.coverImage} alt={picker.selectedProduct.name} className="cover" />
-                  <div className="row wrap">
-                    <StatusTag value={picker.selectedProduct.status === 'enabled' ? '启用' : picker.selectedProduct.status === 'draft' ? '草稿' : '禁用'} />
-                    <ReferenceTag active={picker.selectedProduct.isReferable} />
-                    <VersionBadge value={picker.selectedProduct.version} />
-                  </div>
-                  <InfoGrid columns={2}>
-                    <InfoField label="产品名称" value={picker.selectedProduct.name} />
-                    <InfoField label="产品编号" value={picker.selectedProduct.code} />
-                    <InfoField label="默认材质" value={picker.selectedProduct.defaultMaterial || '—'} />
-                    <InfoField label="默认工艺" value={picker.selectedProduct.defaultProcess || '—'} />
-                    <InfoField label="规格模式" value={picker.selectedProduct.specMode === 'single_axis' ? '单轴规格' : '无规格'} />
-                    <InfoField label="参考基础价" value={formatPrice(picker.selectedProduct.specs[0]?.basePrice)} />
-                  </InfoGrid>
-                  <div className="subtle-panel">
-                    <strong>规格摘要</strong>
-                    <ul className="list-reset stack spacer-top">
-                      {picker.selectedProduct.specs.map((spec) => (
-                        <li key={spec.id} className="row wrap" style={{ justifyContent: 'space-between' }}>
-                          <span>{spec.specValue}</span>
-                          <span className="text-price">{formatPrice(spec.basePrice)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                ))
               ) : (
-                <div className="placeholder-block">左侧选择一个产品后，这里会显示快速预览。</div>
+                <div className="placeholder-block">当前筛选下暂无可引用产品。</div>
               )}
             </div>
+          </div>
+          <div className="subtle-panel product-picker-preview">
+            {picker.selectedProduct ? (
+              <div className="stack">
+                <div className="product-picker-panel-header">
+                  <div>
+                    <div className="section-card-title">快速预览</div>
+                    <div className="text-muted">右侧先看核心信息，再决定是否引用到当前商品卡。</div>
+                  </div>
+                </div>
+                <img src={picker.selectedProduct.coverImage} alt={picker.selectedProduct.name} className="cover" />
+                <div className="row wrap">
+                  <StatusTag value={picker.selectedProduct.status === 'enabled' ? '启用' : picker.selectedProduct.status === 'draft' ? '草稿' : '禁用'} />
+                  <ReferenceTag active={picker.selectedProduct.isReferable} />
+                  <VersionBadge value={picker.selectedProduct.version} />
+                </div>
+                <InfoGrid columns={2}>
+                  <InfoField label="产品名称" value={picker.selectedProduct.name} />
+                  <InfoField label="产品编号" value={picker.selectedProduct.code} />
+                  <InfoField label="默认材质" value={picker.selectedProduct.defaultMaterial || '—'} />
+                  <InfoField label="默认工艺" value={picker.selectedProduct.defaultProcess || '—'} />
+                  <InfoField label="规格模式" value={picker.selectedProduct.specMode === 'single_axis' ? '单轴规格' : '无规格'} />
+                  <InfoField label="参考基础价" value={formatPrice(picker.selectedProduct.specs[0]?.basePrice)} />
+                </InfoGrid>
+                <div className="subtle-panel">
+                  <strong>规格摘要</strong>
+                  <ul className="list-reset stack spacer-top">
+                    {picker.selectedProduct.specs.map((spec) => (
+                      <li key={spec.id} className="row wrap" style={{ justifyContent: 'space-between' }}>
+                        <span>{spec.specValue}</span>
+                        <span className="text-price">{formatPrice(spec.basePrice)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="placeholder-block">左侧选择一个产品后，这里会显示快速预览。</div>
+            )}
           </div>
         </div>
       </div>
@@ -194,6 +242,12 @@ export const SourceProductDrawer = ({
       status: 'matched'
     }
   ]
+
+  const specColumns = buildSpecColumns(product)
+  const sortedSpecs = [...product.specs].sort((left, right) => left.sortOrder - right.sortOrder)
+  const currentSpecValue = item.selectedSpecValue || item.selectedSpecSnapshot?.specValue
+  const sourceSpecValue = item.sourceProduct?.sourceSpecValue
+  const priceRange = formatPriceRange(product.specs.map((spec) => spec.basePrice).filter((value): value is number => typeof value === 'number'))
 
   return (
     <SideDrawer
@@ -254,6 +308,76 @@ export const SourceProductDrawer = ({
               <span className={`tag ${product.customRules.requiresMeasureTool ? 'status-warning' : 'reference-off'}`}>需测量工具：{product.customRules.requiresMeasureTool ? '是' : '否'}</span>
               <span className={`tag ${product.customRules.requiresRemodeling ? 'status-warning' : 'reference-off'}`}>需重新建模：{product.customRules.requiresRemodeling ? '是' : '否'}</span>
               <span className={`tag ${product.customRules.canEngrave ? 'status-enabled' : 'reference-off'}`}>支持刻字：{product.customRules.canEngrave ? '是' : '否'}</span>
+            </div>
+          </div>
+          <div className="field-grid four">
+            <div className="subtle-panel">
+              <div className="text-caption">模板规格数</div>
+              <div className="quote-value">{sortedSpecs.length}</div>
+            </div>
+            <div className="subtle-panel">
+              <div className="text-caption">当前订单所选规格</div>
+              <div className="row wrap spacer-top">
+                <strong>{currentSpecValue || '未选择'}</strong>
+              </div>
+            </div>
+            <div className="subtle-panel">
+              <div className="text-caption">引用时规格</div>
+              <div className="row wrap spacer-top">
+                <strong>{sourceSpecValue || '未记录'}</strong>
+              </div>
+            </div>
+            <div className="subtle-panel">
+              <div className="text-caption">基础价格区间</div>
+              <div className="quote-value">{priceRange}</div>
+            </div>
+          </div>
+          <div className="subtle-panel">
+            <strong>完整规格参数表</strong>
+            <div className="text-muted spacer-top">下表展示模板全部规格参数、参考重量和基础价格，当前订单所选规格会高亮，方便横向核对。</div>
+            <div className="spacer-top table-shell">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{product.specName || '规格值'}</th>
+                    {specColumns.map((column) => (
+                      <th key={column.key}>{column.label}</th>
+                    ))}
+                    <th>参考重量</th>
+                    <th>基础价格</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedSpecs.map((spec) => {
+                    const isCurrent = currentSpecValue === spec.specValue
+                    const isSource = sourceSpecValue === spec.specValue
+
+                    return (
+                      <tr key={spec.id} className={isCurrent ? 'row-highlight' : undefined}>
+                        <td>
+                          <div className="stack" style={{ gap: 6 }}>
+                            <strong>{spec.specValue}</strong>
+                            <div className="row wrap">
+                              {isCurrent ? <span className="tag status-warning">当前订单选择</span> : null}
+                              {isSource ? <span className="tag version">引用时规格</span> : null}
+                            </div>
+                          </div>
+                        </td>
+                        {specColumns.map((column) => {
+                          const field = spec.sizeFields.find((item) => item.key === column.key)
+                          return <td key={`${spec.id}-${column.key}`}>{field ? `${field.value}${field.unit ?? ''}` : '—'}</td>
+                        })}
+                        <td>{typeof spec.referenceWeight === 'number' ? `${spec.referenceWeight} g` : '—'}</td>
+                        <td className="price">{formatPrice(spec.basePrice)}</td>
+                        <td>
+                          <StatusTag value={spec.status === 'enabled' ? '启用' : '禁用'} />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import { OrderFilterBar, OrderListHeader, OrderQuickStats, OrderTable } from '@/components/business/order'
 import { PageContainer } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
@@ -27,7 +26,6 @@ export const OrderListPage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '订单中心' }]} />
       <OrderListHeader />
       <div className="stack">
         <OrderQuickStats orders={orders} />
