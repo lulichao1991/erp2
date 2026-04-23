@@ -11,8 +11,12 @@ export type Task = {
   type: TaskType
   title: string
   status: TaskStatus
+  transactionId?: string
+  transactionNo?: string
   orderId: string
   orderNo: string
+  orderLineId?: string
+  orderLineName?: string
   orderItemId?: string
   orderItemName?: string
   assigneeRole: TaskAssigneeRole

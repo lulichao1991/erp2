@@ -1,5 +1,48 @@
 import type { ProductSpecRow } from '@/types/product'
 import type { QuoteResult } from '@/types/quote'
+import type {
+  OrderLine,
+  OrderLineActualRequirements,
+  OrderLineDesignInfo,
+  OrderLineOutsourceInfo,
+  OrderLinePriority,
+  OrderLineProductionInfo,
+  OrderLineUploadedFile,
+  ProductSnapshot
+} from '@/types/order-line'
+import type {
+  OrderFinanceInfo,
+  OrderFinanceTransaction,
+  OrderFinanceTransactionType,
+  TimelineRecord,
+  TimelineRecordType,
+  TransactionAggregateStatus
+} from '@/types/transaction'
+
+export type {
+  OrderLine,
+  OrderLineActualRequirements,
+  OrderLineDesignInfo,
+  OrderLineOutsourceInfo,
+  OrderLinePriority,
+  OrderLineProductionInfo,
+  OrderLineStatus,
+  OrderLineUploadedFile,
+  ProductSnapshot
+} from '@/types/order-line'
+export type {
+  OrderFinanceInfo,
+  OrderFinanceTransaction,
+  OrderFinanceTransactionType,
+  TimelineRecord,
+  TimelineRecordType,
+  TransactionAggregateStatus,
+  TransactionOrderType,
+  TransactionRecord,
+  TransactionSourceChannel
+} from '@/types/transaction'
+
+// Compatibility layer for the existing page/service code.
 
 export type OrderStatus =
   | 'draft'
@@ -13,127 +56,38 @@ export type OrderStatus =
 
 export type OrderPriority = 'normal' | 'high' | 'urgent'
 
-export type OrderFinanceTransactionType =
-  | 'deposit_received'
-  | 'balance_received'
-  | 'platform_refund'
-  | 'offline_refund'
-  | 'after_sales_payment'
-  | 'after_sales_refund'
+export type SourceProductSnapshot = ProductSnapshot
 
-export type SourceProductSnapshot = {
-  sourceProductId: string
-  sourceProductCode: string
-  sourceProductName: string
-  sourceProductVersion: string
-  sourceSpecValue?: string
-}
+export type OrderItemUploadedFile = OrderLineUploadedFile
 
-export type OrderItemUploadedFile = {
-  id: string
-  name: string
-  url: string
-}
-
-export type OrderFinanceTransaction = {
-  id: string
-  type: OrderFinanceTransactionType
-  amount: number
-  occurredAt: string
-  note?: string
-}
-
-export type OrderFinanceInfo = {
-  dealPrice?: number
-  depositAmount?: number
-  balanceAmount?: number
-  invoiced?: boolean
-  remark?: string
-  transactions: OrderFinanceTransaction[]
-}
-
-export type OrderItemActualRequirements = {
-  material?: string
-  process?: string
-  sizeNote?: string
-  engraveText?: string
+export type OrderItemActualRequirements = OrderLineActualRequirements & {
   engraveImageFiles?: OrderItemUploadedFile[]
   engravePltFiles?: OrderItemUploadedFile[]
-  specialNotes?: string[]
-  remark?: string
 }
 
-export type OrderItemDesignInfo = {
-  designStatus?: string
-  assignedDesigner?: string
-  requiresRemodeling?: boolean
-  designDeadline?: string
-  designNote?: string
-}
+export type OrderItemDesignInfo = OrderLineDesignInfo
 
-export type OrderItemOutsourceInfo = {
-  outsourceStatus?: string
-  supplierName?: string
-  plannedDeliveryDate?: string
-  outsourceNote?: string
-}
+export type OrderItemOutsourceInfo = OrderLineOutsourceInfo
 
-export type OrderItemFactoryFeedback = {
-  factoryStatus?: string
-  returnedWeight?: string
-  qualityResult?: string
-  factoryNote?: string
-}
+export type OrderItemFactoryFeedback = OrderLineProductionInfo
 
-export type OrderItem = {
-  id: string
-  name: string
+export type OrderItem = Omit<OrderLine, 'actualRequirements' | 'designInfo' | 'outsourceInfo' | 'productionInfo' | 'quote'> & {
   itemSku: string
-  quantity: number
-  status: string
-  isReferencedProduct: boolean
-  sourceProduct?: SourceProductSnapshot
-  selectedSpecValue?: string
-  selectedSpecSnapshot?: ProductSpecRow
-  selectedMaterial?: string
-  selectedProcess?: string
-  selectedSpecialOptions?: string[]
   actualRequirements?: OrderItemActualRequirements
   designInfo?: OrderItemDesignInfo
   outsourceInfo?: OrderItemOutsourceInfo
   factoryFeedback?: OrderItemFactoryFeedback
   quote?: QuoteResult
-  manualAdjustment?: number
-  manualAdjustmentReason?: string
-  finalDisplayQuote?: number
+  priority?: OrderPriority | OrderLinePriority
+  selectedSpecSnapshot?: ProductSpecRow
 }
 
-export type TimelineRecordType =
-  | 'order_created'
-  | 'product_referenced'
-  | 'spec_changed'
-  | 'quote_recalculated'
-  | 'status_changed'
-  | 'task_created'
-  | 'task_updated'
-  | 'task_completed'
-  | 'remark_updated'
-
-export type TimelineRecord = {
-  id: string
-  orderId: string
-  type: TimelineRecordType
-  title: string
-  description?: string
-  actorName: string
-  createdAt: string
-  relatedTaskId?: string
-  relatedOrderItemId?: string
-}
+export type LegacyTimelineRecord = TimelineRecord
 
 export type Order = {
   id: string
   orderNo: string
+  transactionNo?: string
   platformOrderNo?: string
   orderType: string
   ownerName: string
@@ -147,15 +101,23 @@ export type Order = {
   customerAddress?: string
   customerRemark?: string
   status: OrderStatus
+  aggregateStatus?: TransactionAggregateStatus
   priority: OrderPriority
   riskTags: string[]
   promisedDate?: string
   expectedDate?: string
   plannedDate?: string
   paymentDate?: string
+  paymentAt?: string
+  customerId?: string
+  recipientName?: string
+  recipientPhone?: string
+  recipientAddress?: string
   finance?: OrderFinanceInfo
   items: OrderItem[]
+  orderLineCount?: number
+  orderLines?: OrderLine[]
   remark?: string
   latestActivityAt?: string
-  timeline: TimelineRecord[]
+  timeline: LegacyTimelineRecord[]
 }

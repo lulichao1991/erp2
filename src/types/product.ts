@@ -79,8 +79,13 @@ export type ProductReferenceRecordStatus = 'referenced' | 'adjusted' | 'closed'
 
 export type ProductReferenceRecord = {
   id: string
+  transactionId?: string
+  transactionNo?: string
+  orderLineId?: string
+  orderLineName?: string
   orderId: string
   orderNo: string
+  customerId?: string
   customerName: string
   orderItemName: string
   sourceVersion: string
