@@ -1,5 +1,5 @@
 import { mockProducts } from '@/mocks/products'
-import type { Order } from '@/types/order'
+import type { Order, OrderLine, TransactionAggregateStatus, TransactionRecord } from '@/types/order'
 import { buildQuoteResult } from '@/utils/quote/buildQuoteResult'
 
 const ringProduct = mockProducts[0]
@@ -361,3 +361,102 @@ export const mockOrders: Order[] = [
     ]
   }
 ]
+
+const aggregateStatusMap: Record<string, TransactionAggregateStatus> = {
+  draft: 'draft',
+  pending_confirm: 'in_progress',
+  pending_design: 'in_progress',
+  pending_production_prep: 'in_progress',
+  pending_shipping: 'partially_shipped',
+  after_sales: 'after_sales',
+  completed: 'completed',
+  cancelled: 'cancelled'
+}
+
+const customerIdMap: Record<string, string> = {
+  '林小姐': 'customer-lin-001',
+  '王先生': 'customer-wang-001'
+}
+
+const mapOrderItemToOrderLine = (order: Order, item: Order['items'][number], index: number): OrderLine => ({
+  id: item.id,
+  lineNo: index + 1,
+  lineCode: item.itemSku || `${order.orderNo}-LINE-${String(index + 1).padStart(2, '0')}`,
+  transactionId: order.id,
+  customerId: order.customerId || customerIdMap[order.customerName || ''],
+  name: item.name,
+  category: item.sourceProduct?.category,
+  quantity: item.quantity,
+  status: item.status,
+  currentOwner: order.ownerName,
+  priority: item.priority || order.priority,
+  isReferencedProduct: item.isReferencedProduct,
+  productId: item.sourceProduct?.sourceProductId,
+  sourceProduct: item.sourceProduct
+    ? {
+        ...item.sourceProduct,
+        category: item.sourceProduct.category,
+        defaultMaterial: item.selectedMaterial,
+        defaultProcess: item.selectedProcess,
+        snapshotAt: order.paymentDate || order.registeredAt
+      }
+    : undefined,
+  selectedSpecValue: item.selectedSpecValue,
+  selectedSpecSnapshot: item.selectedSpecSnapshot,
+  selectedMaterial: item.selectedMaterial,
+  selectedProcess: item.selectedProcess,
+  selectedSpecialOptions: item.selectedSpecialOptions,
+  actualRequirements: item.actualRequirements,
+  designInfo: item.designInfo,
+  outsourceInfo: item.outsourceInfo,
+  productionInfo: item.factoryFeedback,
+  quote: item.quote,
+  expectedDate: order.expectedDate,
+  promisedDate: order.promisedDate,
+  itemSku: item.itemSku,
+  manualAdjustment: item.manualAdjustment,
+  manualAdjustmentReason: item.manualAdjustmentReason,
+  finalDisplayQuote: item.finalDisplayQuote
+})
+
+export const mockOrderLines: OrderLine[] = mockOrders.flatMap((order) =>
+  order.items.map((item, index) => mapOrderItemToOrderLine(order, item, index))
+)
+
+export const mockTransactionRecords: TransactionRecord[] = mockOrders.map((order) => {
+  const orderLines = order.items.map((item, index) => mapOrderItemToOrderLine(order, item, index))
+
+  return {
+    id: order.id,
+    transactionNo: order.transactionNo || order.orderNo,
+    platformOrderNo: order.platformOrderNo,
+    sourceChannel: order.sourceChannel || 'other',
+    customerId: order.customerId || customerIdMap[order.customerName || ''],
+    orderType: order.orderType,
+    ownerName: order.ownerName,
+    recipientName: order.recipientName || order.customerName,
+    recipientPhone: order.recipientPhone || order.customerPhone,
+    recipientAddress: order.recipientAddress || order.customerAddress,
+    paymentAt: order.paymentAt || order.paymentDate,
+    expectedDate: order.expectedDate,
+    promisedDate: order.promisedDate,
+    riskTags: order.riskTags,
+    remark: order.remark,
+    aggregateStatus: order.aggregateStatus || aggregateStatusMap[order.status] || 'in_progress',
+    orderLineCount: order.orderLineCount || orderLines.length,
+    orderLines,
+    finance: order.finance,
+    latestActivityAt: order.latestActivityAt,
+    timeline: order.timeline.map((record) => ({
+      id: record.id,
+      transactionId: order.id,
+      type: record.type,
+      title: record.title,
+      description: record.description,
+      actorName: record.actorName,
+      createdAt: record.createdAt,
+      relatedTaskId: record.relatedTaskId,
+      relatedOrderLineId: record.relatedOrderItemId
+    }))
+  }
+})

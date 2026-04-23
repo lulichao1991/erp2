@@ -105,8 +105,13 @@ export const mockProducts: Product[] = [
     referenceRecords: [
       {
         id: 'ref-ring-001',
+        transactionId: 'o-202604-001',
+        transactionNo: 'SO-202604-001',
+        orderLineId: 'oi-ring-001',
+        orderLineName: '山形素圈戒指',
         orderId: 'o-202604-001',
         orderNo: 'SO-202604-001',
+        customerId: 'customer-lin-001',
         customerName: '林小姐',
         orderItemName: '山形素圈戒指',
         sourceVersion: 'v3',
@@ -117,8 +122,13 @@ export const mockProducts: Product[] = [
       },
       {
         id: 'ref-ring-002',
+        transactionId: 'o-202603-118',
+        transactionNo: 'SO-202603-118',
+        orderLineId: 'oi-ring-118',
+        orderLineName: '山形纪念戒',
         orderId: 'o-202603-118',
         orderNo: 'SO-202603-118',
+        customerId: 'customer-zhao-001',
         customerName: '赵女士',
         orderItemName: '山形纪念戒',
         sourceVersion: 'v2',
@@ -251,8 +261,13 @@ export const mockProducts: Product[] = [
     referenceRecords: [
       {
         id: 'ref-pendant-001',
+        transactionId: 'o-202604-001',
+        transactionNo: 'SO-202604-001',
+        orderLineId: 'oi-pendant-001',
+        orderLineName: '如意吊坠',
         orderId: 'o-202604-001',
         orderNo: 'SO-202604-001',
+        customerId: 'customer-lin-001',
         customerName: '林小姐',
         orderItemName: '如意吊坠',
         sourceVersion: 'v2',
