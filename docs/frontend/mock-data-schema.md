@@ -1,5 +1,5 @@
 ~~~md
-# 首轮前端 Mock 数据结构草案（订单中心 + 产品管理）
+# 首轮前端 Mock 数据结构草案（商品任务中心 + 产品管理）
 
 ## 1. 文档目标
 本文件用于统一首轮前端 mock 数据结构，避免 AI / 前端在开发过程中随意发明字段名、对象关系和计算结果结构。
@@ -7,7 +7,7 @@
 当前 mock 数据结构必须服务于以下首轮主链路：
 
 **产品维护（含规格明细与固定加价规则）  
-→ 订单引用产品  
+→ 商品任务引用产品  
 → 选择规格  
 → 自动带出规格参数  
 → 自动带出基础价格  
@@ -32,6 +32,8 @@
 ### 2.2 字段语义必须稳定
 以下字段的语义首轮禁止随意改动：
 
+- `transactionNo`
+- `lineCode`
 - `sourceProductId`
 - `sourceProductVersion`
 - `selectedSpecValue`
@@ -51,19 +53,145 @@
 ### 2.3 对象关系必须明确
 首轮至少要分清这些对象：
 
+- `Customer`
+- `TransactionRecord`
+- `OrderLine`
 - `Product`
 - `ProductSpecRow`
 - `ProductPriceRule`
-- `Order`
-- `OrderItem`
-- `SourceProductSnapshot`
+- `ProductSnapshot`
+- `LogisticsRecord`
+- `AfterSalesCase`
 - `QuoteResult`
 
-不要把产品模板和订单商品混成一个对象。
+不要把产品模板、交易公共信息和单件商品任务混成一个对象。
 
 ---
 
-## 3. Product（产品模板）
+## 3. Customer（客户主档）
+
+```ts
+type CustomerTag =
+  | 'new'
+  | 'returning'
+  | 'vip'
+  | 'high_value'
+  | 'after_sales_sensitive'
+  | 'blacklist_watch'
+  | 'other'
+
+type CustomerChannel =
+  | 'taobao'
+  | 'tmall'
+  | 'xiaohongshu'
+  | 'wechat'
+  | 'offline'
+  | 'other'
+
+type Customer = {
+  id: string
+
+  name?: string
+  phone?: string
+  wechat?: string
+
+  defaultRecipientName?: string
+  defaultRecipientPhone?: string
+  defaultRecipientAddress?: string
+
+  sourceChannels: CustomerChannel[]
+  tags: CustomerTag[]
+
+  remark?: string
+
+  firstTransactionAt?: string
+  lastTransactionAt?: string
+
+  totalTransactionCount: number
+  totalOrderLineCount: number
+  totalAfterSalesCount: number
+}
+~~~
+
+说明：
+
+- 客户是长期沉淀对象
+- 首轮前端可以先只做轻量 mock，不要求立刻有完整客户中心页面
+
+------
+
+## 4. TransactionRecord（交易记录）
+
+```ts
+type TransactionOrderType =
+  | 'semi_custom'
+  | 'full_custom'
+  | 'spot_goods'
+  | 'internal'
+
+type TransactionSourceChannel =
+  | 'taobao'
+  | 'tmall'
+  | 'xiaohongshu'
+  | 'wechat'
+  | 'offline'
+  | 'other'
+
+type TransactionAggregateStatus =
+  | 'draft'
+  | 'in_progress'
+  | 'partially_shipped'
+  | 'completed'
+  | 'after_sales'
+  | 'exception'
+  | 'cancelled'
+
+type TransactionRecord = {
+  id: string
+
+  transactionNo: string
+  platformOrderNo?: string
+
+  sourceChannel: TransactionSourceChannel
+  shopName?: string
+
+  customerId?: string
+
+  orderType: TransactionOrderType
+  ownerName: string
+
+  recipientName?: string
+  recipientPhone?: string
+  recipientAddress?: string
+
+  paymentAt?: string
+  expectedDate?: string
+  promisedDate?: string
+
+  riskTags: string[]
+  remark?: string
+
+  /**
+   * 仅用于整单聚合展示，不作为主流程驱动状态
+   */
+  aggregateStatus: TransactionAggregateStatus
+
+  /**
+   * 冗余字段，便于列表页直接显示
+   */
+  orderLineCount: number
+}
+```
+
+说明：
+
+- 交易记录保存一次购买中的公共信息
+- 交易记录不是系统真正的主操作对象
+- 多件商品同单购买时，应拆为多条 `OrderLine`
+
+------
+
+## 5. Product（产品模板）
 
 ```ts
 type ProductStatus = 'draft' | 'enabled' | 'disabled'
@@ -113,27 +241,11 @@ type Product = {
   productionReference: ProductProductionReference
   assets: ProductAssets
 }
-~~~
+```
 
 ------
 
-## 4. ProductSpecRow（产品规格明细）
-
-一个产品可以有多条规格行。
-
-适用示例：
-
-### 戒指
-
-- 10号
-- 12号
-- 16号
-
-### 吊坠
-
-- 小号
-- 中号
-- 大号
+## 6. ProductSpecRow（产品规格明细）
 
 ```ts
 type ProductSpecRowStatus = 'enabled' | 'disabled'
@@ -156,9 +268,7 @@ type ProductSpecRow = {
 
 ------
 
-## 5. ProductSizeField（规格参数字段）
-
-为了兼容不同品类，首轮建议规格参数统一用数组表达，而不是每种品类单独换 schema。
+## 7. ProductSizeField（规格参数字段）
 
 ```ts
 type ProductSizeField = {
@@ -192,9 +302,7 @@ type ProductSizeField = {
 
 ------
 
-## 6. ProductPriceRule（固定加价规则）
-
-首轮只支持固定加价规则。
+## 8. ProductPriceRule（固定加价规则）
 
 ```ts
 type ProductPriceRuleType = 'material' | 'process' | 'special' | 'other'
@@ -212,21 +320,9 @@ type ProductPriceRule = {
 }
 ```
 
-### 示例
-
-```ts
-[
-  { id: 'pr-1', productId: 'p-ring-1', type: 'material', ruleKey: '18K金', delta: 300, enabled: true },
-  { id: 'pr-2', productId: 'p-ring-1', type: 'process', ruleKey: '微镶', delta: 200, enabled: true },
-  { id: 'pr-3', productId: 'p-ring-1', type: 'special', ruleKey: '刻字', delta: 50, enabled: true }
-]
-```
-
 ------
 
-## 7. ProductCustomRules（产品定制规则）
-
-用于产品详情页和来源产品详情抽屉中展示“模板规则”。
+## 9. ProductCustomRules（产品定制规则）
 
 ```ts
 type ProductCustomRules = {
@@ -242,9 +338,7 @@ type ProductCustomRules = {
 
 ------
 
-## 8. ProductProductionReference（产品生产参考）
-
-用于产品详情页和来源产品抽屉展示。
+## 10. ProductProductionReference（产品生产参考）
 
 ```ts
 type ProductProductionReference = {
@@ -258,9 +352,7 @@ type ProductProductionReference = {
 
 ------
 
-## 9. ProductAssets（产品文件与图片）
-
-首轮只做展示结构，不强调上传能力。
+## 11. ProductAssets（产品文件与图片）
 
 ```ts
 type ProductAssetFile = {
@@ -282,43 +374,77 @@ type ProductAssets = {
 
 ------
 
-## 10. Order（订单）
+## 12. ProductSnapshot（来源产品快照）
 
 ```ts
-type Order = {
-  id: string
-  orderNo: string
-  platformOrderNo?: string
+type ProductSnapshot = {
+  sourceProductId: string
+  sourceProductCode: string
+  sourceProductName: string
+  sourceProductVersion: string
 
-  customerName?: string
-  customerPhone?: string
+  category?: string
+  sourceSpecValue?: string
 
-  status: string
-  riskTags: string[]
+  defaultMaterial?: string
+  defaultProcess?: string
 
-  promisedDate?: string
-  expectedDate?: string
-
-  items: OrderItem[]
+  snapshotAt: string
 }
 ```
 
+说明：
+
+- 用于商品任务与来源产品模板的关系显示和核对
+- 首轮先保留最关键的来源关系信息
+- 后续如果需要，可扩展更多快照内容
+
 ------
 
-## 11. OrderItem（订单商品）
+## 13. OrderLine（商品任务）
 
-订单商品是业务实例，不等于产品模板。
+商品任务是系统真正的业务执行对象，不等于产品模板，也不等于交易记录。
+
+一件商品对应一条独立商品任务。
+同一次交易中的多个商品任务可以分别推进规格确认、设计、委外、生产、发货和售后。
 
 ```ts
-type OrderItem = {
+type OrderLinePriority = 'normal' | 'urgent' | 'vip'
+
+type OrderLineStatus =
+  | 'draft'
+  | 'pending_confirm'
+  | 'pending_measurement'
+  | 'pending_design'
+  | 'designing'
+  | 'pending_outsource'
+  | 'in_production'
+  | 'pending_factory_feedback'
+  | 'pending_shipment'
+  | 'shipped'
+  | 'after_sales'
+  | 'completed'
+  | 'cancelled'
+
+type OrderLine = {
   id: string
+  lineNo: number
+  lineCode: string
+
+  transactionId: string
+  customerId?: string
+
   name: string
+  category?: 'ring' | 'pendant' | 'necklace' | 'earring' | 'bracelet' | 'other'
   quantity: number
-  status: string
+
+  status: OrderLineStatus
+  currentOwner?: string
+  priority?: OrderLinePriority
 
   isReferencedProduct: boolean
-
-  sourceProduct?: SourceProductSnapshot
+  productId?: string
+  sourceProduct?: ProductSnapshot
 
   selectedSpecValue?: string
   selectedSpecSnapshot?: ProductSpecRow
@@ -327,20 +453,25 @@ type OrderItem = {
   selectedProcess?: string
   selectedSpecialOptions?: string[]
 
-  actualRequirements?: OrderItemActualRequirements
+  actualRequirements?: OrderLineActualRequirements
+  designInfo?: OrderLineDesignInfo
+  outsourceInfo?: OrderLineOutsourceInfo
+  productionInfo?: OrderLineProductionInfo
 
   quote?: QuoteResult
+
+  expectedDate?: string
+  promisedDate?: string
+  finishedAt?: string
 }
 ```
 
 ------
 
-## 12. OrderItemActualRequirements（订单实际需求）
-
-订单商品可以在模板基础上继续改。
+## 14. OrderLineActualRequirements（商品任务实际需求）
 
 ```ts
-type OrderItemActualRequirements = {
+type OrderLineActualRequirements = {
   material?: string
   process?: string
   sizeNote?: string
@@ -350,33 +481,191 @@ type OrderItemActualRequirements = {
 }
 ```
 
+说明：
+
+- 商品任务可以在来源模板基础上继续改
+- 这一层记录的是“这次实际做什么”，不是模板默认值
+
 ------
 
-## 13. SourceProductSnapshot（来源产品快照）
-
-用于订单商品与来源产品的关系显示和核对。
+## 15. OrderLineDesignInfo（设计建模信息）
 
 ```ts
-type SourceProductSnapshot = {
-  sourceProductId: string
-  sourceProductCode: string
-  sourceProductName: string
-  sourceProductVersion: string
+type OrderLineDesignStatus =
+  | 'not_required'
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'delivered'
+  | 'rework'
 
-  sourceSpecValue?: string
+type OrderLineDesignInfo = {
+  designStatus?: OrderLineDesignStatus
+  assignedDesigner?: string
+  requiresRemodeling?: boolean
+  designDeadline?: string
+  designNote?: string
+
+  modelingFileUrl?: string
+  waxFileUrl?: string
+  waxFileSentAt?: string
 }
 ```
 
-### 说明
+------
 
-首轮先保留最关键的来源关系信息。
-后续如果需要，可以扩展更多快照内容。
+## 16. OrderLineOutsourceInfo（委外 / 跟单信息）
+
+```ts
+type OrderLineOutsourceStatus =
+  | 'not_started'
+  | 'ordered'
+  | 'in_progress'
+  | 'delivered'
+  | 'delayed'
+  | 'cancelled'
+
+type OrderLineOutsourceInfo = {
+  outsourceStatus?: OrderLineOutsourceStatus
+  supplierName?: string
+  plannedDeliveryDate?: string
+  outsourceNote?: string
+
+  placedAt?: string
+  factoryName?: string
+  factorySku?: string
+}
+```
 
 ------
 
-## 14. QuoteResult（报价结果）
+## 17. OrderLineProductionInfo（工厂回传 / 生产信息）
 
-首轮系统报价结果统一用这个对象表达。
+```ts
+type OrderLineProductionStatus =
+  | 'pending'
+  | 'in_production'
+  | 'quality_check'
+  | 'completed'
+  | 'shipped'
+  | 'exception'
+
+type StoneDetail = {
+  stoneType?: string
+  quantity?: number
+  totalWeight?: string
+  unitPrice?: number
+  totalAmount?: number
+  unit?: string
+}
+
+type LaborDetail = {
+  name: string
+  amount: number
+  note?: string
+}
+
+type OrderLineProductionInfo = {
+  factoryStatus?: OrderLineProductionStatus
+
+  actualMaterial?: string
+  grossWeight?: string
+  netWeight?: string
+
+  mainStone?: StoneDetail
+  sideStone?: StoneDetail
+
+  laborDetails?: LaborDetail[]
+
+  shippedAt?: string
+  qualityResult?: string
+  factoryNote?: string
+}
+```
+
+------
+
+## 18. LogisticsRecord（物流记录）
+
+```ts
+type LogisticsType =
+  | 'measurement_tool'
+  | 'goods'
+  | 'after_sales'
+  | 'other'
+
+type LogisticsDirection = 'outbound' | 'return'
+
+type LogisticsRecord = {
+  id: string
+
+  transactionId: string
+  orderLineId: string
+
+  logisticsType: LogisticsType
+  direction: LogisticsDirection
+
+  company?: string
+  trackingNo?: string
+
+  shippedAt?: string
+  signedAt?: string
+  remark?: string
+}
+```
+
+说明：
+
+- 物流记录默认关联商品任务
+- 交易记录页只做汇总展示与统一入口
+- 支持同一交易中的多个商品任务分开发货
+
+------
+
+## 19. AfterSalesCase（售后记录）
+
+```ts
+type AfterSalesType =
+  | 'resize'
+  | 'repair'
+  | 'repolish'
+  | 'remake'
+  | 'resend'
+  | 'other'
+
+type AfterSalesStatus =
+  | 'open'
+  | 'processing'
+  | 'waiting_return'
+  | 'resolved'
+  | 'closed'
+
+type AfterSalesCase = {
+  id: string
+
+  transactionId: string
+  orderLineId: string
+  customerId?: string
+
+  type: AfterSalesType
+  reason: string
+  status: AfterSalesStatus
+
+  responsibleParty?: string
+  createdAt: string
+  closedAt?: string
+  remark?: string
+}
+```
+
+说明：
+
+- 售后记录默认关联商品任务
+- 支持同一交易中的单件商品独立进入售后
+
+------
+
+## 20. QuoteResult（报价结果）
 
 ```ts
 type QuoteWarningCode =
@@ -407,19 +696,19 @@ type QuoteResult = {
 
 ------
 
-## 15. 自动报价计算规则
+## 21. 自动报价计算规则
 
 首轮固定使用下面这条规则：
 
 **系统参考报价 = 规格基础价 + 所有生效固定加价之和**
 
-### 15.1 规格基础价来源
+### 21.1 规格基础价来源
 
 - 当前选中的 `selectedSpecSnapshot.basePrice`
 
-### 15.2 附加价来源
+### 21.2 附加价来源
 
-根据当前订单商品已选项匹配产品规则：
+根据当前商品任务已选项匹配产品规则：
 
 - `selectedMaterial`
 - `selectedProcess`
@@ -427,7 +716,7 @@ type QuoteResult = {
 
 与 `ProductPriceRule` 匹配。
 
-### 15.3 警告场景
+### 21.3 警告场景
 
 首轮至少支持这几种 warning：
 
@@ -445,7 +734,7 @@ type QuoteResult = {
 
 ------
 
-## 16. 戒指 mock 示例
+## 22. 戒指 mock 示例
 
 ```ts
 const ringProduct: Product = {
@@ -547,7 +836,7 @@ const ringProduct: Product = {
 
 ------
 
-## 17. 吊坠 mock 示例
+## 23. 吊坠 mock 示例
 
 ```ts
 const pendantProduct: Product = {
@@ -646,23 +935,87 @@ const pendantProduct: Product = {
 
 ------
 
-## 18. 订单商品 mock 示例
-
-### 18.1 戒指订单商品
+## 24. 客户 mock 示例
 
 ```ts
-const ringOrderItem: OrderItem = {
-  id: 'oi-001',
+const customerMock: Customer = {
+  id: 'c-001',
+  name: '张三',
+  phone: '13800000000',
+  wechat: 'zhangsan001',
+  defaultRecipientName: '张三',
+  defaultRecipientPhone: '13800000000',
+  defaultRecipientAddress: '上海市浦东新区...',
+  sourceChannels: ['taobao'],
+  tags: ['returning'],
+  remark: '老客，沟通顺畅',
+  firstTransactionAt: '2026-03-01',
+  lastTransactionAt: '2026-04-21',
+  totalTransactionCount: 2,
+  totalOrderLineCount: 3,
+  totalAfterSalesCount: 0
+}
+```
+
+------
+
+## 25. 交易记录 mock 示例
+
+```ts
+const transactionMock: TransactionRecord = {
+  id: 't-001',
+  transactionNo: 'TRX-20260421-00128',
+  platformOrderNo: 'TB-8899112233',
+  sourceChannel: 'taobao',
+  shopName: '淘宝旗舰店',
+  customerId: 'c-001',
+  orderType: 'semi_custom',
+  ownerName: '客服A',
+  recipientName: '张三',
+  recipientPhone: '13800000000',
+  recipientAddress: '上海市浦东新区...',
+  paymentAt: '2026-04-21',
+  expectedDate: '2026-04-28',
+  promisedDate: '2026-04-30',
+  riskTags: ['交期紧'],
+  remark: '客户希望尽快',
+  aggregateStatus: 'in_progress',
+  orderLineCount: 2
+}
+```
+
+------
+
+## 26. 商品任务 mock 示例
+
+### 26.1 戒指商品任务
+
+```ts
+const ringOrderLine: OrderLine = {
+  id: 'ol-001',
+  lineNo: 1,
+  lineCode: 'TRX-20260421-00128-01',
+  transactionId: 't-001',
+  customerId: 'c-001',
   name: '山形素圈戒指',
+  category: 'ring',
   quantity: 1,
-  status: 'draft',
+  status: 'in_production',
+  currentOwner: '跟单A',
+  priority: 'normal',
   isReferencedProduct: true,
+  productId: 'p-ring-001',
 
   sourceProduct: {
     sourceProductId: 'p-ring-001',
     sourceProductCode: 'PD-RING-001',
     sourceProductName: '山形素圈戒指',
-    sourceProductVersion: 'v3'
+    sourceProductVersion: 'v3',
+    category: 'ring',
+    sourceSpecValue: '16号',
+    defaultMaterial: '足金',
+    defaultProcess: '亮面',
+    snapshotAt: '2026-04-21T10:30:00+08:00'
   },
 
   selectedSpecValue: '16号',
@@ -680,6 +1033,28 @@ const ringOrderItem: OrderItem = {
     remark: '客户要求精细一些'
   },
 
+  designInfo: {
+    designStatus: 'completed',
+    assignedDesigner: '设计A',
+    requiresRemodeling: false,
+    designDeadline: '2026-04-22'
+  },
+
+  outsourceInfo: {
+    outsourceStatus: 'in_progress',
+    supplierName: '工厂A',
+    plannedDeliveryDate: '2026-04-27',
+    factoryName: '工厂A',
+    factorySku: 'SKU-RING-001',
+    placedAt: '2026-04-22'
+  },
+
+  productionInfo: {
+    factoryStatus: 'in_production',
+    actualMaterial: '18K金',
+    factoryNote: '正在生产中'
+  },
+
   quote: {
     basePrice: 1450,
     priceAdjustments: [
@@ -690,25 +1065,41 @@ const ringOrderItem: OrderItem = {
     systemQuote: 2000,
     status: 'ready',
     warnings: []
-  }
+  },
+
+  expectedDate: '2026-04-28',
+  promisedDate: '2026-04-30'
 }
 ```
 
-### 18.2 吊坠订单商品
+### 26.2 吊坠商品任务
 
 ```ts
-const pendantOrderItem: OrderItem = {
-  id: 'oi-002',
+const pendantOrderLine: OrderLine = {
+  id: 'ol-002',
+  lineNo: 2,
+  lineCode: 'TRX-20260421-00128-02',
+  transactionId: 't-001',
+  customerId: 'c-001',
   name: '山形吊坠',
+  category: 'pendant',
   quantity: 1,
-  status: 'draft',
+  status: 'pending_outsource',
+  currentOwner: '跟单A',
+  priority: 'urgent',
   isReferencedProduct: true,
+  productId: 'p-pendant-001',
 
   sourceProduct: {
     sourceProductId: 'p-pendant-001',
     sourceProductCode: 'PD-PENDANT-001',
     sourceProductName: '山形吊坠',
-    sourceProductVersion: 'v2'
+    sourceProductVersion: 'v2',
+    category: 'pendant',
+    sourceSpecValue: '小号',
+    defaultMaterial: '足金',
+    defaultProcess: '亮面',
+    snapshotAt: '2026-04-21T10:35:00+08:00'
   },
 
   selectedSpecValue: '小号',
@@ -734,43 +1125,89 @@ const pendantOrderItem: OrderItem = {
     systemQuote: 1280,
     status: 'ready',
     warnings: []
-  }
+  },
+
+  expectedDate: '2026-04-28',
+  promisedDate: '2026-04-30'
 }
 ```
 
 ------
 
-## 19. 订单 mock 示例
+## 27. 物流 mock 示例
 
 ```ts
-const orderMock: Order = {
-  id: 'o-001',
-  orderNo: 'CO-20260421-00128',
-  platformOrderNo: 'TB-8899112233',
-  customerName: '张三',
-  customerPhone: '13800000000',
-  status: '待下厂',
-  riskTags: ['交期紧'],
-  promisedDate: '2026-04-30',
-  expectedDate: '2026-04-28',
-  items: [ringOrderItem, pendantOrderItem]
+const logisticsMock: LogisticsRecord = {
+  id: 'lg-001',
+  transactionId: 't-001',
+  orderLineId: 'ol-001',
+  logisticsType: 'goods',
+  direction: 'outbound',
+  company: '顺丰',
+  trackingNo: 'SF1234567890',
+  shippedAt: '2026-04-29',
+  remark: '戒指先发'
 }
 ```
 
 ------
 
-## 20. 推荐 mock 数据文件组织方式
+## 28. 售后 mock 示例
+
+```ts
+const afterSalesMock: AfterSalesCase = {
+  id: 'as-001',
+  transactionId: 't-001',
+  orderLineId: 'ol-001',
+  customerId: 'c-001',
+  type: 'resize',
+  reason: '圈号偏小',
+  status: 'processing',
+  responsibleParty: '售后A',
+  createdAt: '2026-05-03',
+  remark: '仅戒指出现售后'
+}
+```
+
+------
+
+## 29. 推荐 mock 数据文件组织方式
 
 建议前端先按下面方式组织：
 
 ```text
 src/
   mocks/
+    customers.ts
+    transactions.ts
+    order-lines.ts
     products.ts
-    orders.ts
+    supporting-records.ts
     quotes.ts
     index.ts
 ```
+
+### customers.ts
+
+放：
+
+- `Customer`
+- 客户样例
+
+### transactions.ts
+
+放：
+
+- `TransactionRecord`
+- 交易记录样例
+
+### order-lines.ts
+
+放：
+
+- `OrderLine`
+- `ProductSnapshot`
+- 商品任务样例
 
 ### products.ts
 
@@ -781,14 +1218,12 @@ src/
 - `ProductPriceRule`
 - 戒指 / 吊坠样例
 
-### orders.ts
+### supporting-records.ts
 
 放：
 
-- `Order`
-- `OrderItem`
-- `SourceProductSnapshot`
-- 订单样例
+- `LogisticsRecord`
+- `AfterSalesCase`
 
 ### quotes.ts
 
@@ -799,7 +1234,7 @@ src/
 
 ------
 
-## 21. 自动报价前端 mock 计算建议
+## 30. 自动报价前端 mock 计算建议
 
 首轮前端可以直接先写一个本地函数：
 
@@ -837,9 +1272,21 @@ function buildQuoteResult(params: {
 
 ------
 
-## 22. 首轮必须跑通的 mock 场景
+## 31. 首轮必须跑通的 mock 场景
 
-### 戒指场景
+### 场景 A：同一交易，两件商品，两条商品任务
+
+- 交易记录：1 条
+- 商品任务：2 条
+  - 戒指 1 条
+  - 吊坠 1 条
+
+结果：
+
+- 商品任务中心显示 2 行
+- 交易记录详情页显示 2 张商品任务卡
+
+### 场景 B：戒指自动带价
 
 - 来源产品：山形素圈戒指
 - 选规格：16号
@@ -853,9 +1300,7 @@ function buildQuoteResult(params: {
 - 自动带出基础价格 1450
 - 自动算出系统参考报价 2000
 
-------
-
-### 吊坠场景
+### 场景 C：吊坠自动带价
 
 - 来源产品：山形吊坠
 - 选规格：小号
@@ -868,9 +1313,29 @@ function buildQuoteResult(params: {
 - 自动带出基础价格 980
 - 自动算出系统参考报价 1280
 
+### 场景 D：同一交易中单件商品分开发货
+
+- 戒指先发
+- 吊坠后发
+
+结果：
+
+- 物流记录按商品任务维度独立存在
+- 交易记录页只做汇总显示
+
+### 场景 E：同一交易中仅一件商品进入售后
+
+- 戒指出现改圈售后
+- 吊坠正常完结
+
+结果：
+
+- 售后记录按商品任务维度独立存在
+- 不影响另一件商品的完成状态
+
 ------
 
-## 23. 首轮 warning 示例
+## 32. 首轮 warning 示例
 
 ### 未选规格
 
@@ -916,27 +1381,37 @@ function buildQuoteResult(params: {
 
 ------
 
-## 24. 首轮验收标准
+## 33. 首轮验收标准
 
-### 24.1 字段结构稳定
+### 33.1 字段结构稳定
 
 前端不再边写边发明字段名。
 
-### 24.2 两条样例能直接驱动 UI
+### 33.2 对象层级明确
+
+前端能明确区分：
+
+- 客户
+- 交易记录
+- 商品任务
+- 产品模板
+
+### 33.3 两条样例能直接驱动 UI
 
 - 戒指
 - 吊坠
 
-### 24.3 能支撑以下页面
+### 33.4 能支撑以下页面
 
-- 产品列表页
+- 商品任务中心
+- 新建交易记录页
+- 交易记录详情页
 - 产品详情页
 - 产品编辑页
-- 订单详情页
 - 产品引用选择器
 - 来源产品详情抽屉
 
-### 24.4 能支撑规格与报价主链路
+### 33.5 能支撑规格与报价主链路
 
 - 引用产品
 - 选规格
@@ -944,3 +1419,35 @@ function buildQuoteResult(params: {
 - 自动带价
 - 显示 warning
 
+### 33.6 能支撑“同单多件分开推进”
+
+- 同一交易中的两件商品显示为两条商品任务
+- 支持不同状态
+- 支持不同物流
+- 支持不同售后
+
+```
+---
+
+## 这版解决了什么
+
+这版最核心地解决了 4 个问题：
+
+第一，把旧的 `Order / OrderItem` 口径，正式改成了  
+**Customer / TransactionRecord / OrderLine**。
+
+第二，把你真实业务里的“同一次购买两件商品，在系统里是两行”落实成了 mock 结构，而不是继续用 `orderMock.items` 的旧思路。你当前旧文档最后还是把两件商品挂在一条 `Order.items` 里。:contentReference[oaicite:2]{index=2}
+
+第三，把物流和售后正式挂到了 `orderLineId` 上，而不是停留在整单占位语义。
+
+第四，让 AI coding 以后再看 mock 文档时，不会继续把“商品任务”误写成“订单里的普通明细”。
+
+到这里，四份关键文档其实已经能统一口径了：
+
+- `README.md`
+- `routes-and-pages.md`
+- `ui-structure.md`
+- `mock-data-schema.md`
+
+下一步最有价值的，是我把这四份文档再整理成一份 **《给 AI coding 的执行版重构清单 v1》**，直接可贴进 Codex/Claude。
+```

@@ -4,10 +4,14 @@
 
 本文档用于说明当前仓库 `docs/frontend` 目录中各文档的作用、优先级与阅读顺序。
 
-当前项目已进入 **Phase 2（业务流转版）**。  
-因此，阅读文档时不要再按“首轮仅做产品管理 + 订单中心静态骨架”的理解方式推进，而应以：
+当前项目中存在两批文档：
 
-**产品中心 → 订单中心 → 任务中心**
+- 第一批：已按当前业务主语统一过口径的文档
+- 第二批：仍保留较强 Phase 2 / 历史整单中心语义的文档
+
+因此，阅读文档时不要再按“首轮仅做产品管理 + 旧整单中心静态骨架”的理解方式推进，而应优先按：
+
+**产品管理 → 商品任务中心 / 交易记录 → 任务中心**
 
 作为当前主链路。
 
@@ -29,109 +33,98 @@
 
 ---
 
-### 第二优先级：Phase 2 核心需求文档
-2. `docs/frontend/phase-2-prd.md`
+### 第二优先级：当前已统一主语的实现文档
+2. `docs/frontend/routes-and-pages.md`
 
 作用：
-- 定义 Phase 2 的总目标
-- 定义当前范围边界
-- 定义三大模块升级方向
-- 定义数据结构草案
-- 定义当前阶段完成标准
+- 定义当前主路由与页面职责
+- 明确 `/orders` 的保留路径与新业务语义
+- 用于约束页面跳转与上下文入口
 
-3. `docs/frontend/order-lifecycle-spec.md`
+3. `docs/frontend/ui-structure.md`
 
 作用：
-- 定义订单状态体系
-- 定义状态切换规则
-- 定义状态下字段编辑边界
-- 定义订单与任务的关系
-- 定义订单时间线记录规则
+- 定义商品任务中心、新建交易记录页、交易记录详情页结构
+- 用于约束区块划分与信息层级
 
-4. `docs/frontend/task-center-prd.md`
+4. `docs/frontend/mock-data-schema.md`
 
 作用：
-- 定义任务中心目标
-- 定义任务分类、任务状态
-- 定义任务页面与字段
-- 定义任务来源规则
-- 定义任务与订单、订单商品的关系
+- 定义 `Customer / TransactionRecord / OrderLine / ProductSnapshot` 等主对象
+- 用于约束 mock 与字段语义
 
-5. `docs/frontend/role-draft.md`
+5. `docs/frontend/handoff.md`
 
 作用：
-- 定义 Phase 2 的角色草案
-- 定义页面可见性草案
-- 定义字段编辑边界草案
-- 为后续权限系统预留口径
+- 记录当前阶段共识、反馈与推进顺序
+- 若与旧文档冲突，优先按当前 handoff 理解
 
-6. `docs/frontend/phase-2-task-board.md`
+6. `docs/frontend/frontend-task-board.md`
 
 作用：
-- 把 Phase 2 需求拆成开发任务清单
-- 定义推荐开发顺序
-- 定义验收与收尾检查点
+- 记录当前首轮推荐开发顺序
+- 用于约束页面与主链路的收口范围
 
-7. `docs/frontend/codex-prompts-phase-2.md`
+7. `docs/frontend/frontend-prd.md`
 
 作用：
-- 给 AI coding 工具提供分阶段执行 prompt
-- 避免 AI 一次性乱改整个工程
-- 强化“先类型、再订单、再任务”的节奏
+- 记录前端 PRD 基础范围
+- 现已按“交易记录 / 商品任务”语义修正，可作为实现参考
 
 ---
 
-## 3. 当前基础文档
+## 3. 历史规划文档
 
-以下文档是 Phase 1 和当前前端基础的重要补充，仍然有价值，但优先级低于 Phase 2 核心文档。
+以下文档仍有参考价值，但保留较强历史 Phase 2 或旧整单中心语义。  
+阅读时应视为**历史规划 / 兼容阅读材料**，不得覆盖前一节已统一主语的文档。
 
-8. `docs/frontend/frontend-prd.md`
-
-作用：
-- 记录更早期的前端 PRD 基础范围
-- 适合了解项目最初页面结构和业务定义
-
-9. `docs/frontend/routes-and-pages.md`
+8. `docs/frontend/phase-2-prd.md`
 
 作用：
-- 记录页面路由与页面职责
-- 用于核对当前路由是否超范围扩展
+- 记录 Phase 2 旧版总体规划
+- 可用于理解项目演进背景，不作为当前一线实现口径
 
-10. `docs/frontend/ui-structure.md`
-
-作用：
-- 记录主要页面的信息结构
-- 用于保持页面布局和区块划分一致
-
-11. `docs/frontend/components-plan.md`
+9. `docs/frontend/order-lifecycle-spec.md`
 
 作用：
-- 记录组件规划
-- 用于判断哪些能力应该抽组件复用
+- 记录旧版订单状态体系与状态边界
+- 当前阅读时需自行映射到“交易记录 / 商品任务”语义
 
-12. `docs/frontend/mock-data-schema.md`
-
-作用：
-- 记录 mock 数据结构
-- 用于保持字段语义一致
-
-13. `docs/frontend/business-rules.md`
+10. `docs/frontend/task-center-prd.md`
 
 作用：
-- 记录业务规则基础口径
-- 用于核对产品、订单、报价等对象的业务定义
+- 记录任务中心目标与任务关系
+- 当前阅读时需避免把“订单”继续视为唯一主操作对象
 
-14. `docs/frontend/frontend-task-board.md`
-
-作用：
-- 记录更早阶段的前端任务拆解
-- 当前可作为参考，但不应覆盖 Phase 2 任务板
-
-15. `docs/frontend/handoff.md`
+11. `docs/frontend/role-draft.md`
 
 作用：
-- 记录当前阶段工作交接信息
-- 若 handoff 与旧文档冲突，应按当前阶段 handoff 为准
+- 记录历史角色与页面可见性草案
+- 可作参考，不作为当前权限实现依据
+
+12. `docs/frontend/phase-2-task-board.md`
+
+作用：
+- 记录 Phase 2 历史任务拆解
+- 只可用于理解演进顺序，不作为当前直接执行清单
+
+13. `docs/frontend/api-adapter-plan.md`
+
+作用：
+- 记录历史 API 适配想法
+- 当前阅读时需结合现有兼容层理解，不可直接当成现状接口契约
+
+14. `docs/frontend/state-management-plan.md`
+
+作用：
+- 记录历史状态管理想法
+- 当前阅读时需把 `Order / OrderItem` 理解为兼容命名
+
+15. 其余历史文档
+
+作用：
+- 如 `codex-prompts-phase-2.md`、`odex-prompts-phase-2.md`、`layout-and-navigation.md`、`file-structure.md`
+- 仅作背景参考，若口径冲突，一律不高于当前主文档
 
 ---
 
@@ -142,15 +135,13 @@
 
 1. `AGENTS.md`
 2. `README.md`
-3. `docs/frontend/phase-2-prd.md`
-4. `docs/frontend/order-lifecycle-spec.md`
-5. `docs/frontend/task-center-prd.md`
-6. `docs/frontend/role-draft.md`
-7. `docs/frontend/phase-2-task-board.md`
-8. `docs/frontend/codex-prompts-phase-2.md`
-9. `docs/frontend/routes-and-pages.md`
-10. `docs/frontend/mock-data-schema.md`
-11. `docs/frontend/handoff.md`
+3. `docs/frontend/routes-and-pages.md`
+4. `docs/frontend/ui-structure.md`
+5. `docs/frontend/mock-data-schema.md`
+6. `docs/frontend/handoff.md`
+7. `docs/frontend/frontend-task-board.md`
+8. `docs/frontend/frontend-prd.md`
+9. 第二批历史规划文档（按需）
 
 ---
 
@@ -158,11 +149,12 @@
 推荐顺序：
 
 1. `AGENTS.md`
-2. 当前要实现对应的 Phase 2 文档
-3. `docs/frontend/mock-data-schema.md`
-4. `docs/frontend/routes-and-pages.md`
-5. `docs/frontend/components-plan.md`
-6. `docs/frontend/handoff.md`
+2. `docs/frontend/routes-and-pages.md`
+3. `docs/frontend/ui-structure.md`
+4. `docs/frontend/mock-data-schema.md`
+5. `docs/frontend/handoff.md`
+6. `docs/frontend/frontend-task-board.md`
+7. 对应专题文档，如 `components-plan.md` / `business-rules.md`
 
 ---
 
@@ -170,11 +162,11 @@
 推荐顺序：
 
 1. `AGENTS.md`
-2. `docs/frontend/phase-2-prd.md`
+2. `docs/frontend/routes-and-pages.md`
 3. `docs/frontend/ui-structure.md`
-4. `docs/frontend/routes-and-pages.md`
-5. `docs/frontend/components-plan.md`
-6. `docs/frontend/role-draft.md`
+4. `docs/frontend/components-plan.md`
+5. `docs/frontend/handoff.md`
+6. 第二批历史规划文档（按需）
 
 ---
 
@@ -182,10 +174,11 @@
 推荐顺序：
 
 1. `AGENTS.md`
-2. `docs/frontend/codex-prompts-phase-2.md`
-3. 当前对应模块的 PRD 文档
-4. `docs/frontend/phase-2-task-board.md`
-5. `docs/frontend/handoff.md`
+2. `docs/frontend/routes-and-pages.md`
+3. `docs/frontend/mock-data-schema.md`
+4. `docs/frontend/handoff.md`
+5. `docs/frontend/frontend-task-board.md`
+6. 当前对应模块专题文档
 
 ---
 
@@ -195,37 +188,37 @@
 
 1. `AGENTS.md`
 2. 当前阶段 `handoff.md`
-3. `docs/frontend/phase-2-prd.md`
-4. `docs/frontend/order-lifecycle-spec.md`
-5. `docs/frontend/task-center-prd.md`
-6. `docs/frontend/role-draft.md`
-7. `docs/frontend/phase-2-task-board.md`
-8. `docs/frontend/codex-prompts-phase-2.md`
-9. `docs/frontend/business-rules.md`
-10. 其他历史文档
+3. `docs/frontend/routes-and-pages.md`
+4. `docs/frontend/ui-structure.md`
+5. `docs/frontend/mock-data-schema.md`
+6. `docs/frontend/frontend-task-board.md`
+7. `docs/frontend/frontend-prd.md`
+8. `docs/frontend/business-rules.md`
+9. `docs/frontend/components-plan.md`
+10. 第二批历史规划文档
 
 ---
 
 ## 6. 当前阶段最容易搞错的地方
 
-### 1. 把项目理解成 Phase 1
+### 1. 把项目理解成旧整单中心模式
 错误理解：
-- 还以为当前只做产品管理和订单静态页面
+- 还以为当前仍以整单为唯一主操作对象
 
 正确理解：
-- 当前已经进入 Phase 2
-- 要开始做订单流转、任务中心、产品档案升级
+- 当前一线文档已统一为“交易记录归组、商品任务执行”
+- `/orders` 只是保留路径，不代表业务主语仍是旧整单中心
 
 ---
 
-### 2. 把订单商品当成产品
+### 2. 把商品任务当成产品
 错误理解：
-- 订单商品和产品详情共用一个对象
+- 商品任务和产品详情共用一个对象
 
 正确理解：
 - 产品 = 模板
-- 订单商品 = 订单里的实例
-- 订单商品必须保留来源产品快照语义
+- 商品任务 = 交易记录里的实例
+- 商品任务必须保留来源产品快照语义
 
 ---
 
@@ -235,11 +228,10 @@
 
 正确理解：
 - 当前只做：
-  - 产品中心升级
-  - 订单中心升级
+  - 产品管理
+  - 商品任务中心 / 交易记录页
   - 任务中心
-  - 首页轻量增强
-  - 角色前端模拟
+  - 其余历史规划只做按需参考
 
 ---
 
@@ -248,7 +240,7 @@
 - 不读 docs，直接大改页面和结构
 
 正确理解：
-- 先读 AGENTS 和 Phase 2 文档
+- 先读 AGENTS 和当前已统一主语的文档
 - 按当前仓库风格做增量修改
 
 ---
@@ -258,14 +250,10 @@
 当前阶段开发顺序固定建议为：
 
 1. 类型与 mock 数据升级
-2. 订单详情页结构升级
-3. 订单状态流转与时间线
-4. 任务中心路由与页面
-5. 从订单创建任务并联动
-6. 产品详情 / 编辑升级
-7. 首页摘要增强
-8. 角色模式显隐
-9. 联调与收尾
+2. 商品任务中心与交易记录页语义升级
+3. 产品详情 / 编辑升级
+4. 任务中心按需接入
+5. 再回头处理第二批历史规划文档
 
 ---
 
@@ -275,4 +263,4 @@
 
 当前最重要的认知只有一句话：
 
-**项目已经进入 Phase 2，当前主链路是：产品中心 → 订单中心 → 任务中心。**
+**当前一线实现文档的主链路是：产品管理 → 商品任务中心 / 交易记录 → 任务中心。**
