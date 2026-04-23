@@ -9,16 +9,40 @@ import {
 } from '@/services/product/productFieldOptions'
 import { createEmptyProduct, getProductList } from '@/services/product/productQueries'
 import { buildQuoteResult } from '@/services/quote/quoteService'
-import type { Order, OrderItem } from '@/types/order'
+import { createTaskDraft, getTaskList } from '@/services/task/taskQueries'
+import { getOrderStatusLabel, getTaskStatusLabel } from '@/services/workflow/workflowMeta'
+import type { Order, OrderItem, OrderStatus, TimelineRecord } from '@/types/order'
 import type { Product } from '@/types/product'
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
+import type { Task, TaskAssigneeRole, TaskType } from '@/types/task'
+
+const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
+const currentUserRoleStorageKey = 'erp-demo-current-role'
+
+const getInitialCurrentUserRole = (): TaskAssigneeRole => {
+  if (typeof window === 'undefined') {
+    return 'operations'
+  }
+
+  const rawValue = window.localStorage.getItem(currentUserRoleStorageKey)
+  if (rawValue === 'customer_service' || rawValue === 'designer' || rawValue === 'operations' || rawValue === 'factory' || rawValue === 'management') {
+    return rawValue
+  }
+
+  return 'operations'
+}
 
 type AppDataContextValue = {
   products: Product[]
   orders: Order[]
+  tasks: Task[]
   productFieldOptions: ProductFieldOptions
+  currentUserRole: TaskAssigneeRole
   getProduct: (productId?: string) => Product | undefined
   getOrder: (orderId?: string) => Order | undefined
+  getTask: (taskId?: string) => Task | undefined
+  getTasksByOrder: (orderId?: string) => Task[]
+  setCurrentUserRole: (role: TaskAssigneeRole) => void
   saveProduct: (payload: Product) => Product
   updateProduct: (productId: string, updater: (current: Product) => Product) => Product | undefined
   createEmptyProduct: () => Product
@@ -27,7 +51,11 @@ type AppDataContextValue = {
   saveGlobalSizeParameterDefinitions: (definitions: ProductSizeParameterDefinition[]) => void
   saveOrder: (payload: Order) => Order
   updateOrder: (orderId: string, updater: (current: Order) => Order) => Order | undefined
+  transitionOrderStatus: (payload: { orderId: string; nextStatus: OrderStatus; reason?: string }) => Order | undefined
   updateOrderItem: (orderId: string, itemId: string, updater: (current: OrderItem) => OrderItem) => Order | undefined
+  removeOrderItem: (payload: { orderId: string; itemId: string }) => Order | undefined
+  createTaskFromOrder: (payload: { orderId: string; type: TaskType; orderItemId?: string; orderItemName?: string }) => Task | undefined
+  updateTask: (taskId: string, updater: (current: Task) => Task) => Task | undefined
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -35,15 +63,27 @@ const AppDataContext = createContext<AppDataContextValue | null>(null)
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(() => getProductList())
   const [orders, setOrders] = useState<Order[]>(() => getOrderList())
+  const [tasks, setTasks] = useState<Task[]>(() => getTaskList())
   const [productFieldOptions, setProductFieldOptions] = useState<ProductFieldOptions>(() => getProductFieldOptions())
+  const [currentUserRole, setCurrentUserRoleState] = useState<TaskAssigneeRole>(() => getInitialCurrentUserRole())
 
   const value = useMemo<AppDataContextValue>(
     () => ({
       products,
       orders,
+      tasks,
       productFieldOptions,
+      currentUserRole,
       getProduct: (productId) => products.find((item) => item.id === productId),
       getOrder: (orderId) => orders.find((item) => item.id === orderId),
+      getTask: (taskId) => tasks.find((item) => item.id === taskId),
+      getTasksByOrder: (orderId) => tasks.filter((item) => item.orderId === orderId),
+      setCurrentUserRole: (role) => {
+        setCurrentUserRoleState(role)
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(currentUserRoleStorageKey, role)
+        }
+      },
       saveProduct: (payload) => {
         setProducts((current) => {
           const exists = current.some((item) => item.id === payload.id)
@@ -92,11 +132,42 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         setOrders((current) => current.map((item) => (item.id === orderId ? next : item)))
         return next
       },
+      transitionOrderStatus: ({ orderId, nextStatus, reason }) => {
+        const order = orders.find((item) => item.id === orderId)
+        if (!order || order.status === nextStatus) {
+          return order
+        }
+
+        const currentTime = formatCurrentTime()
+        const nextOrder: Order = {
+          ...order,
+          status: nextStatus,
+          latestActivityAt: currentTime,
+          timeline: [
+            ...order.timeline,
+            {
+              id: `timeline-status-${orderId}-${currentTime}`,
+              orderId,
+              type: 'status_changed',
+              title: `订单阶段更新为${getOrderStatusLabel(nextStatus)}`,
+              description: reason || `订单阶段已从${getOrderStatusLabel(order.status)}切换为${getOrderStatusLabel(nextStatus)}。`,
+              actorName: '当前用户',
+              createdAt: currentTime
+            }
+          ]
+        }
+
+        setOrders((current) => current.map((item) => (item.id === orderId ? nextOrder : item)))
+        return nextOrder
+      },
       updateOrderItem: (orderId, itemId, updater) => {
         const order = orders.find((item) => item.id === orderId)
         if (!order) {
           return undefined
         }
+
+        const currentTime = formatCurrentTime()
+        const nextTimelineRecords: TimelineRecord[] = []
 
         const nextOrder: Order = {
           ...order,
@@ -104,7 +175,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
             if (item.id !== itemId) {
               return item
             }
-            const nextItem = updater(item)
+            let nextItem = updater(item)
             if (nextItem.isReferencedProduct && nextItem.sourceProduct) {
               const product = products.find((entry) => entry.id === nextItem.sourceProduct?.sourceProductId)
               if (product) {
@@ -118,15 +189,193 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
                 })
               }
             }
+
+            if (!item.isReferencedProduct && nextItem.isReferencedProduct && nextItem.sourceProduct) {
+              nextTimelineRecords.push({
+                id: `timeline-reference-${orderId}-${itemId}-${currentTime}`,
+                orderId,
+                type: 'product_referenced',
+                title: `商品 ${nextItem.name} 已引用来源产品`,
+                description: `来源产品：${nextItem.sourceProduct.sourceProductName} ${nextItem.sourceProduct.sourceProductVersion}`,
+                actorName: '当前用户',
+                createdAt: currentTime,
+                relatedOrderItemId: itemId
+              })
+            }
+
+            if (item.selectedSpecValue !== nextItem.selectedSpecValue && nextItem.selectedSpecValue) {
+              nextTimelineRecords.push({
+                id: `timeline-spec-${orderId}-${itemId}-${currentTime}`,
+                orderId,
+                type: 'spec_changed',
+                title: `商品 ${nextItem.name} 切换规格`,
+                description: `规格已切换为 ${nextItem.selectedSpecValue}。`,
+                actorName: '当前用户',
+                createdAt: currentTime,
+                relatedOrderItemId: itemId
+              })
+            }
+
+            if (item.quote?.systemQuote !== nextItem.quote?.systemQuote && typeof nextItem.quote?.systemQuote === 'number') {
+              nextTimelineRecords.push({
+                id: `timeline-quote-${orderId}-${itemId}-${currentTime}`,
+                orderId,
+                type: 'quote_recalculated',
+                title: `商品 ${nextItem.name} 重算系统参考报价`,
+                description: `当前系统参考报价为 ¥ ${nextItem.quote.systemQuote.toLocaleString('zh-CN')}。`,
+                actorName: '当前用户',
+                createdAt: currentTime,
+                relatedOrderItemId: itemId
+              })
+            }
+
+            if (item.factoryFeedback?.factoryStatus !== nextItem.factoryFeedback?.factoryStatus && nextItem.factoryFeedback?.factoryStatus) {
+              nextTimelineRecords.push({
+                id: `timeline-factory-${orderId}-${itemId}-${currentTime}`,
+                orderId,
+                type: 'remark_updated',
+                title: `商品 ${nextItem.name} 工厂状态更新为${nextItem.factoryFeedback.factoryStatus}`,
+                description: `工厂执行状态已切换为 ${nextItem.factoryFeedback.factoryStatus}。`,
+                actorName: '当前用户',
+                createdAt: currentTime,
+                relatedOrderItemId: itemId
+              })
+            }
+
             return nextItem
           })
         }
 
+        if (nextTimelineRecords.length > 0) {
+          nextOrder.latestActivityAt = currentTime
+          nextOrder.timeline = [...nextOrder.timeline, ...nextTimelineRecords]
+        }
+
         setOrders((current) => current.map((item) => (item.id === orderId ? nextOrder : item)))
         return nextOrder
+      },
+      removeOrderItem: ({ orderId, itemId }) => {
+        const order = orders.find((item) => item.id === orderId)
+        if (!order) {
+          return undefined
+        }
+
+        const targetItem = order.items.find((item) => item.id === itemId)
+        if (!targetItem || order.items.length <= 1) {
+          return order
+        }
+
+        const currentTime = formatCurrentTime()
+        const nextOrder: Order = {
+          ...order,
+          items: order.items.filter((item) => item.id !== itemId),
+          latestActivityAt: currentTime,
+          timeline: [
+            ...order.timeline.filter((record) => record.relatedOrderItemId !== itemId),
+            {
+              id: `timeline-item-removed-${orderId}-${itemId}-${currentTime}`,
+              orderId,
+              type: 'remark_updated',
+              title: `删除订单商品 ${targetItem.name}`,
+              description: '该商品及其关联的订单时间线摘要已从当前订单视图中移除。',
+              actorName: '当前用户',
+              createdAt: currentTime
+            }
+          ]
+        }
+
+        setOrders((current) => current.map((item) => (item.id === orderId ? nextOrder : item)))
+        setTasks((current) => current.filter((task) => !(task.orderId === orderId && task.orderItemId === itemId)))
+        return nextOrder
+      },
+      createTaskFromOrder: ({ orderId, type, orderItemId, orderItemName }) => {
+        const order = orders.find((item) => item.id === orderId)
+        if (!order) {
+          return undefined
+        }
+
+        const nextTask = createTaskDraft({
+          orderId,
+          orderNo: order.orderNo,
+          type,
+          orderItemId,
+          orderItemName
+        })
+
+        const timelineRecord: TimelineRecord = {
+          id: `timeline-task-created-${nextTask.id}`,
+          orderId,
+          type: 'task_created',
+          title: `创建${nextTask.title}`,
+          description: orderItemName ? `已关联订单商品：${orderItemName}` : '已创建订单级任务。',
+          actorName: nextTask.createdBy,
+          createdAt: nextTask.createdAt,
+          relatedTaskId: nextTask.id,
+          relatedOrderItemId: orderItemId
+        }
+
+        setTasks((current) => [...current, nextTask])
+        setOrders((current) =>
+          current.map((item) =>
+            item.id === orderId
+              ? {
+                  ...item,
+                  latestActivityAt: nextTask.createdAt,
+                  timeline: [...item.timeline, timelineRecord]
+                }
+              : item
+          )
+        )
+
+        return nextTask
+      },
+      updateTask: (taskId, updater) => {
+        const found = tasks.find((item) => item.id === taskId)
+        if (!found) {
+          return undefined
+        }
+
+        const currentTime = formatCurrentTime()
+        const updated = updater(found)
+        const nextTask: Task = {
+          ...updated,
+          updatedAt: currentTime,
+          updatedBy: updated.updatedBy || '当前用户',
+          completedAt: updated.status === 'done' ? updated.completedAt || currentTime : undefined
+        }
+
+        const timelineRecord: TimelineRecord = {
+          id: `timeline-task-update-${nextTask.id}-${currentTime}`,
+          orderId: nextTask.orderId,
+          type: nextTask.status === 'done' ? 'task_completed' : 'task_updated',
+          title: nextTask.status === 'done' ? `完成${nextTask.title}` : `更新${nextTask.title}`,
+          description:
+            nextTask.status === 'done'
+              ? `任务已完成，当前责任人：${nextTask.assigneeName || '待分配'}`
+              : `任务状态更新为${getTaskStatusLabel(nextTask.status)}，当前责任人：${nextTask.assigneeName || '待分配'}`,
+          actorName: nextTask.updatedBy,
+          createdAt: currentTime,
+          relatedTaskId: nextTask.id,
+          relatedOrderItemId: nextTask.orderItemId
+        }
+
+        setTasks((current) => current.map((item) => (item.id === taskId ? nextTask : item)))
+        setOrders((current) =>
+          current.map((item) =>
+            item.id === nextTask.orderId
+              ? {
+                  ...item,
+                  latestActivityAt: currentTime,
+                  timeline: [...item.timeline, timelineRecord]
+                }
+              : item
+          )
+        )
+
+        return nextTask
       }
     }),
-    [orders, productFieldOptions, products]
+    [currentUserRole, orders, productFieldOptions, products, tasks]
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

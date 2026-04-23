@@ -478,7 +478,6 @@ export const ProductFieldDictionaryDrawer = ({
   <SideDrawer
     open={open}
     title="字典配置"
-    subtitle="当前先在产品管理里维护业务型字典。mock 阶段使用本机持久化，后续接后端后升级为多人共享字典。"
     onClose={onClose}
   >
     <div className="stack">
@@ -668,7 +667,6 @@ export const ProductTable = ({ products }: { products: Product[] }) => (
 export const ProductHeaderBar = ({ product }: { product: Product }) => (
   <PageHeader
     title="产品详情"
-    subtitle="查看产品模板原始资料、参数配置、价格规则和文件摘要。"
     actions={
       <>
         <Link to={`/products/${product.id}/edit`} className="button primary">
@@ -972,7 +970,6 @@ export const ProductReferenceRecordsDrawer = ({
     <SideDrawer
       open={open}
       title="产品引用记录"
-      subtitle="用于从产品模块回看哪些订单引用了当前模板，并快速核对订单侧是否已调整模板参数。"
       onClose={onClose}
     >
       <div className="stack">
@@ -1038,7 +1035,6 @@ export const ProductVersionHistoryDrawer = ({
   <SideDrawer
     open={open}
     title="产品版本记录"
-    subtitle="按时间查看模板版本演进、更新摘要和相关文件，首轮只做查看态，不做回滚。"
     onClose={onClose}
   >
     <div className="stack">
@@ -1106,7 +1102,6 @@ export const ProductEditHeader = ({
 }) => (
   <PageHeader
     title={mode === 'create' ? '新建产品' : '编辑产品'}
-    subtitle="首轮采用顶部保存区 + 左侧分区导航 + 右侧分区表单，优先把规格明细和固定加价规则维护能力做稳。"
     actions={
       <>
         <span className="topbar-pill">{hasUnsavedChanges ? '有未保存修改' : '已同步到当前页面状态'}</span>

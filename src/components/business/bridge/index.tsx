@@ -64,7 +64,6 @@ export const ProductPickerModal = ({
     <LargeModal
       open={open}
       title="产品引用选择器"
-      subtitle="在订单上下文内完成产品搜索、筛选、预览和确认引用。"
       onClose={onClose}
       footer={
         <>
@@ -253,7 +252,6 @@ export const SourceProductDrawer = ({
     <SideDrawer
       open={open}
       title="来源产品详情"
-      subtitle="用于核对订单商品参数与来源产品模板原始值，不打开订单商品详情。"
       onClose={onClose}
       footer={
         <>

@@ -3,12 +3,22 @@ import type { NavItem } from '@/types/common'
 export const sidebarItems: NavItem[] = [
   { label: '工作台', path: '/', icon: '◌' },
   { label: '订单中心', path: '/orders', icon: '▣' },
-  { label: '产品管理', path: '/products', icon: '◇' }
+  { label: '任务中心', path: '/tasks', icon: '◎' },
+  { label: '产品管理', path: '/products', icon: '◇' },
+  { label: '生产计划', path: '/production-plan', icon: '◍', visibleRoles: ['factory'] }
 ]
 
 export const getModuleLabel = (pathname: string) => {
   if (pathname.startsWith('/orders')) {
     return '订单中心'
+  }
+
+  if (pathname.startsWith('/tasks')) {
+    return '任务中心'
+  }
+
+  if (pathname.startsWith('/production-plan')) {
+    return '生产计划'
   }
 
   if (pathname.startsWith('/products')) {

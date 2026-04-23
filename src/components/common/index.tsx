@@ -6,16 +6,14 @@ export const PageContainer = ({ children }: { children: ReactNode }) => <div cla
 
 type PageHeaderProps = {
   title: string
-  subtitle?: string
   actions?: ReactNode
   className?: string
 }
 
-export const PageHeader = ({ title, subtitle, actions, className }: PageHeaderProps) => (
+export const PageHeader = ({ title, actions, className }: PageHeaderProps) => (
   <div className={cx('page-header', className)}>
     <div>
       <h1 className="page-header-title">{title}</h1>
-      {subtitle ? <p className="page-header-subtitle">{subtitle}</p> : null}
     </div>
     {actions ? <div className="page-header-actions">{actions}</div> : null}
   </div>
@@ -28,14 +26,33 @@ type SectionCardProps = {
   children: ReactNode
   id?: string
   className?: string
+  onHeaderClick?: () => void
+  headerAriaLabel?: string
+  headerExpanded?: boolean
 }
 
-export const SectionCard = ({ title, description, actions, children, id, className }: SectionCardProps) => (
+export const SectionCard = ({ title, description, actions, children, id, className, onHeaderClick, headerAriaLabel, headerExpanded }: SectionCardProps) => (
   <section className={cx('section-card', className)} id={id}>
     <div className="section-card-header">
-      <div>
+      <div
+        className={cx('section-card-heading', onHeaderClick && 'section-card-heading-clickable')}
+        onClick={onHeaderClick}
+        onKeyDown={
+          onHeaderClick
+            ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onHeaderClick()
+                }
+              }
+            : undefined
+        }
+        role={onHeaderClick ? 'button' : undefined}
+        tabIndex={onHeaderClick ? 0 : undefined}
+        aria-label={onHeaderClick ? headerAriaLabel : undefined}
+        aria-expanded={onHeaderClick ? headerExpanded : undefined}
+      >
         <h2 className="section-card-title">{title}</h2>
-        {description ? <p className="text-muted">{description}</p> : null}
       </div>
       {actions}
     </div>
@@ -104,11 +121,11 @@ const tagClassMap: Record<string, string> = {
 export const StatusTag = ({ value }: { value: string }) => {
   const lowered = value.toLowerCase()
   const variant =
-    lowered.includes('启用') || lowered.includes('ready') || lowered.includes('进行中')
+    lowered.includes('启用') || lowered.includes('ready') || lowered.includes('进行中') || lowered.includes('已完成') || lowered.includes('done')
       ? 'enabled'
-      : lowered.includes('草稿') || lowered.includes('待')
+      : lowered.includes('草稿') || lowered.includes('待') || lowered.includes('逾期') || lowered.includes('overdue')
         ? 'draft'
-        : lowered.includes('禁用') || lowered.includes('停用')
+        : lowered.includes('禁用') || lowered.includes('停用') || lowered.includes('取消') || lowered.includes('关闭') || lowered.includes('closed')
           ? 'disabled'
           : lowered.includes('warning')
             ? 'warning'
@@ -221,14 +238,13 @@ export const EmptyState = ({
 
 type OverlayProps = {
   open: boolean
-  title: string
-  subtitle?: string
+  title: ReactNode
   onClose: () => void
   children: ReactNode
   footer?: ReactNode
 }
 
-export const LargeModal = ({ open, title, subtitle, onClose, children, footer }: OverlayProps) => {
+export const LargeModal = ({ open, title, onClose, children, footer }: OverlayProps) => {
   if (!open) {
     return null
   }
@@ -239,8 +255,7 @@ export const LargeModal = ({ open, title, subtitle, onClose, children, footer }:
       <div className="modal-shell" role="dialog" aria-modal="true">
         <div className="modal-header">
           <div>
-            <h2 className="section-card-title">{title}</h2>
-            {subtitle ? <p className="text-muted">{subtitle}</p> : null}
+            {typeof title === 'string' ? <h2 className="section-card-title">{title}</h2> : title}
           </div>
           <button className="button secondary small" onClick={onClose}>
             关闭
@@ -253,7 +268,7 @@ export const LargeModal = ({ open, title, subtitle, onClose, children, footer }:
   )
 }
 
-export const SideDrawer = ({ open, title, subtitle, onClose, children, footer }: OverlayProps) => {
+export const SideDrawer = ({ open, title, onClose, children, footer }: OverlayProps) => {
   if (!open) {
     return null
   }
@@ -264,8 +279,7 @@ export const SideDrawer = ({ open, title, subtitle, onClose, children, footer }:
       <aside className="drawer-shell" role="dialog" aria-modal="true">
         <div className="drawer-header">
           <div>
-            <h2 className="section-card-title">{title}</h2>
-            {subtitle ? <p className="text-muted">{subtitle}</p> : null}
+            {typeof title === 'string' ? <h2 className="section-card-title">{title}</h2> : title}
           </div>
           <button className="button secondary small" onClick={onClose}>
             关闭
@@ -296,7 +310,6 @@ export const ConfirmDialog = ({
   <LargeModal
     open={open}
     title={title}
-    subtitle={description}
     onClose={onClose}
     footer={
       <>

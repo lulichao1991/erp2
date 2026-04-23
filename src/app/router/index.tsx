@@ -8,6 +8,10 @@ import { ProductDetailPage } from '@/pages/products/ProductDetailPage'
 import { ProductEditPage } from '@/pages/products/ProductEditPage'
 import { ProductListPage } from '@/pages/products/ProductListPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { TaskDetailPage } from '@/pages/tasks/TaskDetailPage'
+import { TaskListPage } from '@/pages/tasks/TaskListPage'
+import { ProductionPlanDetailPage } from '@/pages/productionPlan/ProductionPlanDetailPage'
+import { ProductionPlanListPage } from '@/pages/productionPlan/ProductionPlanListPage'
 
 export const AppRouter = () => (
   <Routes>
@@ -16,6 +20,10 @@ export const AppRouter = () => (
       <Route path="/orders" element={<OrderListPage />} />
       <Route path="/orders/new" element={<OrderCreatePage />} />
       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+      <Route path="/tasks" element={<TaskListPage />} />
+      <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+      <Route path="/production-plan" element={<ProductionPlanListPage />} />
+      <Route path="/production-plan/:taskId" element={<ProductionPlanDetailPage />} />
       <Route path="/products" element={<ProductListPage />} />
       <Route path="/products/new" element={<ProductCreatePage />} />
       <Route path="/products/:productId" element={<ProductDetailPage />} />
