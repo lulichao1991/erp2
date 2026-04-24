@@ -933,3 +933,111 @@
 - 权限 / 审批
 
 下一步建议做商品行级售后新增第一版，继续证明同一购买记录下的商品可以独立售后。
+
+---
+
+### 15.9 商品行级新增售后第一版
+
+本轮在商品行详情抽屉的“物流 / 售后摘要”中新增轻量售后创建能力。
+
+新增 / 扩展字段：
+
+- `customerId`
+- `type`: `resize` / `repair` / `repolish` / `remake` / `resend` / `other`
+- `reason`
+- `status`: `open` / `processing` / `waiting_return` / `resolved` / `closed`
+- `responsibleParty`
+- `createdAt`
+- `closedAt`
+- `remark`
+
+兼容保留：
+
+- `refund`
+- `exchange`
+- `in_progress`
+- `note`
+
+实现口径：
+
+- 售后记录 state 独立存在，不存入 `Purchase`
+- 新增售后时，记录默认带当前 `orderLineId`
+- `purchaseId` 只作为归组信息
+- `customerId` 由当前商品行或所属购买记录补充
+- 商品行中心列表、商品行详情抽屉、购买记录详情页都按 `orderLineId` 查找售后
+- 新增售后使用不可变更新追加到售后数组
+- 同时追加一条 `OrderLineLog`，记录“新增售后”
+- 售后原因和备注在抽屉中独立展示，便于区分“售后问题”和“售后处理说明”
+
+当前仍未做：
+
+- 后端持久化
+- 复杂售后中心
+- 售后状态流转限制
+- 权限 / 审批
+- 自动把商品行状态改为“售后中”
+
+下一步建议做工厂协同中心第一版，让工厂只看到被分配给自己的商品行生产任务。
+
+---
+
+### 15.10 商品行基础信息 / 实际需求编辑第一版
+
+本轮将商品行详情抽屉从只读查看，推进到“分区块查看 + 分区块编辑”的第一步。
+
+新增能力：
+
+- 在商品行详情抽屉新增“基础信息 / 实际需求”区块
+- 区块支持编辑、保存、取消
+- 保存后只更新当前商品行
+- `/order-lines` 列表同步更新商品名称、参数摘要、负责人、承诺交期等字段
+- `/purchases/:purchaseId` 购买记录详情页中的当前商品行同步更新
+- 保存后追加一条 `OrderLineLog`
+
+第一版支持编辑字段：
+
+- 商品名称
+- 品类
+- 规格
+- 规格备注
+- 材质
+- 工艺
+- 特殊需求
+- 尺寸备注
+- 刻字 / 印记
+- 客服备注
+- 生产备注
+- 是否加急
+- 是否需要设计
+- 当前负责人
+- 承诺交期
+
+新增 / 扩展字段：
+
+- `OrderLineActualRequirements.specNote`
+
+实现口径：
+
+- 新增 `OrderLineDetailsDraft`
+- 新增 `buildOrderLineDetailsDraft`
+- 新增 `applyOrderLineDetailsDraft`
+- 新增 `updateOrderLineDetailsInRows`
+- 新增 `buildOrderLineDetailsLog`
+- 状态更新仍按 `line.id` 定位当前商品行
+- 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
+- 不直接 mutate mock、rows 数组或 line 对象
+- 不修改 `Product`
+- 不修改来源产品快照字段
+- 不打开财务、工厂回传、完整跟单字段编辑
+
+当前仍未做：
+
+- 后端持久化
+- 具体字段 diff 展示
+- 权限 / 审批
+- 跟单 / 下厂信息编辑
+- 工厂回传编辑
+- 财务字段编辑
+- 物流 / 售后记录编辑和作废
+
+下一步建议做“跟单 / 下厂信息编辑第一版”，继续把商品行从查看页推进为可操作页。

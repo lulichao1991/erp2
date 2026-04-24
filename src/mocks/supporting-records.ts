@@ -23,9 +23,13 @@ export const afterSalesMock: AfterSalesCase[] = [
     orderLineId: 'oi-ring-001',
     purchaseId: 'o-202604-001',
     transactionId: 'o-202604-001',
+    customerId: 'customer-zhang-001',
     type: 'resize',
     status: 'open',
+    reason: '客户反馈戒围可能偏紧',
+    responsibleParty: '王客服',
     createdAt: '2026-04-24 11:20',
+    remark: '张三提前反馈戒围可能偏紧，先在戒指商品行上记录售后预警。',
     note: '张三提前反馈戒围可能偏紧，先在戒指商品行上记录售后预警。'
   }
 ]

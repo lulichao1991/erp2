@@ -9,7 +9,7 @@ import type { OrderLine } from '@/types/order-line'
 import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { QuoteResult } from '@/types/quote'
-import type { LogisticsRecord } from '@/types/supporting-records'
+import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
 import { buildQuoteResult } from '@/utils/quote/buildQuoteResult'
 
 type PurchaseLineRow = {
@@ -304,6 +304,12 @@ const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseA
 
 const getOrderLineStatusLabel = (status?: string) => (status ? orderLineStatusLabelMap[status] || status : '待确认')
 
+const activeAfterSalesStatuses = new Set(['open', 'processing', 'in_progress', 'waiting_return'])
+
+const findCurrentAfterSalesCase = (records: AfterSalesCase[], orderLineId: string) =>
+  records.find((item) => item.orderLineId === orderLineId && item.status && activeAfterSalesStatuses.has(item.status)) ||
+  records.find((item) => item.orderLineId === orderLineId)
+
 const getParameterSummary = (line: OrderLine) =>
   [
     line.selectedSpecValue ? `规格 ${line.selectedSpecValue}` : null,
@@ -397,11 +403,13 @@ export const PurchasePaymentSection = ({ purchase }: { purchase: Purchase }) => 
 export const PurchaseOrderLineTable = ({
   rows,
   onOpenOrderLine,
-  logisticsRecords = logisticsMock
+  logisticsRecords = logisticsMock,
+  afterSalesCases = afterSalesMock
 }: {
   rows: PurchaseLineRow[]
   onOpenOrderLine: (row: PurchaseLineRow) => void
   logisticsRecords?: LogisticsRecord[]
+  afterSalesCases?: AfterSalesCase[]
 }) => (
   <SectionCard
     title="本次商品行列表"
@@ -431,7 +439,7 @@ export const PurchaseOrderLineTable = ({
           <tbody>
             {rows.map(({ line, purchase }) => {
               const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id)
-              const afterSalesCase = afterSalesMock.find((item) => item.orderLineId === line.id && item.status !== 'closed')
+              const afterSalesCase = findCurrentAfterSalesCase(afterSalesCases, line.id)
 
               return (
                 <tr key={line.id}>

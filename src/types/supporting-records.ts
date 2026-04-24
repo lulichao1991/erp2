@@ -19,18 +19,22 @@ export type LogisticsRecord = {
   note?: string
 }
 
-export type AfterSalesCaseType = 'repair' | 'resize' | 'refund' | 'exchange' | 'other'
+export type AfterSalesCaseType = 'resize' | 'repair' | 'repolish' | 'remake' | 'resend' | 'refund' | 'exchange' | 'other'
 
-export type AfterSalesCaseStatus = 'open' | 'in_progress' | 'closed'
+export type AfterSalesCaseStatus = 'open' | 'processing' | 'waiting_return' | 'resolved' | 'closed' | 'in_progress'
 
 export type AfterSalesCase = {
   id: string
   orderLineId: string
   purchaseId?: string
   transactionId?: string
+  customerId?: string
   type?: AfterSalesCaseType
+  reason?: string
   status?: AfterSalesCaseStatus
+  responsibleParty?: string
   createdAt?: string
   closedAt?: string
+  remark?: string
   note?: string
 }

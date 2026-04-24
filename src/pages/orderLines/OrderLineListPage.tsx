@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  addAfterSalesCase,
   addLogisticsRecord,
+  buildOrderLineAfterSalesLog,
+  buildOrderLineDetailsLog,
   buildOrderLineLogisticsLog,
   buildOrderLineStatusLog,
   buildOrderLineRows,
@@ -10,15 +13,18 @@ import {
   OrderLineDetailDrawer,
   OrderLineQuickStats,
   OrderLineTable,
+  updateOrderLineDetailsInRows,
   updateOrderLineStatusInRows,
+  type OrderLineAfterSalesCreateHandler,
   type OrderLineCenterFilters,
+  type OrderLineDetailsUpdateHandler,
   type OrderLineLogisticsCreateHandler,
   type OrderLineStatusUpdateHandler
 } from '@/components/business/orderLine'
 import { PageContainer, PageHeader } from '@/components/common'
-import { logisticsMock, orderLineLogsMock } from '@/mocks'
+import { afterSalesMock, logisticsMock, orderLineLogsMock } from '@/mocks'
 import type { OrderLineLog } from '@/types/order-line'
-import type { LogisticsRecord } from '@/types/supporting-records'
+import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
 
 export const OrderLineListPage = () => {
   const [filters, setFilters] = useState<OrderLineCenterFilters>({
@@ -29,6 +35,7 @@ export const OrderLineListPage = () => {
   const [rows, setRows] = useState(buildOrderLineRows)
   const [logs, setLogs] = useState<OrderLineLog[]>(orderLineLogsMock)
   const [logisticsRecords, setLogisticsRecords] = useState<LogisticsRecord[]>(logisticsMock)
+  const [afterSalesCases, setAfterSalesCases] = useState<AfterSalesCase[]>(afterSalesMock)
   const [selectedLineId, setSelectedLineId] = useState<string>()
   const filteredRows = useMemo(() => filterOrderLineRows(rows, filters), [filters, rows])
   const selectedRow = rows.find(({ line }) => line.id === selectedLineId)
@@ -52,6 +59,25 @@ export const OrderLineListPage = () => {
     }
   }
 
+  const handleAddAfterSales: OrderLineAfterSalesCreateHandler = (record) => {
+    const currentRow = rows.find(({ line }) => line.id === record.orderLineId)
+    setAfterSalesCases((current) => addAfterSalesCase(current, record))
+
+    if (currentRow) {
+      setLogs((current) => [buildOrderLineAfterSalesLog({ line: currentRow.line, purchase: currentRow.purchase, record }), ...current])
+    }
+  }
+
+  const handleUpdateLineDetails: OrderLineDetailsUpdateHandler = (lineId, draft) => {
+    const currentRow = rows.find(({ line }) => line.id === lineId)
+    if (!currentRow) {
+      return
+    }
+
+    setRows((current) => updateOrderLineDetailsInRows(current, lineId, draft))
+    setLogs((current) => [buildOrderLineDetailsLog({ line: currentRow.line, purchase: currentRow.purchase }), ...current])
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -65,18 +91,26 @@ export const OrderLineListPage = () => {
       />
       <p className="text-muted">一行代表一件商品，支持独立推进设计、生产、发货与售后。</p>
       <div className="stack">
-        <OrderLineQuickStats rows={rows} />
+        <OrderLineQuickStats rows={rows} afterSalesCases={afterSalesCases} />
         <OrderLineFilterBar value={filters} onChange={setFilters} />
-        <OrderLineTable rows={filteredRows} logisticsRecords={logisticsRecords} onOpenDetail={(row) => setSelectedLineId(row.line.id)} />
+        <OrderLineTable
+          rows={filteredRows}
+          logisticsRecords={logisticsRecords}
+          afterSalesCases={afterSalesCases}
+          onOpenDetail={(row) => setSelectedLineId(row.line.id)}
+        />
       </div>
       <OrderLineDetailDrawer
         open={Boolean(selectedRow)}
         row={selectedRow}
         onClose={() => setSelectedLineId(undefined)}
         onStatusChange={handleStatusChange}
+        onUpdateLineDetails={handleUpdateLineDetails}
         logs={logs}
         logisticsRecords={logisticsRecords}
+        afterSalesCases={afterSalesCases}
         onAddLogistics={handleAddLogistics}
+        onAddAfterSales={handleAddAfterSales}
       />
     </PageContainer>
   )

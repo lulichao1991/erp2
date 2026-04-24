@@ -56,6 +56,7 @@ export type OrderLineLog = {
 export type OrderLineActualRequirements = {
   material?: string
   process?: string
+  specNote?: string
   sizeNote?: string
   engraveText?: string
   specialNotes?: string[]
