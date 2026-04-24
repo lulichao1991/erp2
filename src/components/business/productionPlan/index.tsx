@@ -73,7 +73,6 @@ export const ProductionPlanSummaryCard = ({
   row,
   taskId,
   taskTitle,
-  orderItemName,
   sourceProductName,
   sourceProductId,
   factoryStatus
@@ -81,7 +80,6 @@ export const ProductionPlanSummaryCard = ({
   row: ProductionPlanRow
   taskId: string
   taskTitle: string
-  orderItemName: string
   sourceProductName: string
   sourceProductId: string
   factoryStatus?: string
@@ -129,12 +127,15 @@ export const ProductionPlanSummaryCard = ({
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">关联商品行</span>
             <strong className="production-plan-trace-value">
-              <Link to="/order-lines">{orderItemName || row.styleName}</Link>
+              <Link to="/order-lines">{row.orderLineName || row.styleName}</Link>
             </strong>
+            <span className="text-caption">{row.orderLineCode}</span>
           </li>
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">购买记录</span>
-            <strong className="production-plan-trace-value">{row.orderNo}</strong>
+            <strong className="production-plan-trace-value">
+              {row.purchaseId ? <Link to={`/purchases/${row.purchaseId}`}>{row.purchaseNo}</Link> : row.purchaseNo}
+            </strong>
           </li>
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">来源产品</span>
@@ -224,7 +225,7 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
       <thead>
         <tr>
           <th>货号</th>
-          <th>款式名称</th>
+          <th>商品行</th>
           <th>来源版本</th>
           <th>品类</th>
           <th>规格</th>
@@ -245,13 +246,15 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
                 <Link to={`/production-plan/${row.taskId}`} className="production-plan-table-link">
                   {row.goodsNo}
                 </Link>
-                <span className="text-caption">{row.orderNo}</span>
+                <span className="text-caption">购买记录 {row.purchaseNo}</span>
               </div>
             </td>
             <td>
               <div className="production-plan-table-primary">
-                <strong>{row.styleName}</strong>
-                <span className="text-caption">{row.sourceProductCode}</span>
+                <Link to="/order-lines" className="production-plan-table-link">
+                  {row.orderLineName || row.styleName}
+                </Link>
+                <span className="text-caption">{row.orderLineCode}</span>
               </div>
             </td>
             <td>
@@ -269,8 +272,16 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
             </td>
             <td>
               <div className="row wrap">
+                <Link to="/order-lines" className="button ghost small">
+                  查看商品行
+                </Link>
+                {row.purchaseId ? (
+                  <Link to={`/purchases/${row.purchaseId}`} className="button ghost small">
+                    查看购买记录
+                  </Link>
+                ) : null}
                 <Link to={`/production-plan/${row.taskId}`} className="button ghost small">
-                  查看详情
+                  生产详情
                 </Link>
               </div>
             </td>

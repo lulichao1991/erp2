@@ -94,14 +94,24 @@ const buildProductionTimeline = (order: Order, task: Task, orderItem: OrderItem)
 
 const buildProductionPlanRow = (task: Task, order: Order, orderItem: OrderItem, sourceProduct: Product): ProductionPlanRow => {
   const stage = getProductionPlanStage(task, orderItem)
+  const purchaseId = order.id
+  const purchaseNo = order.orderNo
+  const orderLineId = orderItem.id
+  const orderLineCode = orderItem.lineCode || orderItem.itemSku || orderItem.id
+  const orderLineName = orderItem.name || task.orderItemName || sourceProduct.name
 
   return {
     taskId: task.id,
-    orderId: order.id,
-    orderNo: order.orderNo,
-    orderItemId: orderItem.id,
+    purchaseId,
+    purchaseNo,
+    orderLineId,
+    orderLineCode,
+    orderLineName,
+    orderId: purchaseId,
+    orderNo: purchaseNo,
+    orderItemId: orderLineId,
     goodsNo: orderItem.itemSku || sourceProduct.code,
-    styleName: orderItem.name || task.orderItemName || sourceProduct.name,
+    styleName: orderLineName,
     sourceProductId: sourceProduct.id,
     sourceProductCode: sourceProduct.code,
     sourceProductVersion: orderItem.sourceProduct?.sourceProductVersion || sourceProduct.version,
@@ -211,8 +221,15 @@ export const buildProductionPlanDetail = ({
     return undefined
   }
 
+  const row = buildProductionPlanRow(task, order, orderItem, sourceProduct)
+
   return {
-    row: buildProductionPlanRow(task, order, orderItem, sourceProduct),
+    purchaseId: row.purchaseId,
+    purchaseNo: row.purchaseNo,
+    orderLineId: row.orderLineId,
+    orderLineCode: row.orderLineCode,
+    orderLineName: row.orderLineName,
+    row,
     task,
     order,
     orderItem,

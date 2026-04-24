@@ -923,19 +923,34 @@ describe('router smoke', () => {
   })
 
   it('renders production plan list route without requiring factory role', () => {
-    renderRoute('/production-plan')
+    const { container } = renderRoute('/production-plan')
 
     expect(screen.getByRole('heading', { name: '工厂生产计划' })).toBeInTheDocument()
     expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
+    expect(screen.getByText('购买记录 SO-202604-001')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '山形戒指' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getByRole('link', { name: '查看商品行' })).toHaveAttribute('href', '/order-lines')
+    expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
+    expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
     expect(screen.queryByText('页面说明')).not.toBeInTheDocument()
   })
 
   it('renders production plan detail route', () => {
-    renderRoute('/production-plan/task-factory-001')
+    const { container } = renderRoute('/production-plan/task-factory-001')
 
     expect(screen.getByRole('heading', { name: '生产任务详情' })).toBeInTheDocument()
     expect(screen.getByText('来源追溯')).toBeInTheDocument()
     expect(screen.getAllByText('RING-SH-016').length).toBeGreaterThan(0)
+    expect(screen.getByText('购买记录')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'SO-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByText('商品行').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: '查看商品行' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看购买记录' })).toBeInTheDocument()
+    expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
+    expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
   it('renders order detail with source product drawer from query', () => {

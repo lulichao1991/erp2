@@ -15,10 +15,16 @@ describe('productionPlanAdapter', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
       taskId: 'task-factory-001',
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'SO-202604-001',
+      orderLineId: 'oi-ring-001',
+      orderLineCode: 'OL-202604-001-01',
+      orderLineName: '山形戒指',
       orderId: 'o-202604-001',
+      orderNo: 'SO-202604-001',
       orderItemId: 'oi-ring-001',
       goodsNo: 'RING-SH-016',
-      styleName: '山形素圈戒指',
+      styleName: '山形戒指',
       sourceProductVersion: 'v3',
       categoryLabel: '戒指',
       quantity: 1,
@@ -68,6 +74,20 @@ describe('productionPlanAdapter', () => {
     })
 
     expect(detail).toBeTruthy()
+    expect(detail).toMatchObject({
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'SO-202604-001',
+      orderLineId: 'oi-ring-001',
+      orderLineCode: 'OL-202604-001-01',
+      orderLineName: '山形戒指'
+    })
+    expect(detail?.row).toMatchObject({
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'SO-202604-001',
+      orderLineId: 'oi-ring-001',
+      orderLineCode: 'OL-202604-001-01',
+      orderLineName: '山形戒指'
+    })
     expect(detail?.fileGroups.map((group) => group.title)).toContain('建模文件')
     expect(detail?.fileGroups.map((group) => group.title)).toContain('刻字 PLT 文件')
     expect(detail?.timeline.length).toBeGreaterThan(0)

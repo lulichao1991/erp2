@@ -107,6 +107,11 @@ export const ProductionPlanDetailPage = () => {
             <button className="button secondary" onClick={() => navigate('/order-lines')}>
               查看商品行
             </button>
+            {row.purchaseId ? (
+              <button className="button secondary" onClick={() => navigate(`/purchases/${row.purchaseId}`)}>
+                查看购买记录
+              </button>
+            ) : null}
           </>
         }
       />
@@ -115,7 +120,6 @@ export const ProductionPlanDetailPage = () => {
           row={row}
           taskId={task.id}
           taskTitle={task.title}
-          orderItemName={orderItem.name}
           sourceProductName={sourceProduct.name}
           sourceProductId={sourceProduct.id}
           factoryStatus={orderItem.factoryFeedback?.factoryStatus}

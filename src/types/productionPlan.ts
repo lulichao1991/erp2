@@ -24,8 +24,22 @@ export type ProductionPlanFileGroup = {
 
 export type ProductionPlanRow = {
   taskId: string
+  purchaseId: string
+  purchaseNo: string
+  orderLineId: string
+  orderLineCode: string
+  orderLineName: string
+  /**
+   * @deprecated Compatibility alias for purchaseId while productionPlan still reads old Order data.
+   */
   orderId: string
+  /**
+   * @deprecated Compatibility alias for purchaseNo while productionPlan still reads old Order data.
+   */
   orderNo: string
+  /**
+   * @deprecated Compatibility alias for orderLineId while productionPlan still reads old OrderItem data.
+   */
   orderItemId: string
   goodsNo: string
   styleName: string
@@ -49,9 +63,20 @@ export type ProductionPlanRow = {
 }
 
 export type ProductionPlanDetail = {
+  purchaseId: string
+  purchaseNo: string
+  orderLineId: string
+  orderLineCode: string
+  orderLineName: string
   row: ProductionPlanRow
   task: Task
+  /**
+   * @deprecated Compatibility source while productionPlan still reads old Order data.
+   */
   order: Order
+  /**
+   * @deprecated Compatibility source while productionPlan still reads old OrderItem data.
+   */
   orderItem: OrderItem
   sourceProduct: Product
   timeline: TimelineRecord[]
