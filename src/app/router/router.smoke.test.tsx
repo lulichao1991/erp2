@@ -1093,7 +1093,9 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '查看全部引用记录' }))
 
     expect(screen.getByText('产品引用记录')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: '山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getAllByRole('link', { name: 'OL-202604-001-01 · 山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
   })
 
   it('opens product version history drawer from product detail', async () => {

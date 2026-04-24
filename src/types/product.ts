@@ -79,15 +79,23 @@ export type ProductReferenceRecordStatus = 'referenced' | 'adjusted' | 'closed'
 
 export type ProductReferenceRecord = {
   id: string
+  purchaseId: string
+  purchaseNo: string
+  orderLineId: string
+  orderLineCode: string
+  orderLineName: string
+  /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseId。 */
   transactionId?: string
+  /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseNo。 */
   transactionNo?: string
-  orderLineId?: string
-  orderLineName?: string
-  orderId: string
-  orderNo: string
+  /** @deprecated 兼容旧 /orders 模块，请优先使用 purchaseId。 */
+  orderId?: string
+  /** @deprecated 兼容旧 /orders 模块，请优先使用 purchaseNo。 */
+  orderNo?: string
   customerId?: string
   customerName: string
-  orderItemName: string
+  /** @deprecated 兼容旧 /orders 模块，请优先使用 orderLineName。 */
+  orderItemName?: string
   sourceVersion: string
   selectedSpecValue?: string
   referencedAt: string
