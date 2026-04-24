@@ -15,10 +15,15 @@ export const OrderLineListPage = () => {
   const [filters, setFilters] = useState<OrderLineCenterFilters>({
     keyword: '',
     status: 'all',
-    owner: ''
+    owner: '',
+    category: 'all',
+    urgent: 'all',
+    afterSales: 'all',
+    overdue: 'all',
+    quickView: 'all'
   })
   const workspace = useOrderLineWorkspaceState()
-  const filteredRows = useMemo(() => filterOrderLineRows(workspace.rows, filters), [filters, workspace.rows])
+  const filteredRows = useMemo(() => filterOrderLineRows(workspace.rows, filters, workspace.afterSalesCases), [filters, workspace.afterSalesCases, workspace.rows])
 
   return (
     <PageContainer>

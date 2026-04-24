@@ -163,10 +163,51 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('heading', { name: '商品行中心' })).toBeInTheDocument()
     expect(screen.getByText('一行代表一件商品，支持独立推进设计、生产、发货与售后。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '全部商品行' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '我的待办' })).toBeInTheDocument()
+    expect(screen.getByLabelText('品类筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('是否加急筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('是否售后中')).toBeInTheDocument()
+    expect(screen.getByLabelText('是否超期')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'PUR-202604-001' }).length).toBeGreaterThan(0)
+  })
+
+  it('filters order-line center by category, owner, after-sales, urgent flag and keyword', async () => {
+    const user = userEvent.setup()
+    renderRoute('/order-lines')
+
+    await user.selectOptions(screen.getByLabelText('品类筛选'), 'pendant')
+    expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('品类筛选'), 'all')
+    await user.selectOptions(screen.getByLabelText('是否售后中'), 'yes')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('是否售后中'), 'all')
+    await user.selectOptions(screen.getByLabelText('是否加急筛选'), 'yes')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('是否加急筛选'), 'all')
+    await user.clear(screen.getByLabelText('负责人筛选'))
+    await user.type(screen.getByLabelText('负责人筛选'), '陈设计')
+    expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('负责人筛选'))
+    await user.type(screen.getByLabelText('搜索商品行编号 / 商品名称 / 客户 / 购买记录 / 平台单号'), 'TB-9938201')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '售后中' }))
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
   })
 
   it('opens order-line detail drawer from view button and switches records from row click', async () => {
@@ -435,8 +476,8 @@ describe('router smoke', () => {
     expect(screen.getByText('返工抛光')).toBeInTheDocument()
     expect(screen.getByText('吊坠表面需要返工抛光')).toBeInTheDocument()
     expect(screen.getByText('为商品行 OL-202604-001-02 新增返工抛光售后：吊坠表面需要返工抛光')).toBeInTheDocument()
-    expect(within(pendantRow as HTMLElement).getByText('售后 processing')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('售后 处理中')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('无售后')).toBeInTheDocument()
 
     const afterSalesPanel = screen.getByText('售后记录').closest('.subtle-panel')
@@ -454,8 +495,8 @@ describe('router smoke', () => {
 
     await user.click(within(afterSalesPanel as HTMLElement).getByRole('button', { name: '关闭' }))
     expect(screen.getByText('关闭售后')).toBeInTheDocument()
-    expect(within(pendantRow as HTMLElement).getByText('售后 closed')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('售后 已关闭')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
 
     await user.click(screen.getAllByRole('button', { name: '关闭' })[0] as HTMLElement)
     await user.click(necklaceRow as HTMLElement)
