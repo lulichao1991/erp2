@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
 import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag } from '@/components/common'
 import { afterSalesMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
@@ -218,6 +219,14 @@ const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
     specRequired: Boolean(product.isSpecRequired)
   })
 }
+
+const buildDraftSourceProductCompareValue = (line: OrderLineDraft, tempLineNo: string): SourceProductCompareValue => ({
+  sourceLabel: `${tempLineNo} ${line.productName || line.sourceProductName || '未命名商品行'}`,
+  specValue: line.spec,
+  material: line.material,
+  process: line.process,
+  specialOptions: line.selectedSpecialOptions
+})
 
 const buildDraftPayload = (
   draft: PurchaseDraftFormValue,
@@ -699,7 +708,8 @@ export const OrderLineDraftCard = ({
   onRemove,
   onApplyProduct,
   onSelectSpec,
-  onToggleSpecialOption
+  onToggleSpecialOption,
+  onOpenSourceProduct
 }: {
   line: OrderLineDraft
   tempLineNo: string
@@ -709,6 +719,7 @@ export const OrderLineDraftCard = ({
   onApplyProduct: (productId: string) => void
   onSelectSpec: (specId: string) => void
   onToggleSpecialOption: (option: string, checked: boolean) => void
+  onOpenSourceProduct: () => void
 }) => {
   const product = getDraftProduct(line)
   const selectedSpec = getSelectedSpec(line, product)
@@ -746,8 +757,13 @@ export const OrderLineDraftCard = ({
       </div>
 
       {product ? (
-        <div className="text-caption spacer-top">
-          来源产品：{product.name} · {product.code} · {product.version}
+        <div className="row wrap spacer-top" style={{ justifyContent: 'space-between' }}>
+          <div className="text-caption">
+            来源产品：{product.name} · {product.code} · {product.version}
+          </div>
+          <button type="button" className="button ghost small" onClick={onOpenSourceProduct}>
+            查看来源产品
+          </button>
         </div>
       ) : null}
 
@@ -860,33 +876,51 @@ export const PurchaseDraftOrderLinesSection = ({
   onApplyProduct: (lineId: string, productId: string) => void
   onSelectSpec: (lineId: string, specId: string) => void
   onToggleSpecialOption: (lineId: string, option: string, checked: boolean) => void
-}) => (
-  <SectionCard
-    title="商品行区域"
-    actions={
-      <button type="button" className="button primary small" onClick={onAdd}>
-        添加商品行
-      </button>
-    }
-  >
-    <div className="stack">
-      <div className="subtle-panel">
-        <strong>本次购买共 {orderLines.length} 条商品行</strong>
-        <div className="text-caption">每张卡代表一件商品，保存草稿时会拆成独立商品行。</div>
-      </div>
-      {orderLines.map((line, index) => (
-        <OrderLineDraftCard
-          key={line.id}
-          line={line}
-          tempLineNo={getTempLineNo(index)}
-          canRemove={orderLines.length > 1}
-          onChange={(patch) => onChange(line.id, patch)}
-          onRemove={() => onRemove(line.id)}
-          onApplyProduct={(productId) => onApplyProduct(line.id, productId)}
-          onSelectSpec={(specId) => onSelectSpec(line.id, specId)}
-          onToggleSpecialOption={(option, checked) => onToggleSpecialOption(line.id, option, checked)}
-        />
-      ))}
-    </div>
-  </SectionCard>
-)
+}) => {
+  const [sourceProductLineId, setSourceProductLineId] = useState('')
+  const sourceProductLine = orderLines.find((line) => line.id === sourceProductLineId)
+  const sourceProductLineIndex = sourceProductLine ? orderLines.findIndex((line) => line.id === sourceProductLine.id) : -1
+  const sourceProduct = sourceProductLine ? getDraftProduct(sourceProductLine) : undefined
+  const sourceProductCompareValue =
+    sourceProductLine && sourceProductLineIndex >= 0 ? buildDraftSourceProductCompareValue(sourceProductLine, getTempLineNo(sourceProductLineIndex)) : undefined
+
+  return (
+    <>
+      <SectionCard
+        title="商品行区域"
+        actions={
+          <button type="button" className="button primary small" onClick={onAdd}>
+            添加商品行
+          </button>
+        }
+      >
+        <div className="stack">
+          <div className="subtle-panel">
+            <strong>本次购买共 {orderLines.length} 条商品行</strong>
+            <div className="text-caption">每张卡代表一件商品，保存草稿时会拆成独立商品行。</div>
+          </div>
+          {orderLines.map((line, index) => (
+            <OrderLineDraftCard
+              key={line.id}
+              line={line}
+              tempLineNo={getTempLineNo(index)}
+              canRemove={orderLines.length > 1}
+              onChange={(patch) => onChange(line.id, patch)}
+              onRemove={() => onRemove(line.id)}
+              onApplyProduct={(productId) => onApplyProduct(line.id, productId)}
+              onSelectSpec={(specId) => onSelectSpec(line.id, specId)}
+              onToggleSpecialOption={(option, checked) => onToggleSpecialOption(line.id, option, checked)}
+              onOpenSourceProduct={() => setSourceProductLineId(line.id)}
+            />
+          ))}
+        </div>
+      </SectionCard>
+      <SourceProductDrawer
+        open={Boolean(sourceProductLineId)}
+        product={sourceProduct}
+        compareValue={sourceProductCompareValue}
+        onClose={() => setSourceProductLineId('')}
+      />
+    </>
+  )
+}

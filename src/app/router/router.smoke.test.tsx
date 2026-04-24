@@ -185,6 +185,15 @@ describe('router smoke', () => {
     expect(screen.getByText('改圈/改尺寸')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '打开购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
 
+    await user.click(screen.getByRole('button', { name: '查看来源产品' }))
+
+    expect(screen.getByText('来源产品详情')).toBeInTheDocument()
+    expect(screen.getByText('这里展示产品模板原始信息；查看或调整商品行不会修改产品模板。')).toBeInTheDocument()
+    expect(screen.getByText('商品行参数对比')).toBeInTheDocument()
+    expect(screen.getAllByText('PD-RING-001').length).toBeGreaterThan(0)
+
+    const closeButtons = screen.getAllByRole('button', { name: '关闭' })
+    await user.click(closeButtons[closeButtons.length - 1] as HTMLElement)
     await user.click(screen.getByRole('button', { name: '关闭' }))
 
     const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
@@ -296,6 +305,14 @@ describe('router smoke', () => {
     expect(within(firstLineCard as HTMLElement).getByText(/面宽 3.8mm/)).toBeInTheDocument()
     expect(within(firstLineCard as HTMLElement).getByText('¥ 2,000')).toBeInTheDocument()
 
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '查看来源产品' }))
+    expect(screen.getByText('来源产品详情')).toBeInTheDocument()
+    expect(screen.getByText('PD-RING-001')).toBeInTheDocument()
+    expect(screen.getByText('商品行参数对比')).toBeInTheDocument()
+    expect(screen.getAllByText('16号').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('已调整').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: '关闭' }))
+
     await user.selectOptions(within(secondLineCard as HTMLElement).getByLabelText('引用产品'), 'p-pendant-001')
     expect(within(secondLineCard as HTMLElement).getByLabelText('商品名称')).toHaveValue('如意吊坠')
     expect(within(secondLineCard as HTMLElement).getByText(/来源产品：如意吊坠/)).toBeInTheDocument()
@@ -306,6 +323,11 @@ describe('router smoke', () => {
     await user.click(within(secondLineCard as HTMLElement).getByRole('checkbox', { name: '附赠礼盒' }))
     expect(within(secondLineCard as HTMLElement).getByText(/长 16mm/)).toBeInTheDocument()
     expect(within(secondLineCard as HTMLElement).getByText('¥ 1,480')).toBeInTheDocument()
+
+    await user.click(within(secondLineCard as HTMLElement).getByRole('button', { name: '查看来源产品' }))
+    expect(screen.getByText('PD-PENDANT-001')).toBeInTheDocument()
+    expect(screen.getAllByText('小号').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: '关闭' }))
 
     await user.type(within(thirdLineCard as HTMLElement).getByLabelText('商品名称'), '定制项链')
 

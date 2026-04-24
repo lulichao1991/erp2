@@ -1,7 +1,9 @@
-import { useMemo, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
 import { EmptyState, InfoField, InfoGrid, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
+import { mockProducts } from '@/mocks/products'
 import type { OrderLine, OrderLineStatus } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 
@@ -133,6 +135,14 @@ const isInteractiveTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('a, button, input, select, textarea, label'))
 
 const TextList = ({ values, empty = '—' }: { values?: string[]; empty?: string }) => (values && values.length > 0 ? values.join(' / ') : empty)
+
+const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProductCompareValue => ({
+  sourceLabel: `${line.lineCode || line.id} ${line.name}`,
+  specValue: line.selectedSpecValue || line.sourceProduct?.sourceSpecValue,
+  material: line.selectedMaterial || line.actualRequirements?.material,
+  process: line.selectedProcess || line.actualRequirements?.process,
+  specialOptions: line.selectedSpecialOptions
+})
 
 const DetailSection = ({ title, children }: { title: string; children: ReactNode }) => (
   <SectionCard title={title} className="compact-card">
@@ -340,15 +350,22 @@ export const OrderLineDetailDrawer = ({
   row?: OrderLineRow
   onClose: () => void
 }) => {
+  const [sourceProductOpen, setSourceProductOpen] = useState(false)
   const line = row?.line
   const purchase = row?.purchase
   const customer = customersMock.find((item) => item.id === line?.customerId || item.id === purchase?.customerId)
   const logisticsRecords = line ? logisticsMock.filter((item) => item.orderLineId === line.id) : []
   const afterSalesCases = line ? afterSalesMock.filter((item) => item.orderLineId === line.id) : []
   const riskLabels = line ? getLineRiskLabels(line) : []
+  const sourceProduct = line ? mockProducts.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
+  const sourceProductCompareValue = line ? buildOrderLineSourceProductCompareValue(line) : undefined
+  const handleClose = () => {
+    setSourceProductOpen(false)
+    onClose()
+  }
 
   return (
-    <SideDrawer open={open} title="商品行详情" onClose={onClose}>
+    <SideDrawer open={open} title="商品行详情" onClose={handleClose}>
       {!line ? (
         <EmptyState title="未选择商品行" description="请选择一条商品行查看详情。" />
       ) : (
@@ -389,7 +406,7 @@ export const OrderLineDetailDrawer = ({
               <InfoField
                 label="来源产品入口"
                 value={
-                  <button type="button" className="button ghost small">
+                  <button type="button" className="button ghost small" onClick={() => setSourceProductOpen(true)} disabled={!sourceProduct}>
                     查看来源产品
                   </button>
                 }
@@ -509,6 +526,12 @@ export const OrderLineDetailDrawer = ({
               />
             </InfoGrid>
           </DetailSection>
+          <SourceProductDrawer
+            open={sourceProductOpen}
+            product={sourceProduct}
+            compareValue={sourceProductCompareValue}
+            onClose={() => setSourceProductOpen(false)}
+          />
         </div>
       )}
     </SideDrawer>
