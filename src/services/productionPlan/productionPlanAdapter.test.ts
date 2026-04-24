@@ -1,10 +1,57 @@
 import { describe, expect, it } from 'vitest'
+import { orderLinesMock } from '@/mocks/order-lines'
 import { mockOrders } from '@/mocks/orders'
 import { mockProducts } from '@/mocks/products'
+import { purchasesMock } from '@/mocks/purchases'
 import { mockTasks } from '@/mocks/tasks'
 import { buildProductionPlanDetail, buildProductionPlanRows, getProductionPlanStage } from '@/services/productionPlan/productionPlanAdapter'
 
 describe('productionPlanAdapter', () => {
+  it('builds rows and detail from purchases and order lines first', () => {
+    const rows = buildProductionPlanRows({
+      tasks: mockTasks,
+      purchases: purchasesMock,
+      orderLines: orderLinesMock,
+      products: mockProducts
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      taskId: 'task-factory-001',
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'PUR-202604-001',
+      orderLineId: 'oi-ring-001',
+      orderLineCode: 'OL-202604-001-01',
+      orderLineName: '山形戒指',
+      orderId: 'o-202604-001',
+      orderNo: 'PUR-202604-001',
+      orderItemId: 'oi-ring-001',
+      goodsNo: 'RING-SH-016',
+      styleName: '山形戒指',
+      sourceProductVersion: 'v3',
+      categoryLabel: '戒指',
+      quantity: 1
+    })
+
+    const detail = buildProductionPlanDetail({
+      taskId: 'task-factory-001',
+      tasks: mockTasks,
+      purchases: purchasesMock,
+      orderLines: orderLinesMock,
+      products: mockProducts
+    })
+
+    expect(detail).toBeTruthy()
+    expect(detail).toMatchObject({
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'PUR-202604-001',
+      orderLineId: 'oi-ring-001',
+      orderLineCode: 'OL-202604-001-01',
+      orderLineName: '山形戒指'
+    })
+    expect(detail?.timeline.map((record) => record.id)).toContain('tl-purchase-001-ring-production')
+  })
+
   it('builds one production plan row from the factory production task', () => {
     const rows = buildProductionPlanRows({
       tasks: mockTasks,
@@ -29,6 +76,27 @@ describe('productionPlanAdapter', () => {
       categoryLabel: '戒指',
       quantity: 1,
       stage: 'pending_receive'
+    })
+  })
+
+  it('falls back to old orders and order items when purchase and order line inputs are absent', () => {
+    const legacyTasks = mockTasks.map(({ purchaseId, purchaseNo, orderLineId, orderLineCode, orderLineName, transactionId, transactionNo, ...task }) => task)
+    const rows = buildProductionPlanRows({
+      tasks: legacyTasks,
+      orders: mockOrders,
+      products: mockProducts
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'SO-202604-001',
+      orderLineId: 'oi-ring-001',
+      orderLineCode: 'OL-202604-001-01',
+      orderLineName: '山形戒指',
+      orderId: 'o-202604-001',
+      orderNo: 'SO-202604-001',
+      orderItemId: 'oi-ring-001'
     })
   })
 

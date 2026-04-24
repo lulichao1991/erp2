@@ -927,7 +927,7 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('heading', { name: '工厂生产计划' })).toBeInTheDocument()
     expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
-    expect(screen.getByText('购买记录 SO-202604-001')).toBeInTheDocument()
+    expect(screen.getByText('购买记录 PUR-202604-001')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: '山形戒指' })[0]).toHaveAttribute('href', '/order-lines')
     expect(screen.getByRole('link', { name: '查看商品行' })).toHaveAttribute('href', '/order-lines')
     expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
@@ -944,7 +944,7 @@ describe('router smoke', () => {
     expect(screen.getByText('来源追溯')).toBeInTheDocument()
     expect(screen.getAllByText('RING-SH-016').length).toBeGreaterThan(0)
     expect(screen.getByText('购买记录')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'SO-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getByRole('link', { name: 'PUR-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.getAllByText('商品行').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: '查看商品行' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '查看购买记录' })).toBeInTheDocument()

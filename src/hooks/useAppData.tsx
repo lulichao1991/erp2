@@ -1,4 +1,6 @@
 import { createContext, useContext, useMemo, useState } from 'react'
+import { orderLinesMock } from '@/mocks/order-lines'
+import { purchasesMock } from '@/mocks/purchases'
 import { getOrderList } from '@/services/order/orderQueries'
 import {
   addProductFieldOption,
@@ -12,8 +14,10 @@ import { buildQuoteResult } from '@/services/quote/quoteService'
 import { createTaskDraft, getTaskList } from '@/services/task/taskQueries'
 import { getOrderStatusLabel, getTaskStatusLabel } from '@/services/workflow/workflowMeta'
 import type { Order, OrderItem, OrderStatus, TimelineRecord } from '@/types/order'
+import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
+import type { Purchase } from '@/types/purchase'
 import type { Task, TaskAssigneeRole, TaskType } from '@/types/task'
 
 const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
@@ -34,6 +38,8 @@ const getInitialCurrentUserRole = (): TaskAssigneeRole => {
 
 type AppDataContextValue = {
   products: Product[]
+  purchases: Purchase[]
+  orderLines: OrderLine[]
   orders: Order[]
   tasks: Task[]
   productFieldOptions: ProductFieldOptions
@@ -62,6 +68,8 @@ const AppDataContext = createContext<AppDataContextValue | null>(null)
 
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(() => getProductList())
+  const [purchases] = useState<Purchase[]>(() => structuredClone(purchasesMock))
+  const [orderLines] = useState<OrderLine[]>(() => structuredClone(orderLinesMock))
   const [orders, setOrders] = useState<Order[]>(() => getOrderList())
   const [tasks, setTasks] = useState<Task[]>(() => getTaskList())
   const [productFieldOptions, setProductFieldOptions] = useState<ProductFieldOptions>(() => getProductFieldOptions())
@@ -70,6 +78,8 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
   const value = useMemo<AppDataContextValue>(
     () => ({
       products,
+      purchases,
+      orderLines,
       orders,
       tasks,
       productFieldOptions,
@@ -375,7 +385,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         return nextTask
       }
     }),
-    [currentUserRole, orders, productFieldOptions, products, tasks]
+    [currentUserRole, orderLines, orders, productFieldOptions, products, purchases, tasks]
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

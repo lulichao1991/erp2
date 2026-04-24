@@ -25,10 +25,12 @@ export const ProductionPlanListPage = () => {
     () =>
       buildProductionPlanRows({
         tasks: appData.tasks,
+        purchases: appData.purchases,
+        orderLines: appData.orderLines,
         orders: appData.orders,
         products: appData.products
       }),
-    [appData.orders, appData.products, appData.tasks]
+    [appData.orderLines, appData.orders, appData.products, appData.purchases, appData.tasks]
   )
 
   const filteredRows = useMemo(
