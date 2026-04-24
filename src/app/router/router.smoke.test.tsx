@@ -1051,15 +1051,14 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     const { container } = renderRoute('/production-plan/task-factory-001')
 
-    await user.click(screen.getByRole('button', { name: '接收任务' }))
-
-    expect(screen.getAllByText('待生产').length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: '开始生产' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '开始生产' }))
-
-    expect(screen.getByLabelText('工厂状态')).toHaveValue('生产中')
+    expect(screen.getByLabelText('工厂状态')).toHaveValue('in_progress')
     expect(screen.getAllByText('生产中').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: '标记待回传' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '标记待回传' }))
+
+    expect(screen.getByLabelText('工厂状态')).toHaveValue('pending_feedback')
+    expect(screen.getAllByText('待回传').length).toBeGreaterThan(0)
 
     await user.clear(screen.getByLabelText('回传重量'))
     await user.type(screen.getByLabelText('回传重量'), '5.8g')

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import {
   ProductionFeedbackBlock,
+  getProductionFeedbackStatusLabel,
   ProductionOrderLineInfoBlock,
   ProductionPlanStatusBadge,
   ProductionPlanSummaryCard,
@@ -85,14 +86,14 @@ export const ProductionPlanDetailPage = () => {
   const handleStartProduction = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: '生产中'
+      factoryStatus: 'in_progress'
     })
   }
 
   const handleMarkPendingReport = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: '待回传'
+      factoryStatus: 'pending_feedback'
     })
     updateTaskStatus('pending_confirm')
   }
@@ -100,7 +101,7 @@ export const ProductionPlanDetailPage = () => {
   const handleSubmitReport = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: '已回传'
+      factoryStatus: 'completed'
     })
     updateTaskStatus('done')
   }
@@ -108,7 +109,7 @@ export const ProductionPlanDetailPage = () => {
   const handleMarkIssue = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: '有异常'
+      factoryStatus: 'issue'
     })
   }
 
@@ -166,7 +167,7 @@ export const ProductionPlanDetailPage = () => {
               <div className="stack">
                 <InfoGrid columns={2}>
                   <InfoField label="当前显示状态" value={<ProductionPlanStatusBadge stage={row.stage} />} />
-                  <InfoField label="工厂状态" value={productionFeedback.factoryStatus || '待回传'} />
+                  <InfoField label="工厂状态" value={getProductionFeedbackStatusLabel(productionFeedback.factoryStatus)} />
                   <InfoField label="回传重量" value={productionFeedback.returnedWeight || '—'} />
                   <InfoField label="质检结论" value={productionFeedback.qualityResult || '—'} />
                 </InfoGrid>

@@ -1,5 +1,5 @@
 import type { Order, OrderItem, TimelineRecord } from '@/types/order'
-import type { OrderLine } from '@/types/order-line'
+import type { OrderLine, OrderLineProductionStatus } from '@/types/order-line'
 import type { Product, ProductCategory, ProductAssetFile } from '@/types/product'
 import type { ProductionPlanDetail, ProductionPlanFile, ProductionPlanFileGroup, ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
 import type { Purchase } from '@/types/purchase'
@@ -122,6 +122,21 @@ const getLineFactoryFeedback = (orderLine: ProductionPlanLineSource) => {
 
 const getLineSku = (orderLine: ProductionPlanLineSource) => orderLine.itemSku || orderLine.lineCode
 
+const legacyFactoryStatusMap: Record<string, OrderLineProductionStatus> = {
+  待回传: 'pending_feedback',
+  生产中: 'in_progress',
+  已回传: 'completed',
+  有异常: 'issue'
+}
+
+const normalizeFactoryStatus = (status?: string): OrderLineProductionStatus | undefined => {
+  if (!status) {
+    return undefined
+  }
+
+  return legacyFactoryStatusMap[status] || status as OrderLineProductionStatus
+}
+
 const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow => {
   const { task, purchase, orderLine, order, orderItem, sourceProduct } = source
   const stage = getProductionPlanStage(task, orderItem || orderLine)
@@ -164,17 +179,17 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
 }
 
 export const getProductionPlanStage = (task: Task, orderLine: ProductionPlanLineSource): ProductionPlanStage => {
-  const factoryStatus = getLineFactoryFeedback(orderLine)?.factoryStatus
+  const factoryStatus = normalizeFactoryStatus(getLineFactoryFeedback(orderLine)?.factoryStatus)
 
-  if (factoryStatus === '有异常') {
+  if (factoryStatus === 'issue') {
     return 'issue'
   }
 
-  if (task.status === 'done' || factoryStatus === '已回传') {
+  if (task.status === 'done' || factoryStatus === 'completed') {
     return 'reported'
   }
 
-  if (factoryStatus === '生产中') {
+  if (factoryStatus === 'in_progress') {
     return 'in_production'
   }
 
@@ -182,11 +197,11 @@ export const getProductionPlanStage = (task: Task, orderLine: ProductionPlanLine
     return 'pending_receive'
   }
 
-  if (task.status === 'in_progress' && factoryStatus !== '生产中') {
+  if (task.status === 'in_progress') {
     return 'ready_to_produce'
   }
 
-  if (task.status === 'pending_confirm' || factoryStatus === '待回传') {
+  if (task.status === 'pending_confirm' || factoryStatus === 'pending_feedback') {
     return 'pending_report'
   }
 

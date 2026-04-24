@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FileList, InfoField, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
+import type { OrderLineProductionStatus } from '@/types/order-line'
 import type { ProductSpecRow } from '@/types/product'
 import type { ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
 
@@ -32,7 +33,7 @@ export type ProductionOrderLineInfo = {
 }
 
 export type ProductionFeedbackValue = {
-  factoryStatus?: string
+  factoryStatus?: OrderLineProductionStatus | string
   returnedWeight?: string
   qualityResult?: string
   factoryNote?: string
@@ -48,6 +49,34 @@ export type ProductionPlanFilterValue = {
 
 const getUniqueValues = (values: Array<string | undefined>) =>
   Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean))) as string[]
+
+const productionFeedbackStatusOptions: Array<{ value: OrderLineProductionStatus; label: string }> = [
+  { value: 'not_started', label: '未开始' },
+  { value: 'in_progress', label: '生产中' },
+  { value: 'pending_feedback', label: '待回传' },
+  { value: 'completed', label: '已回传' },
+  { value: 'issue', label: '异常' }
+]
+
+const legacyProductionFeedbackStatusMap: Record<string, OrderLineProductionStatus> = {
+  待回传: 'pending_feedback',
+  生产中: 'in_progress',
+  已回传: 'completed',
+  有异常: 'issue'
+}
+
+export const normalizeProductionFeedbackStatus = (status?: string): OrderLineProductionStatus | undefined => {
+  if (!status) {
+    return undefined
+  }
+
+  return legacyProductionFeedbackStatusMap[status] || (productionFeedbackStatusOptions.some((option) => option.value === status) ? (status as OrderLineProductionStatus) : undefined)
+}
+
+export const getProductionFeedbackStatusLabel = (status?: string) => {
+  const normalizedStatus = normalizeProductionFeedbackStatus(status)
+  return productionFeedbackStatusOptions.find((option) => option.value === normalizedStatus)?.label || status || '待回传'
+}
 
 export const ProductionPlanStatusBadge = ({ stage }: { stage: ProductionPlanStage }) =>
   stage === 'issue' ? <RiskTag value="异常" /> : <StatusTag value={getProductionPlanStageLabel(stage)} />
@@ -126,7 +155,7 @@ export const ProductionPlanSummaryCard = ({
     { label: '当前责任人', value: row.assigneeName || '待分配' },
     { label: '下发时间', value: row.assignedAt },
     { label: '计划交期', value: row.plannedDueDate || '未设置' },
-    { label: '工厂状态', value: factoryStatus || '待回传' }
+    { label: '工厂状态', value: getProductionFeedbackStatusLabel(factoryStatus) }
   ]
   const specSummary = [row.specValue, row.material, row.process].filter(Boolean).join(' / ') || '待补充'
 
@@ -351,18 +380,19 @@ export const ProductionFeedbackBlock = ({
           <select
             id={`${idPrefix}-status`}
             className="select"
-            value={feedback?.factoryStatus || '待回传'}
+            value={normalizeProductionFeedbackStatus(feedback?.factoryStatus) || 'pending_feedback'}
             onChange={(event) =>
               onChange({
                 ...feedback,
-                factoryStatus: event.target.value
+                factoryStatus: event.target.value as OrderLineProductionStatus
               })
             }
           >
-            <option value="待回传">待回传</option>
-            <option value="生产中">生产中</option>
-            <option value="已回传">已回传</option>
-            <option value="有异常">有异常</option>
+            {productionFeedbackStatusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="field-control">

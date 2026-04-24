@@ -75,7 +75,7 @@ describe('productionPlanAdapter', () => {
       sourceProductVersion: 'v3',
       categoryLabel: '戒指',
       quantity: 1,
-      stage: 'pending_receive'
+      stage: 'in_production'
     })
   })
 
@@ -108,7 +108,21 @@ describe('productionPlanAdapter', () => {
     expect(orderItem).toBeTruthy()
 
     const receivedTask = { ...factoryTask!, status: 'in_progress' as const }
+    const readyItem = {
+      ...orderItem!,
+      factoryFeedback: {
+        ...orderItem!.factoryFeedback,
+        factoryStatus: 'not_started'
+      }
+    }
     const producingItem = {
+      ...orderItem!,
+      factoryFeedback: {
+        ...orderItem!.factoryFeedback,
+        factoryStatus: 'in_progress'
+      }
+    }
+    const legacyProducingItem = {
       ...orderItem!,
       factoryFeedback: {
         ...orderItem!.factoryFeedback,
@@ -116,8 +130,22 @@ describe('productionPlanAdapter', () => {
       }
     }
     const pendingReportTask = { ...receivedTask, status: 'pending_confirm' as const }
+    const pendingFeedbackItem = {
+      ...orderItem!,
+      factoryFeedback: {
+        ...orderItem!.factoryFeedback,
+        factoryStatus: 'pending_feedback'
+      }
+    }
     const reportedTask = { ...receivedTask, status: 'done' as const }
     const issueItem = {
+      ...orderItem!,
+      factoryFeedback: {
+        ...orderItem!.factoryFeedback,
+        factoryStatus: 'issue'
+      }
+    }
+    const legacyIssueItem = {
       ...orderItem!,
       factoryFeedback: {
         ...orderItem!.factoryFeedback,
@@ -125,12 +153,14 @@ describe('productionPlanAdapter', () => {
       }
     }
 
-    expect(getProductionPlanStage(factoryTask!, orderItem!)).toBe('pending_receive')
-    expect(getProductionPlanStage(receivedTask, orderItem!)).toBe('ready_to_produce')
+    expect(getProductionPlanStage(factoryTask!, orderItem!)).toBe('in_production')
+    expect(getProductionPlanStage(receivedTask, readyItem)).toBe('ready_to_produce')
     expect(getProductionPlanStage(receivedTask, producingItem)).toBe('in_production')
-    expect(getProductionPlanStage(pendingReportTask, orderItem!)).toBe('pending_report')
+    expect(getProductionPlanStage(receivedTask, legacyProducingItem)).toBe('in_production')
+    expect(getProductionPlanStage(pendingReportTask, pendingFeedbackItem)).toBe('pending_report')
     expect(getProductionPlanStage(reportedTask, orderItem!)).toBe('reported')
     expect(getProductionPlanStage(receivedTask, issueItem)).toBe('issue')
+    expect(getProductionPlanStage(receivedTask, legacyIssueItem)).toBe('issue')
   })
 
   it('builds detail data with production files and timeline records', () => {
