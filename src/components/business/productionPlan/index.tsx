@@ -1,6 +1,42 @@
 import { Link } from 'react-router-dom'
-import { PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
+import { FileList, InfoField, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
+import type { ProductSpecRow } from '@/types/product'
 import type { ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
+
+type ProductionPlanUploadedFile = {
+  id: string
+  name: string
+  url: string
+}
+
+export type ProductionOrderLineInfo = {
+  id: string
+  goodsNo?: string
+  sourceProductCode?: string
+  selectedSpecValue?: string
+  quantity?: number
+  selectedMaterial?: string
+  selectedProcess?: string
+  selectedSpecialOptions?: string[]
+  selectedSpecSnapshot?: ProductSpecRow
+  actualRequirements?: {
+    material?: string
+    process?: string
+    sizeNote?: string
+    engraveText?: string
+    specialNotes?: string[]
+    remark?: string
+    engraveImageFiles?: ProductionPlanUploadedFile[]
+    engravePltFiles?: ProductionPlanUploadedFile[]
+  }
+}
+
+export type ProductionFeedbackValue = {
+  factoryStatus?: string
+  returnedWeight?: string
+  qualityResult?: string
+  factoryNote?: string
+}
 
 export type ProductionPlanFilterValue = {
   keyword: string
@@ -216,6 +252,171 @@ export const ProductionPlanFilterBar = ({
         </div>
       </div>
     </SectionCard>
+  )
+}
+
+export const ProductionOrderLineInfoBlock = ({
+  line,
+  showEngravingFiles = true
+}: {
+  line: ProductionOrderLineInfo
+  showEngravingFiles?: boolean
+}) => {
+  const engraveImageFiles = line.actualRequirements?.engraveImageFiles ?? []
+  const engravePltFiles = line.actualRequirements?.engravePltFiles ?? []
+  const engravingSelected =
+    line.selectedSpecialOptions?.includes('刻字') ||
+    Boolean(line.actualRequirements?.engraveText) ||
+    engraveImageFiles.length > 0 ||
+    engravePltFiles.length > 0
+
+  return (
+    <div className="stack">
+      <div className="field-grid four">
+        <InfoField label="货号" value={line.goodsNo || '待维护'} />
+        <InfoField label="来源产品编码" value={line.sourceProductCode || '待引用模板'} />
+        <InfoField label="规格" value={line.selectedSpecValue || '未选规格'} />
+        <InfoField label="数量" value={`${line.quantity || 1} 件`} />
+      </div>
+      <div className="field-grid three">
+        <InfoField label="材质" value={line.selectedMaterial || line.actualRequirements?.material || '未设置'} />
+        <InfoField label="工艺" value={line.selectedProcess || line.actualRequirements?.process || '未设置'} />
+        <InfoField label="特殊需求" value={line.selectedSpecialOptions?.join(' / ') || line.actualRequirements?.specialNotes?.join(' / ') || '无'} />
+      </div>
+      {line.selectedSpecSnapshot ? (
+        <div className="subtle-panel">
+          <strong>生产参数</strong>
+          <div className="field-grid four spacer-top">
+            {line.selectedSpecSnapshot.sizeFields.map((field) => (
+              <InfoField
+                key={field.key}
+                label={field.label}
+                value={
+                  <>
+                    {field.value}
+                    {field.unit || ''}
+                  </>
+                }
+              />
+            ))}
+            <InfoField label="参考重量" value={line.selectedSpecSnapshot.referenceWeight ? `${line.selectedSpecSnapshot.referenceWeight} g` : '—'} />
+          </div>
+        </div>
+      ) : (
+        <div className="placeholder-block">当前还没有规格参数，请上游先确认来源模板与规格。</div>
+      )}
+      {engravingSelected ? (
+        <div className="subtle-panel stack">
+          <strong>刻字生产信息</strong>
+          <div className="field-grid two">
+            <InfoField label="刻字内容" value={line.actualRequirements?.engraveText || '待客服补充'} />
+            <InfoField label="刻字文件数量" value={`图片 ${engraveImageFiles.length} 个 / PLT ${engravePltFiles.length} 个`} />
+          </div>
+          {showEngravingFiles ? (
+            <>
+              {engraveImageFiles.length > 0 ? <FileList title="刻字图片文件" files={engraveImageFiles} /> : <div className="text-muted">暂无刻字图片文件。</div>}
+              {engravePltFiles.length > 0 ? <FileList title="刻字PLT文件" files={engravePltFiles} /> : <div className="text-muted">暂无刻字PLT文件。</div>}
+            </>
+          ) : (
+            <div className="text-muted">刻字文件已收敛到下方“文件与刻字资料区”统一查看。</div>
+          )}
+        </div>
+      ) : null}
+      <div className="field-grid two">
+        <InfoField label="尺寸/规格备注" value={line.actualRequirements?.sizeNote || '—'} />
+        <InfoField label="生产备注" value={line.actualRequirements?.remark || '—'} />
+      </div>
+    </div>
+  )
+}
+
+export const ProductionFeedbackBlock = ({
+  orderLineId,
+  feedback,
+  onChange
+}: {
+  orderLineId: string
+  feedback?: ProductionFeedbackValue
+  onChange: (next: ProductionFeedbackValue) => void
+}) => {
+  const idPrefix = `production-feedback-${orderLineId}`
+
+  return (
+    <>
+      <div className="field-grid three">
+        <div className="field-control">
+          <label className="field-label" htmlFor={`${idPrefix}-status`}>
+            工厂状态
+          </label>
+          <select
+            id={`${idPrefix}-status`}
+            className="select"
+            value={feedback?.factoryStatus || '待回传'}
+            onChange={(event) =>
+              onChange({
+                ...feedback,
+                factoryStatus: event.target.value
+              })
+            }
+          >
+            <option value="待回传">待回传</option>
+            <option value="生产中">生产中</option>
+            <option value="已回传">已回传</option>
+            <option value="有异常">有异常</option>
+          </select>
+        </div>
+        <div className="field-control">
+          <label className="field-label" htmlFor={`${idPrefix}-weight`}>
+            回传重量
+          </label>
+          <input
+            id={`${idPrefix}-weight`}
+            className="input"
+            value={feedback?.returnedWeight || ''}
+            onChange={(event) =>
+              onChange({
+                ...feedback,
+                returnedWeight: event.target.value
+              })
+            }
+          />
+        </div>
+        <div className="field-control">
+          <label className="field-label" htmlFor={`${idPrefix}-quality`}>
+            质检结论
+          </label>
+          <input
+            id={`${idPrefix}-quality`}
+            className="input"
+            value={feedback?.qualityResult || ''}
+            onChange={(event) =>
+              onChange({
+                ...feedback,
+                qualityResult: event.target.value
+              })
+            }
+          />
+        </div>
+      </div>
+      <div className="spacer-top">
+        <div className="field-control">
+          <label className="field-label" htmlFor={`${idPrefix}-note`}>
+            工厂备注
+          </label>
+          <textarea
+            id={`${idPrefix}-note`}
+            className="textarea"
+            value={feedback?.factoryNote || ''}
+            onChange={(event) =>
+              onChange({
+                ...feedback,
+                factoryNote: event.target.value
+              })
+            }
+          />
+        </div>
+      </div>
+    </>
   )
 }
 
