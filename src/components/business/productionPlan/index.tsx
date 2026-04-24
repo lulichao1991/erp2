@@ -127,14 +127,14 @@ export const ProductionPlanSummaryCard = ({
         </div>
         <ul className="production-plan-trace-grid">
           <li className="production-plan-trace-item">
-            <span className="production-plan-trace-label">关联订单</span>
+            <span className="production-plan-trace-label">关联商品行</span>
             <strong className="production-plan-trace-value">
-              <Link to={`/orders/${row.orderId}`}>{row.orderNo}</Link>
+              <Link to="/order-lines">{orderItemName || row.styleName}</Link>
             </strong>
           </li>
           <li className="production-plan-trace-item">
-            <span className="production-plan-trace-label">订单商品</span>
-            <strong className="production-plan-trace-value">{orderItemName}</strong>
+            <span className="production-plan-trace-label">购买记录</span>
+            <strong className="production-plan-trace-value">{row.orderNo}</strong>
           </li>
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">来源产品</span>

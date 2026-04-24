@@ -15,8 +15,8 @@ export const TaskListHeader = () => (
     title="任务中心"
     className="compact-page-header"
     actions={
-      <Link to="/orders" className="button secondary">
-        返回订单中心
+      <Link to="/order-lines" className="button secondary">
+        返回商品行中心
       </Link>
     }
   />
@@ -51,6 +51,8 @@ type TaskFilterValue = {
   assignee: string
 }
 
+const getCurrentTaskTypeLabel = (type: TaskType) => (type === 'order_process' ? '购买处理' : getTaskTypeLabel(type))
+
 export const TaskFilterBar = ({
   value,
   onChange
@@ -61,14 +63,14 @@ export const TaskFilterBar = ({
   <SectionCard title="搜索与筛选" className="compact-card">
     <div className="field-grid four">
       <div className="field-control">
-        <label className="field-label">搜索任务 / 订单号</label>
+        <label className="field-label">搜索任务 / 购买记录号</label>
         <input className="input" value={value.keyword} onChange={(event) => onChange({ ...value, keyword: event.target.value })} />
       </div>
       <div className="field-control">
         <label className="field-label">任务类型</label>
         <select className="select" value={value.type} onChange={(event) => onChange({ ...value, type: event.target.value as TaskFilterValue['type'] })}>
           <option value="all">全部类型</option>
-          <option value="order_process">订单处理</option>
+          <option value="order_process">购买处理</option>
           <option value="design_modeling">设计建模</option>
           <option value="production_prep">生产准备</option>
           <option value="factory_production">工厂生产</option>
@@ -103,7 +105,7 @@ export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
           <th>优先级</th>
           <th>任务标题</th>
           <th>任务类型</th>
-          <th>关联订单</th>
+          <th>关联商品行</th>
           <th>责任人</th>
           <th>截止时间</th>
           <th>状态</th>
@@ -119,14 +121,14 @@ export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
                 <Link to={`/tasks/${task.id}`} className="text-price">
                   {task.title}
                 </Link>
-                <span className="text-caption">{task.orderItemName || '订单级任务'}</span>
+                <span className="text-caption">{task.orderItemName || '购买记录级任务'}</span>
               </div>
             </td>
-            <td>{getTaskTypeLabel(task.type)}</td>
+            <td>{getCurrentTaskTypeLabel(task.type)}</td>
             <td>
               <div className="stack" style={{ gap: 6 }}>
-                <Link to={`/orders/${task.orderId}`}>{task.orderNo}</Link>
-                <span className="text-caption">{task.orderItemName || '整单流转'}</span>
+                <Link to="/order-lines">{task.orderItemName || task.orderNo}</Link>
+                <span className="text-caption">{task.orderItemName ? task.orderNo : '购买记录级任务'}</span>
               </div>
             </td>
             <td>
@@ -158,7 +160,7 @@ export const TaskSummaryCard = ({ task }: { task: Task }) => (
         <div>
           <h2 style={{ margin: 0 }}>{task.title}</h2>
           <p className="text-muted">
-            {getTaskTypeLabel(task.type)} · {task.orderNo}
+            {getCurrentTaskTypeLabel(task.type)} · {task.orderNo}
           </p>
         </div>
         <div className="row wrap">
@@ -184,7 +186,7 @@ export const TaskInfoCardGroup = ({ task, order, hideCommercialInfo = false }: {
   <div className="field-grid three">
     <SummaryCard title="任务信息">
       <InfoGrid columns={2}>
-        <InfoField label="任务类型" value={getTaskTypeLabel(task.type)} />
+        <InfoField label="任务类型" value={getCurrentTaskTypeLabel(task.type)} />
         <InfoField label="当前状态" value={getTaskStatusLabel(task.status)} />
         <InfoField label="优先级" value={getOrderPriorityLabel(task.priority)} />
         <InfoField label="责任角色" value={getTaskAssigneeRoleLabel(task.assigneeRole)} />
@@ -192,12 +194,12 @@ export const TaskInfoCardGroup = ({ task, order, hideCommercialInfo = false }: {
         <InfoField label="截止时间" value={task.dueAt || '未设置'} />
       </InfoGrid>
     </SummaryCard>
-    <SummaryCard title="关联订单">
+    <SummaryCard title="关联购买记录">
       <InfoGrid columns={2}>
-        <InfoField label="订单编号" value={order ? <Link to={`/orders/${order.id}`}>{order.orderNo}</Link> : task.orderNo} />
-        <InfoField label="订单阶段" value={order ? getOrderStatusLabel(order.status) : '—'} />
-        <InfoField label="订单负责人" value={order?.ownerName || '—'} />
-        <InfoField label="关联商品" value={task.orderItemName || '订单级任务'} />
+        <InfoField label="购买记录编号" value={order ? <Link to="/order-lines">{order.orderNo}</Link> : task.orderNo} />
+        <InfoField label="购买记录阶段" value={order ? getOrderStatusLabel(order.status) : '—'} />
+        <InfoField label="购买记录负责人" value={order?.ownerName || '—'} />
+        <InfoField label="关联商品行" value={task.orderItemName || '购买记录级任务'} />
         {!hideCommercialInfo ? <InfoField label="客户姓名" value={order?.customerName || '—'} /> : null}
         <InfoField label="风险标签" value={order?.riskTags.join(' / ') || '—'} />
       </InfoGrid>

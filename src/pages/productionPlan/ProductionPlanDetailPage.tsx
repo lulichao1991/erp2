@@ -26,7 +26,7 @@ export const ProductionPlanDetailPage = () => {
   if (!detail) {
     return (
       <PageContainer>
-        <EmptyState title="未找到生产计划任务" description="当前任务不存在、不是工厂生产任务，或其关联订单商品 / 来源产品 mock 数据不完整。" />
+        <EmptyState title="未找到生产计划任务" description="当前任务不存在、不是工厂生产任务，或其关联商品行 / 来源产品 mock 数据不完整。" />
       </PageContainer>
     )
   }
@@ -104,8 +104,8 @@ export const ProductionPlanDetailPage = () => {
             <button className="button secondary" onClick={() => navigate(`/tasks/${task.id}`)}>
               查看原任务
             </button>
-            <button className="button secondary" onClick={() => navigate(`/orders/${order.id}`)}>
-              返回订单
+            <button className="button secondary" onClick={() => navigate('/order-lines')}>
+              查看商品行
             </button>
           </>
         }
@@ -197,7 +197,7 @@ export const ProductionPlanDetailPage = () => {
               }))}
             />
           ) : (
-            <EmptyState title="当前还没有相关时间线" description="后续工厂状态变化、任务完成或订单商品变更后，会继续沉淀到这里。" />
+            <EmptyState title="当前还没有相关时间线" description="后续工厂状态变化、任务完成或商品行变更后，会继续沉淀到这里。" />
           )}
         </SectionCard>
       </div>

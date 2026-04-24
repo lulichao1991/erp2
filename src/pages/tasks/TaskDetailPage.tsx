@@ -80,8 +80,8 @@ export const TaskDetailPage = () => {
               返回列表
             </button>
             {order ? (
-              <button className="button secondary" onClick={() => navigate(`/orders/${order.id}`)}>
-                返回订单
+              <button className="button secondary" onClick={() => navigate('/order-lines')}>
+                查看商品行
               </button>
             ) : null}
             <button className="button primary" onClick={handleSave}>
@@ -161,14 +161,14 @@ export const TaskDetailPage = () => {
           </div>
         </SectionCard>
         {order && !hideCommercialInfo ? (
-          <SectionCard title="订单推进建议" description="任务完成不等于订单自动完成；这里只给出当前订单的可推进方向，仍由业务人员手动判断是否推进。">
+          <SectionCard title="商品行推进建议" description="任务完成不等于购买记录或商品行自动完成；这里只给出当前购买记录的可推进方向，仍由业务人员手动判断是否推进。">
             <div className="stack">
               <div className="text-muted">
-                {task.status === 'done' ? '当前任务已完成，可以结合订单活跃任务和资料完整度继续推进订单状态。' : '建议先完成当前任务，再判断订单是否适合推进到下一阶段。'}
+                {task.status === 'done' ? '当前任务已完成，可以结合购买记录活跃任务和资料完整度继续推进阶段。' : '建议先完成当前任务，再判断购买记录是否适合推进到下一阶段。'}
               </div>
               <div className="row wrap">
-                <button type="button" className="button secondary" onClick={() => navigate(`/orders/${order.id}`)}>
-                  返回订单继续推进
+                <button type="button" className="button secondary" onClick={() => navigate('/order-lines')}>
+                  查看商品行
                 </button>
                 {task.status === 'done'
                   ? orderNextStatuses.map((status) => (
@@ -180,9 +180,9 @@ export const TaskDetailPage = () => {
                           appData.transitionOrderStatus({
                             orderId: order.id,
                             nextStatus: status,
-                            reason: `任务「${task.title}」已完成，订单阶段推进到${getOrderStatusLabel(status)}。`
+                            reason: `任务「${task.title}」已完成，购买记录阶段推进到${getOrderStatusLabel(status)}。`
                           })
-                          navigate(`/orders/${order.id}`)
+                          navigate('/order-lines')
                         }}
                       >
                         推进到{getOrderStatusLabel(status)}
@@ -193,7 +193,7 @@ export const TaskDetailPage = () => {
             </div>
           </SectionCard>
         ) : null}
-        <SectionCard title="任务相关时间线" description="这里只筛当前任务关联到订单时间线里的记录，方便核对任务是否推动了订单节点。">
+        <SectionCard title="任务相关时间线" description="这里只筛当前任务关联到购买记录时间线里的记录，方便核对任务是否推动了购买记录节点。">
           {orderTimeline.length > 0 ? (
             <div className="stack">
               {orderTimeline.map((record) => (
@@ -208,7 +208,7 @@ export const TaskDetailPage = () => {
               ))}
             </div>
           ) : (
-            <EmptyState title="当前任务还没有关联时间线" description="后续任务更新、完成或订单状态变化后，会逐步沉淀到这里。" />
+            <EmptyState title="当前任务还没有关联时间线" description="后续任务更新、完成或购买记录状态变化后，会逐步沉淀到这里。" />
           )}
         </SectionCard>
       </div>

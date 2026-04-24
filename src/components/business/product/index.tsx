@@ -868,7 +868,7 @@ export const ProductReferenceRecordSection = ({
   <SectionCard
     id="references"
     title="引用记录"
-    description="查看哪些订单引用了当前模板，以及订单侧是否已经在模板基础上做过调整。"
+    description="查看哪些商品行引用了当前模板，以及商品行侧是否已经在模板基础上做过调整。"
     actions={
       <button type="button" className="button secondary small" onClick={onOpen}>
         查看全部引用记录
@@ -881,8 +881,8 @@ export const ProductReferenceRecordSection = ({
           <div key={record.id} className="subtle-panel">
             <div className="row wrap" style={{ justifyContent: 'space-between' }}>
               <div className="row wrap">
-                <Link to={`/orders/${record.orderId}`} className="text-price">
-                  {record.orderNo}
+                <Link to="/order-lines" className="text-price">
+                  {record.orderLineName || record.orderItemName || record.orderNo}
                 </Link>
                 <VersionBadge value={record.sourceVersion} />
                 {renderReferenceStatus(record.status)}
@@ -892,7 +892,7 @@ export const ProductReferenceRecordSection = ({
             <div className="spacer-top">
               <InfoGrid columns={2}>
                 <InfoField label="客户" value={record.customerName} />
-                <InfoField label="订单商品" value={record.orderItemName} />
+                <InfoField label="商品行" value={record.orderLineName || record.orderItemName} />
                 <InfoField label="引用规格" value={record.selectedSpecValue || '—'} />
                 <InfoField label="备注" value={record.note || '—'} />
               </InfoGrid>
@@ -901,7 +901,7 @@ export const ProductReferenceRecordSection = ({
         ))}
       </div>
     ) : (
-      <div className="placeholder-block">当前产品还没有被订单引用。</div>
+      <div className="placeholder-block">当前产品还没有被商品行引用。</div>
     )}
   </SectionCard>
 )
@@ -994,20 +994,20 @@ export const ProductReferenceRecordsDrawer = ({
             <div key={record.id} className="subtle-panel">
               <div className="row wrap" style={{ justifyContent: 'space-between' }}>
                 <div className="row wrap">
-                  <Link to={`/orders/${record.orderId}`} className="text-price">
-                    {record.orderNo}
+                  <Link to="/order-lines" className="text-price">
+                    {record.orderLineName || record.orderItemName || record.orderNo}
                   </Link>
                   <VersionBadge value={record.sourceVersion} />
                   {renderReferenceStatus(record.status)}
                 </div>
-                <Link to={`/orders/${record.orderId}`} className="button ghost small">
-                  查看订单
+                <Link to="/order-lines" className="button ghost small">
+                  查看商品行
                 </Link>
               </div>
               <div className="spacer-top">
                 <InfoGrid columns={2}>
                   <InfoField label="客户" value={record.customerName} />
-                  <InfoField label="订单商品" value={record.orderItemName} />
+                  <InfoField label="商品行" value={record.orderLineName || record.orderItemName} />
                   <InfoField label="引用规格" value={record.selectedSpecValue || '—'} />
                   <InfoField label="引用时间" value={record.referencedAt} />
                 </InfoGrid>
