@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { OrderLineDetailDrawer, type OrderLineRow } from '@/components/business/orderLine'
+import { OrderLineDetailDrawer, updateOrderLineStatusInRows, type OrderLineStatusUpdateHandler } from '@/components/business/orderLine'
 import {
   PurchaseCustomerSection,
   PurchaseNotesTimelineSection,
@@ -15,9 +15,9 @@ export const PurchaseDetailPage = () => {
   const { purchaseId } = useParams()
   const purchase = purchasesMock.find((item) => item.id === purchaseId)
   const customer = customersMock.find((item) => item.id === purchase?.customerId)
-  const [selectedOrderLineRow, setSelectedOrderLineRow] = useState<OrderLineRow>()
+  const [selectedOrderLineId, setSelectedOrderLineId] = useState<string>()
 
-  const orderLineRows = useMemo(() => {
+  const initialOrderLineRows = useMemo(() => {
     if (!purchase) {
       return []
     }
@@ -29,6 +29,17 @@ export const PurchaseDetailPage = () => {
         purchase
       }))
   }, [purchase])
+  const [orderLineRows, setOrderLineRows] = useState(initialOrderLineRows)
+  const selectedOrderLineRow = orderLineRows.find(({ line }) => line.id === selectedOrderLineId)
+
+  useEffect(() => {
+    setOrderLineRows(initialOrderLineRows)
+    setSelectedOrderLineId(undefined)
+  }, [initialOrderLineRows])
+
+  const handleStatusChange: OrderLineStatusUpdateHandler = (lineId, nextStatus) => {
+    setOrderLineRows((current) => updateOrderLineStatusInRows(current, lineId, nextStatus))
+  }
 
   if (!purchase) {
     return (
@@ -54,10 +65,15 @@ export const PurchaseDetailPage = () => {
         <PurchaseSummarySection purchase={purchase} customer={customer} />
         <PurchaseCustomerSection purchase={purchase} customer={customer} />
         <PurchasePaymentSection purchase={purchase} />
-        <PurchaseOrderLineTable rows={orderLineRows} onOpenOrderLine={setSelectedOrderLineRow} />
+        <PurchaseOrderLineTable rows={orderLineRows} onOpenOrderLine={(row) => setSelectedOrderLineId(row.line.id)} />
         <PurchaseNotesTimelineSection purchase={purchase} />
       </div>
-      <OrderLineDetailDrawer open={Boolean(selectedOrderLineRow)} row={selectedOrderLineRow} onClose={() => setSelectedOrderLineRow(undefined)} />
+      <OrderLineDetailDrawer
+        open={Boolean(selectedOrderLineRow)}
+        row={selectedOrderLineRow}
+        onClose={() => setSelectedOrderLineId(undefined)}
+        onStatusChange={handleStatusChange}
+      />
     </PageContainer>
   )
 }

@@ -206,6 +206,27 @@ describe('router smoke', () => {
     expect(screen.getByText('暂无售后记录')).toBeInTheDocument()
   })
 
+  it('updates one order-line status from the detail drawer', async () => {
+    const user = userEvent.setup()
+    renderRoute('/order-lines')
+
+    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
+    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    expect(ringRow).not.toBeNull()
+    expect(pendantRow).not.toBeNull()
+    expect(necklaceRow).not.toBeNull()
+
+    await user.click(within(ringRow as HTMLElement).getByRole('button', { name: '查看' }))
+    await user.selectOptions(screen.getByLabelText('目标状态'), 'pending_shipment')
+    await user.click(screen.getByRole('button', { name: '更新状态' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('已将状态从 生产中 更新为 待发货')
+    expect(within(ringRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('设计中')).toBeInTheDocument()
+  })
+
   it('shows non-referenced custom order line details in drawer', async () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
@@ -255,6 +276,27 @@ describe('router smoke', () => {
     expect(screen.getByText('顺丰速运')).toBeInTheDocument()
     expect(screen.getByText('暂无售后记录')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '打开购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
+  })
+
+  it('updates one order-line status from purchase detail without changing siblings', async () => {
+    const user = userEvent.setup()
+    renderRoute('/purchases/o-202604-001')
+
+    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
+    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    expect(ringRow).not.toBeNull()
+    expect(pendantRow).not.toBeNull()
+    expect(necklaceRow).not.toBeNull()
+
+    await user.click(within(necklaceRow as HTMLElement).getByRole('button', { name: '查看商品行' }))
+    await user.selectOptions(screen.getByLabelText('目标状态'), 'completed')
+    await user.click(screen.getByRole('button', { name: '更新状态' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('已将状态从 设计中 更新为 已完成')
+    expect(within(necklaceRow as HTMLElement).getByText('已完成')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('生产中')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
   })
 
   it('creates a purchase draft with multiple order-line cards', async () => {

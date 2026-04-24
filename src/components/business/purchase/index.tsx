@@ -283,7 +283,7 @@ const purchaseAggregateStatusLabelMap: Record<string, string> = {
 const orderLineStatusLabelMap: Record<string, string> = {
   draft: '草稿',
   pending_confirm: '待确认',
-  pending_measurement: '待量尺',
+  pending_measurement: '待测量',
   pending_design: '待设计',
   designing: '设计中',
   pending_outsource: '待下厂',
@@ -293,7 +293,8 @@ const orderLineStatusLabelMap: Record<string, string> = {
   shipped: '已发货',
   after_sales: '售后中',
   completed: '已完成',
-  cancelled: '已取消'
+  cancelled: '已取消',
+  exception: '异常'
 }
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')

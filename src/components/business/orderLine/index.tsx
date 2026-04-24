@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
 import { EmptyState, InfoField, InfoGrid, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
@@ -18,10 +18,12 @@ export type OrderLineRow = {
   purchase?: Purchase
 }
 
+export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineStatus | string) => void
+
 const statusLabelMap: Record<string, string> = {
   draft: '草稿',
   pending_confirm: '待确认',
-  pending_measurement: '待量尺',
+  pending_measurement: '待测量',
   pending_design: '待设计',
   designing: '设计中',
   pending_outsource: '待下厂',
@@ -31,20 +33,27 @@ const statusLabelMap: Record<string, string> = {
   shipped: '已发货',
   after_sales: '售后中',
   completed: '已完成',
-  cancelled: '已取消'
+  cancelled: '已取消',
+  exception: '异常'
 }
 
-const statusOptions = [
-  { value: 'all', label: '全部状态' },
+export const orderLineStatusOptions: Array<{ value: OrderLineStatus | string; label: string }> = [
   { value: 'pending_confirm', label: '待确认' },
+  { value: 'pending_measurement', label: '待测量' },
   { value: 'pending_design', label: '待设计' },
   { value: 'designing', label: '设计中' },
   { value: 'pending_outsource', label: '待下厂' },
   { value: 'in_production', label: '生产中' },
+  { value: 'pending_factory_feedback', label: '待工厂回传' },
   { value: 'pending_shipment', label: '待发货' },
+  { value: 'shipped', label: '已发货' },
   { value: 'after_sales', label: '售后中' },
-  { value: 'completed', label: '已完成' }
+  { value: 'completed', label: '已完成' },
+  { value: 'cancelled', label: '已取消' },
+  { value: 'exception', label: '异常' }
 ]
+
+const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineStatusOptions]
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
@@ -150,13 +159,107 @@ const DetailSection = ({ title, children }: { title: string; children: ReactNode
   </SectionCard>
 )
 
-const buildRows = (): OrderLineRow[] =>
+const OrderLineStatusUpdatePanel = ({
+  line,
+  onStatusChange
+}: {
+  line: OrderLine
+  onStatusChange?: OrderLineStatusUpdateHandler
+}) => {
+  const [nextStatus, setNextStatus] = useState(String(line.status))
+  const [statusMessage, setStatusMessage] = useState('')
+
+  useEffect(() => {
+    setNextStatus(String(line.status))
+  }, [line.id, line.status])
+
+  useEffect(() => {
+    setStatusMessage('')
+  }, [line.id])
+
+  const handleUpdate = () => {
+    if (!onStatusChange) {
+      setStatusMessage('当前入口暂不支持前端状态更新。')
+      return
+    }
+
+    if (nextStatus === line.status) {
+      setStatusMessage('状态未变化。')
+      return
+    }
+
+    const previousLabel = getStatusLabel(String(line.status))
+    const nextLabel = getStatusLabel(nextStatus)
+    onStatusChange(line.id, nextStatus)
+    setStatusMessage(`已将状态从 ${previousLabel} 更新为 ${nextLabel}`)
+  }
+
+  return (
+    <DetailSection title="更新状态">
+      <div className="field-grid three">
+        <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(String(line.status))} />} />
+        <label className="field-control">
+          <span className="field-label">目标状态</span>
+          <select className="select" aria-label="目标状态" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}>
+            {orderLineStatusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="field-control">
+          <span className="field-label">操作</span>
+          <button type="button" className="button primary small" onClick={handleUpdate} disabled={!onStatusChange}>
+            更新状态
+          </button>
+        </div>
+      </div>
+      {statusMessage ? (
+        <div role="status" className="success-alert spacer-top">
+          {statusMessage}
+        </div>
+      ) : null}
+    </DetailSection>
+  )
+}
+
+export const buildOrderLineRows = (): OrderLineRow[] =>
   purchasesMock.flatMap((purchase) =>
     purchase.orderLines.map((line) => ({
       line,
       purchase
     }))
   )
+
+export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCenterFilters) =>
+  rows.filter(({ line, purchase }) => {
+    const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
+    const keyword = filters.keyword.trim().toLowerCase()
+    const matchesKeyword =
+      keyword.length === 0 ||
+      [
+        line.lineCode,
+        line.id,
+        line.name,
+        line.sourceProduct?.sourceProductName,
+        customer?.name,
+        customer?.phone,
+        purchase?.purchaseNo,
+        purchase?.platformOrderNo
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    const matchesStatus = filters.status === 'all' || line.status === filters.status
+    const matchesOwner = filters.owner.trim().length === 0 || (line.currentOwner || purchase?.ownerName || '').includes(filters.owner.trim())
+
+    return matchesKeyword && matchesStatus && matchesOwner
+  })
+
+export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], lineId: string, nextStatus: OrderLineStatus | string): T[] =>
+  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: { ...row.line, status: nextStatus } } as T) : row))
 
 export const OrderLineQuickStats = ({ rows }: { rows: OrderLineRow[] }) => {
   const stats = [
@@ -203,7 +306,7 @@ export const OrderLineFilterBar = ({
       <div className="field-control">
         <label className="field-label">状态筛选</label>
         <select className="select" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}>
-          {statusOptions.map((option) => (
+          {statusFilterOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -344,11 +447,13 @@ export const OrderLineTable = ({
 export const OrderLineDetailDrawer = ({
   open,
   row,
-  onClose
+  onClose,
+  onStatusChange
 }: {
   open: boolean
   row?: OrderLineRow
   onClose: () => void
+  onStatusChange?: OrderLineStatusUpdateHandler
 }) => {
   const [sourceProductOpen, setSourceProductOpen] = useState(false)
   const line = row?.line
@@ -395,6 +500,8 @@ export const OrderLineDetailDrawer = ({
               />
             </InfoGrid>
           </DetailSection>
+
+          <OrderLineStatusUpdatePanel line={line} onStatusChange={onStatusChange} />
 
           <DetailSection title="来源产品">
             <InfoGrid columns={3}>
@@ -539,36 +646,9 @@ export const OrderLineDetailDrawer = ({
 }
 
 export const useOrderLineCenterRows = (filters: OrderLineCenterFilters) => {
-  const rows = useMemo(buildRows, [])
+  const rows = useMemo(buildOrderLineRows, [])
 
-  return useMemo(
-    () =>
-      rows.filter(({ line, purchase }) => {
-        const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
-        const keyword = filters.keyword.trim().toLowerCase()
-        const matchesKeyword =
-          keyword.length === 0 ||
-          [
-            line.lineCode,
-            line.id,
-            line.name,
-            line.sourceProduct?.sourceProductName,
-            customer?.name,
-            customer?.phone,
-            purchase?.purchaseNo,
-            purchase?.platformOrderNo
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-            .includes(keyword)
-        const matchesStatus = filters.status === 'all' || line.status === filters.status
-        const matchesOwner = filters.owner.trim().length === 0 || (line.currentOwner || purchase?.ownerName || '').includes(filters.owner.trim())
-
-        return matchesKeyword && matchesStatus && matchesOwner
-      }),
-    [filters, rows]
-  )
+  return useMemo(() => filterOrderLineRows(rows, filters), [filters, rows])
 }
 
-export const useAllOrderLineCenterRows = () => useMemo(buildRows, [])
+export const useAllOrderLineCenterRows = () => useMemo(buildOrderLineRows, [])

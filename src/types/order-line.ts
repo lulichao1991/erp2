@@ -1,5 +1,6 @@
 import type { ProductCategory, ProductSpecRow } from '@/types/product'
 import type { QuoteResult } from '@/types/quote'
+export type { AfterSalesCase, AfterSalesCaseStatus, AfterSalesCaseType, LogisticsRecord } from '@/types/supporting-records'
 
 export type ProductSnapshot = {
   sourceProductId: string
@@ -35,6 +36,7 @@ export type OrderLineStatus =
   | 'after_sales'
   | 'completed'
   | 'cancelled'
+  | 'exception'
 
 export type OrderLineActualRequirements = {
   material?: string
@@ -92,32 +94,11 @@ export type OrderLineProductionInfo = {
   factoryNote?: string
 }
 
-export type LogisticsRecord = {
-  id: string
-  orderLineId: string
-  transactionId?: string
-  carrier?: string
-  trackingNo?: string
-  shippedAt?: string
-  deliveredAt?: string
-  note?: string
-}
-
-export type AfterSalesCase = {
-  id: string
-  orderLineId: string
-  transactionId?: string
-  type?: 'repair' | 'resize' | 'refund' | 'exchange' | 'other'
-  status?: 'open' | 'in_progress' | 'closed'
-  createdAt?: string
-  closedAt?: string
-  note?: string
-}
-
 export type OrderLine = {
   id: string
   lineNo?: number
   lineCode?: string
+  purchaseId?: string
   transactionId?: string
   customerId?: string
   name: string
