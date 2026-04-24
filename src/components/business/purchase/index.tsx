@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag } from '@/components/common'
 import { afterSalesMock, logisticsMock } from '@/mocks'
@@ -9,6 +10,139 @@ type PurchaseLineRow = {
   line: OrderLine
   purchase: Purchase
 }
+
+export type PurchaseDraftFormValue = {
+  channel: string
+  platformOrderNo: string
+  paymentAt: string
+  ownerName: string
+  remark: string
+  customerName: string
+  customerPhone: string
+  customerWechat: string
+  recipientName: string
+  recipientPhone: string
+  recipientAddress: string
+  customerRemark: string
+  receivableAmount: string
+  receivedAmount: string
+  paymentMethod: string
+}
+
+export type OrderLineDraft = {
+  id: string
+  productName: string
+  category: string
+  spec: string
+  material: string
+  process: string
+  specialRequirement: string
+  needsDesign: boolean
+  urgent: boolean
+  ownerName: string
+  promisedDate: string
+}
+
+type PurchaseDraftPayload = {
+  commonInfo: Pick<PurchaseDraftFormValue, 'channel' | 'platformOrderNo' | 'paymentAt' | 'ownerName' | 'remark'>
+  customerShippingInfo: Pick<
+    PurchaseDraftFormValue,
+    'customerName' | 'customerPhone' | 'customerWechat' | 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'customerRemark'
+  >
+  paymentInfo: {
+    receivableAmount: number
+    receivedAmount: number
+    pendingAmount: number
+    paymentMethod: string
+    paymentStatus: string
+    canShip: boolean
+  }
+}
+
+type OrderLineDraftPayload = OrderLineDraft & {
+  tempLineNo: string
+}
+
+const defaultPurchaseDraft: PurchaseDraftFormValue = {
+  channel: 'taobao',
+  platformOrderNo: '',
+  paymentAt: '',
+  ownerName: '客服A',
+  remark: '',
+  customerName: '',
+  customerPhone: '',
+  customerWechat: '',
+  recipientName: '',
+  recipientPhone: '',
+  recipientAddress: '',
+  customerRemark: '',
+  receivableAmount: '',
+  receivedAmount: '',
+  paymentMethod: '淘宝平台'
+}
+
+let draftLineSeed = 1
+
+const createOrderLineDraft = (): OrderLineDraft => ({
+  id: `order-line-draft-${draftLineSeed++}`,
+  productName: '',
+  category: '',
+  spec: '',
+  material: '',
+  process: '',
+  specialRequirement: '',
+  needsDesign: true,
+  urgent: false,
+  ownerName: '客服A',
+  promisedDate: ''
+})
+
+const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
+
+const parseMoneyInput = (value: string) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+const buildDraftPayload = (
+  draft: PurchaseDraftFormValue,
+  paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary>,
+  orderLines: OrderLineDraft[]
+): {
+  purchaseDraft: PurchaseDraftPayload
+  orderLineDrafts: OrderLineDraftPayload[]
+} => ({
+  purchaseDraft: {
+    commonInfo: {
+      channel: draft.channel,
+      platformOrderNo: draft.platformOrderNo,
+      paymentAt: draft.paymentAt,
+      ownerName: draft.ownerName,
+      remark: draft.remark
+    },
+    customerShippingInfo: {
+      customerName: draft.customerName,
+      customerPhone: draft.customerPhone,
+      customerWechat: draft.customerWechat,
+      recipientName: draft.recipientName,
+      recipientPhone: draft.recipientPhone,
+      recipientAddress: draft.recipientAddress,
+      customerRemark: draft.customerRemark
+    },
+    paymentInfo: {
+      receivableAmount: paymentSummary.receivableAmount,
+      receivedAmount: paymentSummary.receivedAmount,
+      pendingAmount: paymentSummary.pendingAmount,
+      paymentMethod: draft.paymentMethod,
+      paymentStatus: paymentSummary.paymentStatus,
+      canShip: paymentSummary.canShip
+    }
+  },
+  orderLineDrafts: orderLines.map((line, index) => ({
+    ...line,
+    tempLineNo: getTempLineNo(index)
+  }))
+})
 
 const purchaseAggregateStatusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -51,6 +185,21 @@ const getParameterSummary = (line: OrderLine) =>
   ]
     .filter(Boolean)
     .join(' / ') || '待补充参数'
+
+const getPurchaseDraftPaymentSummary = (draft: PurchaseDraftFormValue) => {
+  const receivableAmount = parseMoneyInput(draft.receivableAmount)
+  const receivedAmount = parseMoneyInput(draft.receivedAmount)
+  const pendingAmount = Math.max(receivableAmount - receivedAmount, 0)
+  const paymentStatus = pendingAmount === 0 && receivableAmount > 0 ? '已付清' : receivedAmount > 0 ? '部分收款' : '待收款'
+
+  return {
+    receivableAmount,
+    receivedAmount,
+    pendingAmount,
+    paymentStatus,
+    canShip: receivableAmount > 0 && pendingAmount === 0
+  }
+}
 
 const getPaymentSummary = (purchase: Purchase) => {
   const transactions = purchase.finance?.transactions ?? []
@@ -201,6 +350,275 @@ export const PurchaseNotesTimelineSection = ({ purchase }: { purchase: Purchase 
           description: item.description || '—'
         }))}
       />
+    </div>
+  </SectionCard>
+)
+
+export const usePurchaseDraftForm = () => {
+  const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraftFormValue>(defaultPurchaseDraft)
+  const [orderLineDrafts, setOrderLineDrafts] = useState<OrderLineDraft[]>(() => [createOrderLineDraft()])
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const paymentSummary = useMemo(() => getPurchaseDraftPaymentSummary(purchaseDraft), [purchaseDraft])
+
+  const updatePurchaseDraft = <K extends keyof PurchaseDraftFormValue>(field: K, value: PurchaseDraftFormValue[K]) => {
+    setPurchaseDraft((current) => ({ ...current, [field]: value }))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const addOrderLine = () => {
+    setOrderLineDrafts((current) => [...current, createOrderLineDraft()])
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const removeOrderLine = (lineId: string) => {
+    setOrderLineDrafts((current) => (current.length > 1 ? current.filter((line) => line.id !== lineId) : current))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const updateOrderLine = (lineId: string, patch: Partial<OrderLineDraft>) => {
+    setOrderLineDrafts((current) => current.map((line) => (line.id === lineId ? { ...line, ...patch } : line)))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const saveDraft = () => {
+    if (orderLineDrafts.length === 0) {
+      setErrorMessage('至少需要保留 1 条商品行。')
+      setSuccessMessage('')
+      return
+    }
+
+    const payload = buildDraftPayload(purchaseDraft, paymentSummary, orderLineDrafts)
+    console.log('purchaseDraft', payload.purchaseDraft)
+    console.log('orderLineDrafts', payload.orderLineDrafts)
+    setSuccessMessage(`已生成购买记录草稿：1 笔购买记录 + ${orderLineDrafts.length} 条商品行`)
+    setErrorMessage('')
+  }
+
+  return {
+    purchaseDraft,
+    orderLineDrafts,
+    paymentSummary,
+    successMessage,
+    errorMessage,
+    updatePurchaseDraft,
+    addOrderLine,
+    removeOrderLine,
+    updateOrderLine,
+    saveDraft
+  }
+}
+
+type PurchaseDraftSectionProps = {
+  draft: PurchaseDraftFormValue
+  onChange: <K extends keyof PurchaseDraftFormValue>(field: K, value: PurchaseDraftFormValue[K]) => void
+}
+
+export const PurchaseDraftCommonSection = ({ draft, onChange }: PurchaseDraftSectionProps) => (
+  <SectionCard title="购买公共信息">
+    <div className="field-grid three">
+      <label className="field-control">
+        <span className="field-label">渠道</span>
+        <select className="select" value={draft.channel} onChange={(event) => onChange('channel', event.target.value)}>
+          <option value="taobao">淘宝</option>
+          <option value="wechat">微信</option>
+          <option value="xiaohongshu">小红书</option>
+          <option value="offline">线下</option>
+        </select>
+      </label>
+      <label className="field-control">
+        <span className="field-label">平台订单号</span>
+        <input className="input" value={draft.platformOrderNo} onChange={(event) => onChange('platformOrderNo', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">付款时间</span>
+        <input className="input" type="datetime-local" value={draft.paymentAt} onChange={(event) => onChange('paymentAt', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">客服负责人</span>
+        <input className="input" value={draft.ownerName} onChange={(event) => onChange('ownerName', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">整体备注</span>
+        <textarea className="textarea" value={draft.remark} onChange={(event) => onChange('remark', event.target.value)} />
+      </label>
+    </div>
+  </SectionCard>
+)
+
+export const PurchaseDraftCustomerSection = ({ draft, onChange }: PurchaseDraftSectionProps) => (
+  <SectionCard title="客户与收货信息">
+    <div className="field-grid three">
+      <label className="field-control">
+        <span className="field-label">客户姓名</span>
+        <input className="input" value={draft.customerName} onChange={(event) => onChange('customerName', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">手机</span>
+        <input className="input" value={draft.customerPhone} onChange={(event) => onChange('customerPhone', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">微信</span>
+        <input className="input" value={draft.customerWechat} onChange={(event) => onChange('customerWechat', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">收件人</span>
+        <input className="input" value={draft.recipientName} onChange={(event) => onChange('recipientName', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">收件手机号</span>
+        <input className="input" value={draft.recipientPhone} onChange={(event) => onChange('recipientPhone', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">收件地址</span>
+        <input className="input" value={draft.recipientAddress} onChange={(event) => onChange('recipientAddress', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">客户备注</span>
+        <textarea className="textarea" value={draft.customerRemark} onChange={(event) => onChange('customerRemark', event.target.value)} />
+      </label>
+    </div>
+  </SectionCard>
+)
+
+export const PurchaseDraftPaymentSection = ({
+  draft,
+  paymentSummary,
+  onChange
+}: PurchaseDraftSectionProps & { paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary> }) => (
+  <SectionCard title="付款信息">
+    <div className="field-grid three">
+      <label className="field-control">
+        <span className="field-label">应收总额</span>
+        <input className="input" type="number" min="0" value={draft.receivableAmount} onChange={(event) => onChange('receivableAmount', event.target.value)} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">已收金额</span>
+        <input className="input" type="number" min="0" value={draft.receivedAmount} onChange={(event) => onChange('receivedAmount', event.target.value)} />
+      </label>
+      <InfoField label="待收金额" value={formatPrice(paymentSummary.pendingAmount)} />
+      <label className="field-control">
+        <span className="field-label">付款方式</span>
+        <select className="select" value={draft.paymentMethod} onChange={(event) => onChange('paymentMethod', event.target.value)}>
+          <option value="淘宝平台">淘宝平台</option>
+          <option value="微信支付">微信支付</option>
+          <option value="支付宝">支付宝</option>
+          <option value="线下转账">线下转账</option>
+        </select>
+      </label>
+      <InfoField label="付款状态" value={<StatusTag value={paymentSummary.paymentStatus} />} />
+      <InfoField label="是否允许发货" value={paymentSummary.canShip ? '是' : '否'} />
+    </div>
+  </SectionCard>
+)
+
+export const OrderLineDraftCard = ({
+  line,
+  tempLineNo,
+  canRemove,
+  onChange,
+  onRemove
+}: {
+  line: OrderLineDraft
+  tempLineNo: string
+  canRemove: boolean
+  onChange: (patch: Partial<OrderLineDraft>) => void
+  onRemove: () => void
+}) => (
+  <div className="subtle-panel">
+    <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+      <strong>商品行 {tempLineNo}</strong>
+      <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
+        删除商品行
+      </button>
+    </div>
+    <div className="field-grid three">
+      <label className="field-control">
+        <span className="field-label">商品名称</span>
+        <input className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">品类</span>
+        <input className="input" value={line.category} onChange={(event) => onChange({ category: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">规格</span>
+        <input className="input" value={line.spec} onChange={(event) => onChange({ spec: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">材质</span>
+        <input className="input" value={line.material} onChange={(event) => onChange({ material: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">工艺</span>
+        <input className="input" value={line.process} onChange={(event) => onChange({ process: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">特殊需求</span>
+        <input className="input" value={line.specialRequirement} onChange={(event) => onChange({ specialRequirement: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">负责人</span>
+        <input className="input" value={line.ownerName} onChange={(event) => onChange({ ownerName: event.target.value })} />
+      </label>
+      <label className="field-control">
+        <span className="field-label">承诺交期</span>
+        <input className="input" type="date" value={line.promisedDate} onChange={(event) => onChange({ promisedDate: event.target.value })} />
+      </label>
+      <div className="field-control">
+        <span className="field-label">商品行设置</span>
+        <label className="row" style={{ gap: 8 }}>
+          <input type="checkbox" checked={line.needsDesign} onChange={(event) => onChange({ needsDesign: event.target.checked })} />
+          <span>是否需要设计</span>
+        </label>
+        <label className="row" style={{ gap: 8 }}>
+          <input type="checkbox" checked={line.urgent} onChange={(event) => onChange({ urgent: event.target.checked })} />
+          <span>是否加急</span>
+        </label>
+      </div>
+    </div>
+  </div>
+)
+
+export const PurchaseDraftOrderLinesSection = ({
+  orderLines,
+  onAdd,
+  onRemove,
+  onChange
+}: {
+  orderLines: OrderLineDraft[]
+  onAdd: () => void
+  onRemove: (lineId: string) => void
+  onChange: (lineId: string, patch: Partial<OrderLineDraft>) => void
+}) => (
+  <SectionCard
+    title="商品行区域"
+    actions={
+      <button type="button" className="button primary small" onClick={onAdd}>
+        添加商品行
+      </button>
+    }
+  >
+    <div className="stack">
+      <div className="subtle-panel">
+        <strong>本次购买共 {orderLines.length} 条商品行</strong>
+        <div className="text-caption">每张卡代表一件商品，保存草稿时会拆成独立商品行。</div>
+      </div>
+      {orderLines.map((line, index) => (
+        <OrderLineDraftCard
+          key={line.id}
+          line={line}
+          tempLineNo={getTempLineNo(index)}
+          canRemove={orderLines.length > 1}
+          onChange={(patch) => onChange(line.id, patch)}
+          onRemove={() => onRemove(line.id)}
+        />
+      ))}
     </div>
   </SectionCard>
 )

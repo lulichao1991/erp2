@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppRouter } from '@/app/router'
 import { AppDataProvider } from '@/hooks/useAppData'
 
@@ -16,6 +16,7 @@ const renderRoute = (entry: string) =>
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   window.localStorage.clear()
 })
 
@@ -245,6 +246,67 @@ describe('router smoke', () => {
     expect(screen.getByText('顺丰速运')).toBeInTheDocument()
     expect(screen.getByText('暂无售后记录')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '打开购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
+  })
+
+  it('creates a purchase draft with multiple order-line cards', async () => {
+    const user = userEvent.setup()
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    renderRoute('/purchases/new')
+
+    expect(screen.getByRole('heading', { name: '新建购买记录' })).toBeInTheDocument()
+    expect(screen.getByText('先填写本次购买的公共信息，再逐件添加商品行。')).toBeInTheDocument()
+    expect(screen.getByText('购买公共信息')).toBeInTheDocument()
+    expect(screen.getByText('客户与收货信息')).toBeInTheDocument()
+    expect(screen.getByText('付款信息')).toBeInTheDocument()
+    expect(screen.getByText('商品行区域')).toBeInTheDocument()
+    expect(screen.getByText('本次购买共 1 条商品行')).toBeInTheDocument()
+    expect(screen.getByText('商品行 TEMP-01')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('平台订单号'), 'TB-202604-NEW')
+    await user.type(screen.getByLabelText('客户姓名'), '张三')
+    await user.type(screen.getByLabelText('应收总额'), '9000')
+    await user.type(screen.getByLabelText('已收金额'), '3000')
+
+    await user.click(screen.getByRole('button', { name: '添加商品行' }))
+    await user.click(screen.getByRole('button', { name: '添加商品行' }))
+
+    expect(screen.getByText('本次购买共 3 条商品行')).toBeInTheDocument()
+    expect(screen.getByText('商品行 TEMP-01')).toBeInTheDocument()
+    expect(screen.getByText('商品行 TEMP-02')).toBeInTheDocument()
+    expect(screen.getByText('商品行 TEMP-03')).toBeInTheDocument()
+    expect(screen.getByText('当前草稿：1 笔购买记录 + 3 条商品行。')).toBeInTheDocument()
+    expect(screen.getByText('¥ 6,000')).toBeInTheDocument()
+
+    const firstLineCard = screen.getByText('商品行 TEMP-01').closest('.subtle-panel')
+    const secondLineCard = screen.getByText('商品行 TEMP-02').closest('.subtle-panel')
+    const thirdLineCard = screen.getByText('商品行 TEMP-03').closest('.subtle-panel')
+    expect(firstLineCard).not.toBeNull()
+    expect(secondLineCard).not.toBeNull()
+    expect(thirdLineCard).not.toBeNull()
+
+    await user.type(within(firstLineCard as HTMLElement).getByLabelText('商品名称'), '山形戒指')
+    await user.type(within(secondLineCard as HTMLElement).getByLabelText('商品名称'), '山形吊坠')
+    await user.type(within(thirdLineCard as HTMLElement).getByLabelText('商品名称'), '定制项链')
+
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 3 条商品行')
+    expect(logSpy).toHaveBeenCalledWith(
+      'purchaseDraft',
+      expect.objectContaining({
+        commonInfo: expect.objectContaining({ platformOrderNo: 'TB-202604-NEW' }),
+        customerShippingInfo: expect.objectContaining({ customerName: '张三' }),
+        paymentInfo: expect.objectContaining({ pendingAmount: 6000, paymentStatus: '部分收款', canShip: false })
+      })
+    )
+    expect(logSpy).toHaveBeenCalledWith(
+      'orderLineDrafts',
+      expect.arrayContaining([
+        expect.objectContaining({ tempLineNo: 'TEMP-01', productName: '山形戒指' }),
+        expect.objectContaining({ tempLineNo: 'TEMP-02', productName: '山形吊坠' }),
+        expect.objectContaining({ tempLineNo: 'TEMP-03', productName: '定制项链' })
+      ])
+    )
   })
 
   it('expands order item when clicking summary area', async () => {
