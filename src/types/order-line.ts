@@ -38,6 +38,21 @@ export type OrderLineStatus =
   | 'cancelled'
   | 'exception'
 
+export type OrderLineActionType = 'created' | 'status_changed' | 'note'
+
+export type OrderLineLog = {
+  id: string
+  orderLineId: string
+  purchaseId?: string
+  actionType: OrderLineActionType | string
+  actionLabel: string
+  operatorName: string
+  createdAt: string
+  fromStatus?: OrderLineStatus | string
+  toStatus?: OrderLineStatus | string
+  note?: string
+}
+
 export type OrderLineActualRequirements = {
   material?: string
   process?: string

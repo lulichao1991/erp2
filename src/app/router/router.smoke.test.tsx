@@ -222,9 +222,16 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '更新状态' }))
 
     expect(screen.getByRole('status')).toHaveTextContent('已将状态从 生产中 更新为 待发货')
+    expect(screen.getByText('操作日志')).toBeInTheDocument()
+    expect(screen.getByText('将商品行 OL-202604-001-01 从「生产中」改为「待发货」')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('设计中')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '关闭' }))
+    await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: '查看' }))
+    expect(screen.queryByText('将商品行 OL-202604-001-01 从「生产中」改为「待发货」')).not.toBeInTheDocument()
+    expect(screen.getByText('将商品行 OL-202604-001-02 从「生产中」改为「待发货」')).toBeInTheDocument()
   })
 
   it('shows non-referenced custom order line details in drawer', async () => {
@@ -241,6 +248,7 @@ describe('router smoke', () => {
     expect(screen.getByText('未引用产品')).toBeInTheDocument()
     expect(screen.getAllByText('锁骨链 42cm').length).toBeGreaterThan(0)
     expect(screen.getByText('暂无物流记录')).toBeInTheDocument()
+    expect(screen.getByText('暂无操作日志')).toBeInTheDocument()
   })
 
   it('renders purchase routes without replacing legacy orders routes', () => {
@@ -294,6 +302,8 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '更新状态' }))
 
     expect(screen.getByRole('status')).toHaveTextContent('已将状态从 设计中 更新为 已完成')
+    expect(screen.getByText('操作日志')).toBeInTheDocument()
+    expect(screen.getByText('将商品行 OL-202604-001-03 从「设计中」改为「已完成」')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('已完成')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('生产中')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('待发货')).toBeInTheDocument()

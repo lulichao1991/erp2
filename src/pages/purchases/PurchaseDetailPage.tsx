@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { OrderLineDetailDrawer, updateOrderLineStatusInRows, type OrderLineStatusUpdateHandler } from '@/components/business/orderLine'
+import { buildOrderLineStatusLog, OrderLineDetailDrawer, updateOrderLineStatusInRows, type OrderLineStatusUpdateHandler } from '@/components/business/orderLine'
 import {
   PurchaseCustomerSection,
   PurchaseNotesTimelineSection,
@@ -9,7 +9,8 @@ import {
   PurchaseSummarySection
 } from '@/components/business/purchase'
 import { EmptyState, PageContainer, PageHeader } from '@/components/common'
-import { customersMock, orderLinesMock, purchasesMock } from '@/mocks'
+import { customersMock, orderLineLogsMock, orderLinesMock, purchasesMock } from '@/mocks'
+import type { OrderLineLog } from '@/types/order-line'
 
 export const PurchaseDetailPage = () => {
   const { purchaseId } = useParams()
@@ -30,15 +31,23 @@ export const PurchaseDetailPage = () => {
       }))
   }, [purchase])
   const [orderLineRows, setOrderLineRows] = useState(initialOrderLineRows)
+  const [orderLineLogs, setOrderLineLogs] = useState<OrderLineLog[]>(orderLineLogsMock)
   const selectedOrderLineRow = orderLineRows.find(({ line }) => line.id === selectedOrderLineId)
 
   useEffect(() => {
     setOrderLineRows(initialOrderLineRows)
+    setOrderLineLogs(orderLineLogsMock)
     setSelectedOrderLineId(undefined)
   }, [initialOrderLineRows])
 
   const handleStatusChange: OrderLineStatusUpdateHandler = (lineId, nextStatus) => {
+    const currentRow = orderLineRows.find(({ line }) => line.id === lineId)
+    if (!currentRow || currentRow.line.status === nextStatus) {
+      return
+    }
+
     setOrderLineRows((current) => updateOrderLineStatusInRows(current, lineId, nextStatus))
+    setOrderLineLogs((current) => [buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus }), ...current])
   }
 
   if (!purchase) {
@@ -73,6 +82,7 @@ export const PurchaseDetailPage = () => {
         row={selectedOrderLineRow}
         onClose={() => setSelectedOrderLineId(undefined)}
         onStatusChange={handleStatusChange}
+        logs={orderLineLogs}
       />
     </PageContainer>
   )

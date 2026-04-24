@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { EmptyState, InfoField, InfoGrid, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
+import { EmptyState, InfoField, InfoGrid, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
-import type { OrderLine, OrderLineStatus } from '@/types/order-line'
+import type { OrderLine, OrderLineLog, OrderLineStatus } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 
 export type OrderLineCenterFilters = {
@@ -56,6 +56,12 @@ export const orderLineStatusOptions: Array<{ value: OrderLineStatus | string; la
 const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineStatusOptions]
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
+
+const formatDateTime = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, '0')
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
 
 const getStatusLabel = (status?: string) => (status ? statusLabelMap[status] || status : '待确认')
 
@@ -159,6 +165,34 @@ const DetailSection = ({ title, children }: { title: string; children: ReactNode
   </SectionCard>
 )
 
+export const buildOrderLineStatusLog = ({
+  line,
+  purchase,
+  nextStatus,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  nextStatus: OrderLineStatus | string
+  operatorName?: string
+}): OrderLineLog => {
+  const fromStatus = String(line.status)
+  const toStatus = String(nextStatus)
+
+  return {
+    id: `log-${line.id}-${Date.now()}`,
+    orderLineId: line.id,
+    purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+    actionType: 'status_changed',
+    actionLabel: '状态变更',
+    operatorName,
+    createdAt: formatDateTime(new Date()),
+    fromStatus,
+    toStatus,
+    note: `将商品行 ${line.lineCode || line.id} 从「${getStatusLabel(fromStatus)}」改为「${getStatusLabel(toStatus)}」`
+  }
+}
+
 const OrderLineStatusUpdatePanel = ({
   line,
   onStatusChange
@@ -220,6 +254,31 @@ const OrderLineStatusUpdatePanel = ({
           {statusMessage}
         </div>
       ) : null}
+    </DetailSection>
+  )
+}
+
+const OrderLineLogSection = ({ logs }: { logs: OrderLineLog[] }) => {
+  const sortedLogs = [...logs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  return (
+    <DetailSection title="操作日志">
+      {sortedLogs.length > 0 ? (
+        <RecordTimeline
+          items={sortedLogs.map((log) => ({
+            id: log.id,
+            title: log.actionLabel,
+            meta: `${log.createdAt} · ${log.operatorName}`,
+            description:
+              log.note ||
+              (log.fromStatus || log.toStatus
+                ? `状态：${log.fromStatus ? getStatusLabel(String(log.fromStatus)) : '—'} → ${log.toStatus ? getStatusLabel(String(log.toStatus)) : '—'}`
+                : '—')
+          }))}
+        />
+      ) : (
+        <EmptyState title="暂无操作日志" description="当前商品行还没有记录操作。" />
+      )}
     </DetailSection>
   )
 }
@@ -448,12 +507,14 @@ export const OrderLineDetailDrawer = ({
   open,
   row,
   onClose,
-  onStatusChange
+  onStatusChange,
+  logs = []
 }: {
   open: boolean
   row?: OrderLineRow
   onClose: () => void
   onStatusChange?: OrderLineStatusUpdateHandler
+  logs?: OrderLineLog[]
 }) => {
   const [sourceProductOpen, setSourceProductOpen] = useState(false)
   const line = row?.line
@@ -462,6 +523,7 @@ export const OrderLineDetailDrawer = ({
   const logisticsRecords = line ? logisticsMock.filter((item) => item.orderLineId === line.id) : []
   const afterSalesCases = line ? afterSalesMock.filter((item) => item.orderLineId === line.id) : []
   const riskLabels = line ? getLineRiskLabels(line) : []
+  const lineLogs = line ? logs.filter((log) => log.orderLineId === line.id) : []
   const sourceProduct = line ? mockProducts.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
   const sourceProductCompareValue = line ? buildOrderLineSourceProductCompareValue(line) : undefined
   const handleClose = () => {
@@ -502,6 +564,7 @@ export const OrderLineDetailDrawer = ({
           </DetailSection>
 
           <OrderLineStatusUpdatePanel line={line} onStatusChange={onStatusChange} />
+          <OrderLineLogSection logs={lineLogs} />
 
           <DetailSection title="来源产品">
             <InfoGrid columns={3}>

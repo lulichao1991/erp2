@@ -852,3 +852,44 @@
 - 操作日志
 
 下一步建议做商品行操作日志第一版，记录每次状态变化的旧状态、新状态、操作者与时间。
+
+---
+
+### 15.7 商品行操作日志第一版
+
+本轮在商品行详情抽屉中新增“操作日志”区块，用于按商品行追踪状态变化。
+
+新增对象：
+
+- `OrderLineLog`
+- `orderLineLogsMock`
+
+日志字段：
+
+- `id`
+- `orderLineId`
+- `purchaseId`
+- `actionType`
+- `actionLabel`
+- `operatorName`
+- `createdAt`
+- `fromStatus`
+- `toStatus`
+- `note`
+
+实现口径：
+
+- 日志不存到 `purchase` 里
+- 抽屉内部按 `orderLineId` 过滤日志
+- `/order-lines` 与 `/purchases/:purchaseId` 都传入同一结构的日志数组
+- 状态更新成功时，使用不可变更新追加一条 `status_changed` 日志
+- 不同商品行的日志不会混在一起展示
+
+当前仍未做：
+
+- 后端持久化
+- 真实登录用户
+- 完整审计系统
+- 日志编辑 / 删除
+
+下一步建议做轻量物流新增 / 售后新增，让商品行具备独立发货和独立售后的前端演示能力。
