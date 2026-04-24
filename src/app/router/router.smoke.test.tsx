@@ -284,8 +284,29 @@ describe('router smoke', () => {
     expect(secondLineCard).not.toBeNull()
     expect(thirdLineCard).not.toBeNull()
 
-    await user.type(within(firstLineCard as HTMLElement).getByLabelText('商品名称'), '山形戒指')
-    await user.type(within(secondLineCard as HTMLElement).getByLabelText('商品名称'), '山形吊坠')
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用产品'), 'p-ring-001')
+    expect(within(firstLineCard as HTMLElement).getByLabelText('商品名称')).toHaveValue('山形戒指')
+    expect(within(firstLineCard as HTMLElement).getByText(/来源产品：山形素圈戒指/)).toBeInTheDocument()
+    expect(within(firstLineCard as HTMLElement).getByText('请先选择规格')).toBeInTheDocument()
+
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('规格'), 'spec-ring-16')
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('材质'), '18K金')
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('工艺'), '微镶')
+    await user.click(within(firstLineCard as HTMLElement).getByRole('checkbox', { name: '刻字' }))
+    expect(within(firstLineCard as HTMLElement).getByText(/面宽 3.8mm/)).toBeInTheDocument()
+    expect(within(firstLineCard as HTMLElement).getByText('¥ 2,000')).toBeInTheDocument()
+
+    await user.selectOptions(within(secondLineCard as HTMLElement).getByLabelText('引用产品'), 'p-pendant-001')
+    expect(within(secondLineCard as HTMLElement).getByLabelText('商品名称')).toHaveValue('如意吊坠')
+    expect(within(secondLineCard as HTMLElement).getByText(/来源产品：如意吊坠/)).toBeInTheDocument()
+
+    await user.selectOptions(within(secondLineCard as HTMLElement).getByLabelText('规格'), 'spec-pendant-s')
+    await user.selectOptions(within(secondLineCard as HTMLElement).getByLabelText('材质'), '18K金')
+    await user.selectOptions(within(secondLineCard as HTMLElement).getByLabelText('工艺'), '珐琅')
+    await user.click(within(secondLineCard as HTMLElement).getByRole('checkbox', { name: '附赠礼盒' }))
+    expect(within(secondLineCard as HTMLElement).getByText(/长 16mm/)).toBeInTheDocument()
+    expect(within(secondLineCard as HTMLElement).getByText('¥ 1,480')).toBeInTheDocument()
+
     await user.type(within(thirdLineCard as HTMLElement).getByLabelText('商品名称'), '定制项链')
 
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
@@ -302,9 +323,21 @@ describe('router smoke', () => {
     expect(logSpy).toHaveBeenCalledWith(
       'orderLineDrafts',
       expect.arrayContaining([
-        expect.objectContaining({ tempLineNo: 'TEMP-01', productName: '山形戒指' }),
-        expect.objectContaining({ tempLineNo: 'TEMP-02', productName: '山形吊坠' }),
-        expect.objectContaining({ tempLineNo: 'TEMP-03', productName: '定制项链' })
+        expect.objectContaining({
+          tempLineNo: 'TEMP-01',
+          sourceProductId: 'p-ring-001',
+          selectedSpecId: 'spec-ring-16',
+          productName: '山形戒指',
+          quoteResult: expect.objectContaining({ systemQuote: 2000 })
+        }),
+        expect.objectContaining({
+          tempLineNo: 'TEMP-02',
+          sourceProductId: 'p-pendant-001',
+          selectedSpecId: 'spec-pendant-s',
+          productName: '如意吊坠',
+          quoteResult: expect.objectContaining({ systemQuote: 1480 })
+        }),
+        expect.objectContaining({ tempLineNo: 'TEMP-03', productName: '定制项链', quoteResult: undefined })
       ])
     )
   })

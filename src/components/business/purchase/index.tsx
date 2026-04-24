@@ -2,9 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag } from '@/components/common'
 import { afterSalesMock, logisticsMock } from '@/mocks'
+import { mockProducts } from '@/mocks/products'
 import type { Customer } from '@/types/customer'
 import type { OrderLine } from '@/types/order-line'
+import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
+import type { QuoteResult } from '@/types/quote'
+import { buildQuoteResult } from '@/utils/quote/buildQuoteResult'
 
 type PurchaseLineRow = {
   line: OrderLine
@@ -31,6 +35,12 @@ export type PurchaseDraftFormValue = {
 
 export type OrderLineDraft = {
   id: string
+  sourceProductId?: string
+  sourceProductCode?: string
+  sourceProductName?: string
+  sourceProductVersion?: string
+  selectedSpecId?: string
+  selectedSpecialOptions: string[]
   productName: string
   category: string
   spec: string
@@ -61,7 +71,24 @@ type PurchaseDraftPayload = {
 
 type OrderLineDraftPayload = OrderLineDraft & {
   tempLineNo: string
+  specParameterSummary?: string
+  quoteResult?: QuoteResult
 }
+
+type ProductReferencePatch = Pick<
+  OrderLineDraft,
+  | 'sourceProductId'
+  | 'sourceProductCode'
+  | 'sourceProductName'
+  | 'sourceProductVersion'
+  | 'selectedSpecId'
+  | 'selectedSpecialOptions'
+  | 'productName'
+  | 'category'
+  | 'spec'
+  | 'material'
+  | 'process'
+>
 
 const defaultPurchaseDraft: PurchaseDraftFormValue = {
   channel: 'taobao',
@@ -85,6 +112,7 @@ let draftLineSeed = 1
 
 const createOrderLineDraft = (): OrderLineDraft => ({
   id: `order-line-draft-${draftLineSeed++}`,
+  selectedSpecialOptions: [],
   productName: '',
   category: '',
   spec: '',
@@ -102,6 +130,93 @@ const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '
 const parseMoneyInput = (value: string) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+const categoryLabelMap: Record<ProductCategory, string> = {
+  ring: '戒指',
+  pendant: '吊坠',
+  necklace: '项链',
+  earring: '耳饰',
+  bracelet: '手链',
+  other: '其他'
+}
+
+const getProductCategoryLabel = (category: ProductCategory) => categoryLabelMap[category] || category
+
+const getReferableProducts = () => mockProducts.filter((product) => product.isReferable)
+
+const getDraftProduct = (line: OrderLineDraft) => mockProducts.find((product) => product.id === line.sourceProductId)
+
+const getSelectedSpec = (line: OrderLineDraft, product?: Product) => product?.specs.find((spec) => spec.id === line.selectedSpecId)
+
+const getSpecParameterSummary = (spec?: ProductSpecRow) =>
+  spec?.sizeFields.map((field) => `${field.label} ${field.value}${field.unit || ''}`).join(' / ') || ''
+
+const buildProductReferencePatch = (productId: string): ProductReferencePatch => {
+  const product = mockProducts.find((item) => item.id === productId)
+
+  if (!product) {
+    return {
+      sourceProductId: undefined,
+      sourceProductCode: undefined,
+      sourceProductName: undefined,
+      sourceProductVersion: undefined,
+      selectedSpecId: undefined,
+      selectedSpecialOptions: [],
+      productName: '',
+      category: '',
+      spec: '',
+      material: '',
+      process: ''
+    }
+  }
+
+  return {
+    sourceProductId: product.id,
+    sourceProductCode: product.code,
+    sourceProductName: product.name,
+    sourceProductVersion: product.version,
+    selectedSpecId: undefined,
+    selectedSpecialOptions: [],
+    productName: product.shortName || product.name,
+    category: getProductCategoryLabel(product.category),
+    spec: '',
+    material: product.defaultMaterial || product.supportedMaterials[0] || '',
+    process: product.defaultProcess || product.supportedProcesses[0] || ''
+  }
+}
+
+const buildSpecPatch = (line: OrderLineDraft, specId: string): Partial<OrderLineDraft> => {
+  const product = getDraftProduct(line)
+  const spec = product?.specs.find((item) => item.id === specId)
+
+  return {
+    selectedSpecId: spec?.id,
+    spec: spec?.specValue || ''
+  }
+}
+
+const buildSpecialOptionPatch = (line: OrderLineDraft, option: string, checked: boolean): Pick<OrderLineDraft, 'selectedSpecialOptions'> => ({
+  selectedSpecialOptions: checked
+    ? [...line.selectedSpecialOptions.filter((item) => item !== option), option]
+    : line.selectedSpecialOptions.filter((item) => item !== option)
+})
+
+const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
+  const product = getDraftProduct(line)
+
+  if (!product) {
+    return undefined
+  }
+
+  return buildQuoteResult({
+    selectedSpec: getSelectedSpec(line, product),
+    selectedMaterial: line.material,
+    selectedProcess: line.process,
+    selectedSpecialOptions: line.selectedSpecialOptions,
+    rules: product.priceRules,
+    specRequired: Boolean(product.isSpecRequired)
+  })
 }
 
 const buildDraftPayload = (
@@ -140,7 +255,9 @@ const buildDraftPayload = (
   },
   orderLineDrafts: orderLines.map((line, index) => ({
     ...line,
-    tempLineNo: getTempLineNo(index)
+    tempLineNo: getTempLineNo(index),
+    specParameterSummary: getSpecParameterSummary(getSelectedSpec(line, getDraftProduct(line))),
+    quoteResult: buildOrderLineDraftQuote(line)
   }))
 })
 
@@ -386,6 +503,26 @@ export const usePurchaseDraftForm = () => {
     setErrorMessage('')
   }
 
+  const applyProductToOrderLine = (lineId: string, productId: string) => {
+    setOrderLineDrafts((current) => current.map((line) => (line.id === lineId ? { ...line, ...buildProductReferencePatch(productId) } : line)))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const selectOrderLineSpec = (lineId: string, specId: string) => {
+    setOrderLineDrafts((current) => current.map((line) => (line.id === lineId ? { ...line, ...buildSpecPatch(line, specId) } : line)))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const toggleOrderLineSpecialOption = (lineId: string, option: string, checked: boolean) => {
+    setOrderLineDrafts((current) =>
+      current.map((line) => (line.id === lineId ? { ...line, ...buildSpecialOptionPatch(line, option, checked) } : line))
+    )
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
   const saveDraft = () => {
     if (orderLineDrafts.length === 0) {
       setErrorMessage('至少需要保留 1 条商品行。')
@@ -410,6 +547,9 @@ export const usePurchaseDraftForm = () => {
     addOrderLine,
     removeOrderLine,
     updateOrderLine,
+    applyProductToOrderLine,
+    selectOrderLineSpec,
+    toggleOrderLineSpecialOption,
     saveDraft
   }
 }
@@ -517,84 +657,209 @@ export const PurchaseDraftPaymentSection = ({
   </SectionCard>
 )
 
+const OrderLineDraftQuotePanel = ({ product, selectedSpec, quote }: { product?: Product; selectedSpec?: ProductSpecRow; quote?: QuoteResult }) => {
+  if (!product) {
+    return <div className="text-caption">未引用产品时保留手动填写，暂不生成系统参考报价。</div>
+  }
+
+  if (!quote || quote.status === 'waiting_spec') {
+    return (
+      <div className="warning-alert">
+        <strong>系统参考报价</strong>
+        <div className="text-caption">请先选择规格</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={quote.status === 'warning' ? 'warning-alert' : 'placeholder-block'}>
+      <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+        <strong>系统参考报价</strong>
+        <StatusTag value={quote.status === 'warning' ? '报价提示' : '已生成'} />
+      </div>
+      <InfoGrid columns={3}>
+        <InfoField label="规格基础价" value={formatPrice(quote.basePrice)} />
+        <InfoField label="固定加价" value={formatPrice(quote.priceAdjustments.reduce((sum, item) => sum + item.delta, 0))} />
+        <InfoField label="系统参考报价" value={formatPrice(quote.systemQuote)} />
+      </InfoGrid>
+      <div className="text-caption">{selectedSpec ? `规格参数：${getSpecParameterSummary(selectedSpec) || '暂无规格参数'}` : '请先选择规格'}</div>
+      {quote.priceAdjustments.length > 0 ? (
+        <div className="text-caption">加价命中：{quote.priceAdjustments.map((item) => `${item.ruleKey} +${item.delta}`).join(' / ')}</div>
+      ) : null}
+      {quote.warnings.length > 0 ? <div className="text-caption">{quote.warnings.map((warning) => warning.message).join(' ')}</div> : null}
+    </div>
+  )
+}
+
 export const OrderLineDraftCard = ({
   line,
   tempLineNo,
   canRemove,
   onChange,
-  onRemove
+  onRemove,
+  onApplyProduct,
+  onSelectSpec,
+  onToggleSpecialOption
 }: {
   line: OrderLineDraft
   tempLineNo: string
   canRemove: boolean
   onChange: (patch: Partial<OrderLineDraft>) => void
   onRemove: () => void
-}) => (
-  <div className="subtle-panel">
-    <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-      <strong>商品行 {tempLineNo}</strong>
-      <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
-        删除商品行
-      </button>
-    </div>
-    <div className="field-grid three">
-      <label className="field-control">
-        <span className="field-label">商品名称</span>
-        <input className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">品类</span>
-        <input className="input" value={line.category} onChange={(event) => onChange({ category: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">规格</span>
-        <input className="input" value={line.spec} onChange={(event) => onChange({ spec: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">材质</span>
-        <input className="input" value={line.material} onChange={(event) => onChange({ material: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">工艺</span>
-        <input className="input" value={line.process} onChange={(event) => onChange({ process: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">特殊需求</span>
-        <input className="input" value={line.specialRequirement} onChange={(event) => onChange({ specialRequirement: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">负责人</span>
-        <input className="input" value={line.ownerName} onChange={(event) => onChange({ ownerName: event.target.value })} />
-      </label>
-      <label className="field-control">
-        <span className="field-label">承诺交期</span>
-        <input className="input" type="date" value={line.promisedDate} onChange={(event) => onChange({ promisedDate: event.target.value })} />
-      </label>
-      <div className="field-control">
-        <span className="field-label">商品行设置</span>
-        <label className="row" style={{ gap: 8 }}>
-          <input type="checkbox" checked={line.needsDesign} onChange={(event) => onChange({ needsDesign: event.target.checked })} />
-          <span>是否需要设计</span>
+  onApplyProduct: (productId: string) => void
+  onSelectSpec: (specId: string) => void
+  onToggleSpecialOption: (option: string, checked: boolean) => void
+}) => {
+  const product = getDraftProduct(line)
+  const selectedSpec = getSelectedSpec(line, product)
+  const quote = buildOrderLineDraftQuote(line)
+  const referableProducts = getReferableProducts()
+
+  return (
+    <div className="subtle-panel">
+      <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+        <strong>商品行 {tempLineNo}</strong>
+        <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
+          删除商品行
+        </button>
+      </div>
+      <div className="field-grid three">
+        <label className="field-control">
+          <span className="field-label">引用产品</span>
+          <select className="select" value={line.sourceProductId || ''} onChange={(event) => onApplyProduct(event.target.value)}>
+            <option value="">不引用产品，手动填写</option>
+            {referableProducts.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="row" style={{ gap: 8 }}>
-          <input type="checkbox" checked={line.urgent} onChange={(event) => onChange({ urgent: event.target.checked })} />
-          <span>是否加急</span>
+        <label className="field-control">
+          <span className="field-label">商品名称</span>
+          <input className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">品类</span>
+          <input className="input" value={line.category} onChange={(event) => onChange({ category: event.target.value })} />
         </label>
       </div>
+
+      {product ? (
+        <div className="text-caption spacer-top">
+          来源产品：{product.name} · {product.code} · {product.version}
+        </div>
+      ) : null}
+
+      <div className="field-grid three spacer-top">
+        <label className="field-control">
+          <span className="field-label">规格</span>
+          {product?.specMode === 'single_axis' ? (
+            <select className="select" value={line.selectedSpecId || ''} onChange={(event) => onSelectSpec(event.target.value)}>
+              <option value="">请选择{product.specName || '规格'}</option>
+              {product.specs
+                .filter((spec) => spec.status === 'enabled')
+                .map((spec) => (
+                  <option key={spec.id} value={spec.id}>
+                    {spec.specValue}
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <input className="input" value={line.spec} onChange={(event) => onChange({ spec: event.target.value })} />
+          )}
+        </label>
+        <label className="field-control">
+          <span className="field-label">材质</span>
+          {product ? (
+            <select className="select" value={line.material} onChange={(event) => onChange({ material: event.target.value })}>
+              {product.supportedMaterials.map((material) => (
+                <option key={material} value={material}>
+                  {material}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input className="input" value={line.material} onChange={(event) => onChange({ material: event.target.value })} />
+          )}
+        </label>
+        <label className="field-control">
+          <span className="field-label">工艺</span>
+          {product ? (
+            <select className="select" value={line.process} onChange={(event) => onChange({ process: event.target.value })}>
+              {product.supportedProcesses.map((process) => (
+                <option key={process} value={process}>
+                  {process}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input className="input" value={line.process} onChange={(event) => onChange({ process: event.target.value })} />
+          )}
+        </label>
+        <label className="field-control">
+          <span className="field-label">特殊需求备注</span>
+          <input className="input" value={line.specialRequirement} onChange={(event) => onChange({ specialRequirement: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">负责人</span>
+          <input className="input" value={line.ownerName} onChange={(event) => onChange({ ownerName: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">承诺交期</span>
+          <input className="input" type="date" value={line.promisedDate} onChange={(event) => onChange({ promisedDate: event.target.value })} />
+        </label>
+        {product ? (
+          <div className="field-control">
+            <span className="field-label">特殊需求选项</span>
+            {product.supportedSpecialOptions.map((option) => (
+              <label key={option} className="row" style={{ gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={line.selectedSpecialOptions.includes(option)}
+                  onChange={(event) => onToggleSpecialOption(option, event.target.checked)}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        ) : null}
+        <div className="field-control">
+          <span className="field-label">商品行设置</span>
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" checked={line.needsDesign} onChange={(event) => onChange({ needsDesign: event.target.checked })} />
+            <span>是否需要设计</span>
+          </label>
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" checked={line.urgent} onChange={(event) => onChange({ urgent: event.target.checked })} />
+            <span>是否加急</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="spacer-top">
+        <OrderLineDraftQuotePanel product={product} selectedSpec={selectedSpec} quote={quote} />
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 export const PurchaseDraftOrderLinesSection = ({
   orderLines,
   onAdd,
   onRemove,
-  onChange
+  onChange,
+  onApplyProduct,
+  onSelectSpec,
+  onToggleSpecialOption
 }: {
   orderLines: OrderLineDraft[]
   onAdd: () => void
   onRemove: (lineId: string) => void
   onChange: (lineId: string, patch: Partial<OrderLineDraft>) => void
+  onApplyProduct: (lineId: string, productId: string) => void
+  onSelectSpec: (lineId: string, specId: string) => void
+  onToggleSpecialOption: (lineId: string, option: string, checked: boolean) => void
 }) => (
   <SectionCard
     title="商品行区域"
@@ -617,6 +882,9 @@ export const PurchaseDraftOrderLinesSection = ({
           canRemove={orderLines.length > 1}
           onChange={(patch) => onChange(line.id, patch)}
           onRemove={() => onRemove(line.id)}
+          onApplyProduct={(productId) => onApplyProduct(line.id, productId)}
+          onSelectSpec={(specId) => onSelectSpec(line.id, specId)}
+          onToggleSpecialOption={(option, checked) => onToggleSpecialOption(line.id, option, checked)}
         />
       ))}
     </div>

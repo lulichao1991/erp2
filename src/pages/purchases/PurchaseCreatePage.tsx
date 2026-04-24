@@ -19,6 +19,9 @@ export const PurchaseCreatePage = () => {
     addOrderLine,
     removeOrderLine,
     updateOrderLine,
+    applyProductToOrderLine,
+    selectOrderLineSpec,
+    toggleOrderLineSpecialOption,
     saveDraft
   } = usePurchaseDraftForm()
 
@@ -59,7 +62,15 @@ export const PurchaseCreatePage = () => {
         <PurchaseDraftCommonSection draft={purchaseDraft} onChange={updatePurchaseDraft} />
         <PurchaseDraftCustomerSection draft={purchaseDraft} onChange={updatePurchaseDraft} />
         <PurchaseDraftPaymentSection draft={purchaseDraft} paymentSummary={paymentSummary} onChange={updatePurchaseDraft} />
-        <PurchaseDraftOrderLinesSection orderLines={orderLineDrafts} onAdd={addOrderLine} onRemove={removeOrderLine} onChange={updateOrderLine} />
+        <PurchaseDraftOrderLinesSection
+          orderLines={orderLineDrafts}
+          onAdd={addOrderLine}
+          onRemove={removeOrderLine}
+          onChange={updateOrderLine}
+          onApplyProduct={applyProductToOrderLine}
+          onSelectSpec={selectOrderLineSpec}
+          onToggleSpecialOption={toggleOrderLineSpecialOption}
+        />
       </div>
     </PageContainer>
   )
