@@ -3,26 +3,38 @@ import { Link } from 'react-router-dom'
 import {
   addAfterSalesCase,
   addLogisticsRecord,
+  buildOrderLineAfterSalesCloseLog,
+  buildOrderLineAfterSalesEditLog,
   buildOrderLineAfterSalesLog,
   buildOrderLineDetailsLog,
+  buildOrderLineLogisticsEditLog,
   buildOrderLineLogisticsLog,
+  buildOrderLineLogisticsVoidLog,
   buildOrderLineOutsourceLog,
   buildOrderLineProductionLog,
   buildOrderLineStatusLog,
+  closeAfterSalesCaseInList,
   buildOrderLineRows,
   filterOrderLineRows,
   OrderLineFilterBar,
   OrderLineDetailDrawer,
   OrderLineQuickStats,
   OrderLineTable,
+  updateAfterSalesCaseInList,
   updateOrderLineDetailsInRows,
   updateOrderLineOutsourceInfoInRows,
   updateOrderLineProductionInfoInRows,
   updateOrderLineStatusInRows,
+  updateLogisticsRecordInList,
+  voidLogisticsRecordInList,
   type OrderLineAfterSalesCreateHandler,
+  type OrderLineAfterSalesCloseHandler,
+  type OrderLineAfterSalesUpdateHandler,
   type OrderLineCenterFilters,
   type OrderLineDetailsUpdateHandler,
   type OrderLineLogisticsCreateHandler,
+  type OrderLineLogisticsUpdateHandler,
+  type OrderLineLogisticsVoidHandler,
   type OrderLineOutsourceUpdateHandler,
   type OrderLineProductionUpdateHandler,
   type OrderLineStatusUpdateHandler
@@ -65,6 +77,28 @@ export const OrderLineListPage = () => {
     }
   }
 
+  const handleUpdateLogistics: OrderLineLogisticsUpdateHandler = (recordId, draft) => {
+    const currentRecord = logisticsRecords.find((record) => record.id === recordId)
+    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
+    if (!currentRecord || !currentRow) {
+      return
+    }
+
+    setLogisticsRecords((current) => updateLogisticsRecordInList(current, recordId, draft))
+    setLogs((current) => [buildOrderLineLogisticsEditLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord }), ...current])
+  }
+
+  const handleVoidLogistics: OrderLineLogisticsVoidHandler = (recordId, voidReason) => {
+    const currentRecord = logisticsRecords.find((record) => record.id === recordId)
+    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
+    if (!currentRecord || !currentRow) {
+      return
+    }
+
+    setLogisticsRecords((current) => voidLogisticsRecordInList(current, recordId, voidReason))
+    setLogs((current) => [buildOrderLineLogisticsVoidLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord, voidReason }), ...current])
+  }
+
   const handleAddAfterSales: OrderLineAfterSalesCreateHandler = (record) => {
     const currentRow = rows.find(({ line }) => line.id === record.orderLineId)
     setAfterSalesCases((current) => addAfterSalesCase(current, record))
@@ -72,6 +106,28 @@ export const OrderLineListPage = () => {
     if (currentRow) {
       setLogs((current) => [buildOrderLineAfterSalesLog({ line: currentRow.line, purchase: currentRow.purchase, record }), ...current])
     }
+  }
+
+  const handleUpdateAfterSales: OrderLineAfterSalesUpdateHandler = (recordId, draft) => {
+    const currentRecord = afterSalesCases.find((record) => record.id === recordId)
+    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
+    if (!currentRecord || !currentRow) {
+      return
+    }
+
+    setAfterSalesCases((current) => updateAfterSalesCaseInList(current, recordId, draft))
+    setLogs((current) => [buildOrderLineAfterSalesEditLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord }), ...current])
+  }
+
+  const handleCloseAfterSales: OrderLineAfterSalesCloseHandler = (recordId) => {
+    const currentRecord = afterSalesCases.find((record) => record.id === recordId)
+    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
+    if (!currentRecord || !currentRow) {
+      return
+    }
+
+    setAfterSalesCases((current) => closeAfterSalesCaseInList(current, recordId))
+    setLogs((current) => [buildOrderLineAfterSalesCloseLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord }), ...current])
   }
 
   const handleUpdateLineDetails: OrderLineDetailsUpdateHandler = (lineId, draft) => {
@@ -139,6 +195,10 @@ export const OrderLineListPage = () => {
         afterSalesCases={afterSalesCases}
         onAddLogistics={handleAddLogistics}
         onAddAfterSales={handleAddAfterSales}
+        onUpdateLogistics={handleUpdateLogistics}
+        onVoidLogistics={handleVoidLogistics}
+        onUpdateAfterSales={handleUpdateAfterSales}
+        onCloseAfterSales={handleCloseAfterSales}
       />
     </PageContainer>
   )

@@ -38,6 +38,11 @@ import type { Task, TaskAssigneeRole, TaskStatus, TaskType } from '@/types/task'
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 const orderTaskTypeOptions: TaskType[] = ['order_process', 'design_modeling', 'production_prep', 'factory_production', 'after_sales']
 
+export type OrderLineListRow = {
+  order: Order
+  item: OrderItem
+}
+
 export type OrderInfoCardKey = 'customer_platform' | 'delivery' | 'summary' | 'finance'
 export type OrderItemBlockKey = 'spec_pricing' | 'factory_production' | 'customer' | 'design' | 'outsource' | 'factory'
 export type OrderInfoDraft = {
@@ -198,24 +203,24 @@ export const recalculateOrderItem = (item: OrderItem, product?: Product): OrderI
 
 export const OrderListHeader = () => (
   <PageHeader
-    title="订单列表"
+    title="商品任务中心"
     className="compact-page-header"
     actions={
       <Link to="/orders/new" className="button primary">
-        新建订单
+        新建交易记录
       </Link>
     }
   />
 )
 
-export const OrderQuickStats = ({ orders }: { orders: Order[] }) => {
+export const OrderQuickStats = ({ rows }: { rows: OrderLineListRow[] }) => {
   const stats = [
-    { label: '全部订单', value: orders.length },
-    { label: '待确认', value: orders.filter((item) => item.status === 'pending_confirm').length },
-    { label: '待设计', value: orders.filter((item) => item.status === 'pending_design').length },
-    { label: '待备产', value: orders.filter((item) => item.status === 'pending_production_prep').length },
-    { label: '待发货', value: orders.filter((item) => item.status === 'pending_shipping').length },
-    { label: '售后中', value: orders.filter((item) => item.status === 'after_sales').length }
+    { label: '全部商品任务', value: rows.length },
+    { label: '待确认', value: rows.filter((entry) => entry.item.status === '待确认').length },
+    { label: '设计确认中', value: rows.filter((entry) => entry.item.status === '设计确认中').length },
+    { label: '待发货', value: rows.filter((entry) => entry.item.status === '待发货').length },
+    { label: '售后中', value: rows.filter((entry) => entry.item.status === '售后中').length },
+    { label: '已引用模板', value: rows.filter((entry) => entry.item.isReferencedProduct).length }
   ]
 
   return (
@@ -232,7 +237,7 @@ export const OrderQuickStats = ({ orders }: { orders: Order[] }) => {
 
 type OrderFilterValue = {
   keyword: string
-  status: 'all' | OrderStatus
+  status: 'all' | string
   owner: string
 }
 
@@ -243,55 +248,51 @@ export const OrderFilterBar = ({
   value: OrderFilterValue
   onChange: (next: OrderFilterValue) => void
 }) => (
-  <SectionCard title="搜索与筛选" className="compact-card">
+  <SectionCard title="搜索与筛选" description="当前一行代表一条商品任务，可按交易编号、商品任务名称和负责人快速定位。" className="compact-card">
     <div className="field-grid three">
       <div className="field-control">
-        <label className="field-label">搜索订单编号 / 客户姓名</label>
+        <label className="field-label">搜索交易编号 / 平台单号 / 客户 / 商品任务</label>
         <input className="input" value={value.keyword} onChange={(event) => onChange({ ...value, keyword: event.target.value })} />
       </div>
       <div className="field-control">
-        <label className="field-label">当前状态</label>
+        <label className="field-label">商品任务状态</label>
         <select className="select" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value as OrderFilterValue['status'] })}>
           <option value="all">全部状态</option>
-          <option value="draft">草稿</option>
-          <option value="pending_confirm">待确认</option>
-          <option value="pending_design">待设计/建模</option>
-          <option value="pending_production_prep">待生产准备</option>
-          <option value="pending_shipping">待发货</option>
-          <option value="after_sales">售后中</option>
-          <option value="completed">已完成</option>
-          <option value="cancelled">已取消</option>
+          <option value="待确认">待确认</option>
+          <option value="设计确认中">设计确认中</option>
+          <option value="待发货">待发货</option>
+          <option value="售后中">售后中</option>
         </select>
       </div>
       <div className="field-control">
-        <label className="field-label">当前负责人</label>
+        <label className="field-label">商品任务负责人</label>
         <input className="input" value={value.owner} onChange={(event) => onChange({ ...value, owner: event.target.value })} placeholder="例如：张晨" />
       </div>
     </div>
   </SectionCard>
 )
 
-export const OrderTable = ({ orders }: { orders: Order[] }) => (
+export const OrderTable = ({ rows }: { rows: OrderLineListRow[] }) => (
   <div className="table-shell">
     <table className="table">
       <thead>
         <tr>
           <th>风险</th>
-          <th>订单编号</th>
-          <th>订单类型</th>
+          <th>交易编号</th>
           <th>客户</th>
-          <th>商品摘要</th>
-          <th>状态</th>
+          <th>商品任务</th>
+          <th>来源模板 / 规格</th>
+          <th>商品任务状态</th>
           <th>承诺交期</th>
           <th>负责人</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody>
-        {orders.map((order) => {
+        {rows.map(({ order, item }) => {
           const pressure = getTimePressure(order.promisedDate)
           return (
-            <tr key={order.id}>
+            <tr key={`${order.id}-${item.id}`}>
               <td>{order.riskTags.length > 0 ? <RiskTag value={order.riskTags[0]} /> : <span className="text-muted">—</span>}</td>
               <td>
                 <div className="stack" style={{ gap: 6 }}>
@@ -301,18 +302,21 @@ export const OrderTable = ({ orders }: { orders: Order[] }) => (
                   <span className="text-caption">{order.platformOrderNo || '无平台单号'}</span>
                 </div>
               </td>
-              <td>{order.orderType}</td>
               <td>
                 <div>{order.customerName || '—'}</div>
                 <div className="text-caption">{order.customerPhone || '—'}</div>
               </td>
               <td>
-                <div>{order.items.length} 个商品</div>
-                <div className="text-caption">{order.items.map((item) => item.name).join(' / ')}</div>
+                <div>{item.name}</div>
+                <div className="text-caption">{item.itemSku || '待维护货号'}</div>
+              </td>
+              <td>
+                <div>{item.sourceProduct?.sourceProductName || '未引用模板'}</div>
+                <div className="text-caption">{item.selectedSpecValue || '未选规格'}</div>
               </td>
               <td>
                 <div className="stack" style={{ gap: 6 }}>
-                  <StatusTag value={getOrderStatusLabel(order.status)} />
+                  <StatusTag value={item.status || '待确认'} />
                   <span className="text-caption">{getOrderPriorityLabel(order.priority)}</span>
                 </div>
               </td>
@@ -322,11 +326,11 @@ export const OrderTable = ({ orders }: { orders: Order[] }) => (
                   <TimePressureBadge label={pressure.label} variant={pressure.variant} />
                 </div>
               </td>
-              <td>{order.ownerName}</td>
+              <td>{item.currentOwner || order.ownerName}</td>
               <td>
                 <div className="row wrap">
                   <Link to={`/orders/${order.id}`} className="button ghost small">
-                    查看详情
+                    查看交易详情
                   </Link>
                 </div>
               </td>
@@ -388,13 +392,13 @@ export const OrderSummaryCard = ({
         )
       : (
           <button type="button" className="button secondary small" onClick={onStartEdit}>
-            编辑订单信息
+            编辑交易信息
           </button>
         )
     : actions
   const topMetaFields = [
-    !hideCommercialInfo ? { label: '订单类型', value: order.orderType } : null,
-    !hideCommercialInfo ? { label: '接待客服', value: currentDraft.ownerName || '—' } : null,
+    !hideCommercialInfo ? { label: '交易类型', value: order.orderType } : null,
+    !hideCommercialInfo ? { label: '负责人', value: currentDraft.ownerName || '—' } : null,
     { label: '客户期望时间', value: currentDraft.expectedDate || '—' },
     { label: '计划交期', value: currentDraft.plannedDate || '—' },
     { label: '承诺交期', value: currentDraft.promisedDate || '—' }
@@ -421,7 +425,7 @@ export const OrderSummaryCard = ({
           key: 'delivery',
           title: '时间与交付',
           fields: [
-            { label: '订单登记时间', value: order.registeredAt || '—' },
+            { label: '交易登记时间', value: order.registeredAt || '—' },
             ...(!hideCommercialInfo ? [{ label: '付款时间', value: currentDraft.paymentDate || '—' }] : [])
           ]
         }
@@ -429,10 +433,10 @@ export const OrderSummaryCard = ({
     visibleInfoCards.includes('summary')
       ? {
           key: 'summary',
-          title: '订单摘要',
+          title: '交易摘要',
           fields: [
             { label: '最近活动', value: order.latestActivityAt || '—' },
-            { label: '整单备注', value: currentDraft.remark || '—' }
+            { label: '交易备注', value: currentDraft.remark || '—' }
           ]
         }
       : null
@@ -466,7 +470,7 @@ export const OrderSummaryCard = ({
             <div className="order-summary-inline-meta order-summary-inline-meta-edit">
               <div className="field-control order-summary-inline-editor">
                 <label className="field-label" htmlFor="order-summary-owner-name">
-                  接待客服
+                  负责人
                 </label>
                 <input
                   id="order-summary-owner-name"
@@ -523,7 +527,7 @@ export const OrderSummaryCard = ({
             </div>
           )}
           <div className="order-summary-product-block">
-            <span className="order-summary-metric-label">{isFactoryView ? `生产货号 / 商品（${order.items.length}）` : `订单商品（${order.items.length}）`}</span>
+            <span className="order-summary-metric-label">{isFactoryView ? `生产货号 / 商品任务（${order.items.length}）` : `商品任务（${order.items.length}）`}</span>
             <ul className={productListClassName}>
               {summaryItems.map((item) => (
                 <li key={item.id} className="order-summary-product-item">
@@ -536,8 +540,8 @@ export const OrderSummaryCard = ({
               {remainingItemCount > 0 ? (
                 <li className="order-summary-product-item more">
                   <div className="order-summary-product-copy">
-                    <strong>还有 {remainingItemCount} 个商品</strong>
-                    <span className="text-caption">下方商品协同区可查看全部订单商品明细。</span>
+                    <strong>还有 {remainingItemCount} 条商品任务</strong>
+                    <span className="text-caption">下方商品任务区可查看全部任务明细。</span>
                   </div>
                 </li>
               ) : null}
@@ -674,7 +678,7 @@ export const OrderSummaryCard = ({
             </div>
             <div className="field-control order-summary-edit-text-full">
               <label className="field-label" htmlFor="order-summary-remark">
-                整单备注
+                交易备注
               </label>
               <textarea
                 id="order-summary-remark"
@@ -684,7 +688,7 @@ export const OrderSummaryCard = ({
               />
             </div>
           </div>
-          <div className="text-caption order-summary-readonly-note">只读字段：订单登记时间、最近活动</div>
+          <div className="text-caption order-summary-readonly-note">只读字段：交易登记时间、最近活动</div>
         </div>
       ) : flattenedFields.length > 0 ? (
         <div className="spacer-top order-summary-flat-details">
@@ -718,7 +722,7 @@ export const OrderInfoCardGroup = ({
       <SummaryCard key="finance" title="财务信息">
         <InfoGrid columns={3}>
           <InfoField label="系统参考价" value={formatPrice(financeSummary.referencePrice)} />
-          <InfoField label="实际成交价" value={formatPrice(financeSummary.dealPrice)} />
+          <InfoField label="交易成交价" value={formatPrice(financeSummary.dealPrice)} />
           <InfoField label="定金" value={formatPrice(financeSummary.depositAmount)} />
           <InfoField label="尾款" value={formatPrice(financeSummary.balanceAmount)} />
           <InfoField label="累计收款" value={formatPrice(financeSummary.totalReceived)} />
@@ -863,7 +867,7 @@ export const OrderStatusFlowSection = ({
   const isTerminalAlert = order.status === 'after_sales' || order.status === 'cancelled'
 
   return (
-    <SectionCard title="状态流转区" description="订单状态由业务人员手动推进；若新状态存在典型业务动作，可一键同时创建建议任务。">
+    <SectionCard title="交易推进区" description="这里记录交易记录层的公共阶段；若新阶段存在典型动作，可一键同时创建建议任务。">
       <div className="stack">
         <div className="status-flow-shell">
           <div className="status-flow-shell-title">业务阶段</div>
@@ -921,7 +925,7 @@ export const OrderStatusFlowSection = ({
         {readOnly ? (
           <div className="subtle-panel role-view-note">
             <strong>当前角色以查看为主</strong>
-            <div className="text-muted spacer-top">订单阶段仍可完整查看，但状态推进与建议任务创建仅在客服或跟单/运营视角下开放。</div>
+            <div className="text-muted spacer-top">交易阶段仍可完整查看，但状态推进与建议任务创建仅在客服或跟单/运营视角下开放。</div>
           </div>
         ) : nextStatuses.length > 0 ? (
           <div className="field-grid three">
@@ -961,7 +965,7 @@ export const OrderStatusFlowSection = ({
             })}
           </div>
         ) : (
-          <EmptyState title="当前状态已无后续流转动作" description="该订单已进入终态或当前阶段没有定义新的后续状态。" />
+          <EmptyState title="当前状态已无后续流转动作" description="该交易记录已进入终态或当前阶段没有定义新的后续状态。" />
         )}
       </div>
     </SectionCard>
@@ -982,8 +986,8 @@ export const OrderTaskSection = ({
   onUpdateTask: (taskId: string, status: TaskStatus) => void
 }) => (
   <SectionCard
-    title="任务协同区"
-    description="订单进入业务流转后，任务中心负责承接订单节点；这里先展示与当前订单直接相关的任务。"
+    title="关联任务区"
+    description="交易记录进入业务流转后，任务中心负责承接交易节点与商品任务动作；这里展示与当前记录直接相关的任务。"
     actions={
       <Link to="/tasks" className="button ghost small">
         打开任务中心
@@ -1043,7 +1047,7 @@ export const OrderTaskSection = ({
                   </div>
                 </div>
                 <div className="field-grid three">
-                  <InfoField label="关联商品" value={task.orderItemName || '订单级任务'} />
+                  <InfoField label="关联商品任务" value={task.orderItemName || '交易级任务'} />
                   <InfoField label="截止时间" value={task.dueAt || '未设置'} />
                   <InfoField label="最近更新时间" value={task.updatedAt} />
                 </div>
@@ -1052,7 +1056,7 @@ export const OrderTaskSection = ({
             ))}
         </div>
       ) : (
-        <EmptyState title="当前订单还没有任务" description="可以从这里直接派发订单处理、设计建模、生产准备或售后任务。" />
+        <EmptyState title="当前交易记录还没有关联任务" description="可以从这里直接派发交易处理、设计建模、生产准备或售后任务。" />
       )}
     </div>
   </SectionCard>
@@ -1194,7 +1198,7 @@ export const CustomerSpecBlock = ({
     </>
   )
 
-  return embedded ? content : <SectionCard title="商品需求" description="记录订单商品备注与刻字资料。">{content}</SectionCard>
+  return embedded ? content : <SectionCard title="商品任务需求" description="记录当前商品任务的备注与刻字资料。">{content}</SectionCard>
 }
 
 export const DesignInfoBlock = ({
@@ -1804,8 +1808,8 @@ const orderItemBlockMeta: Record<OrderItemBlockKey, { title: string; description
     description: '工厂视角只保留货号、规格参数、材质/工艺与生产备注，不展示客户与价格。'
   },
   customer: {
-    title: '商品需求',
-    description: '记录当前订单商品的备注、刻字资料与交付要求。'
+    title: '商品任务需求',
+    description: '记录当前商品任务的备注、刻字资料与交付要求。'
   },
   design: {
     title: '设计建模区',
@@ -2162,12 +2166,13 @@ export const OrderItemsSection = ({
   onAddItem?: () => void
 }) => (
   <SectionCard
-    title="订单商品"
+    title="商品任务区"
+    description="这里按商品任务拆开展示；一张卡代表一件商品任务。"
     className="compact-card order-items-section"
     actions={
       onAddItem ? (
         <button className="button primary small" onClick={onAddItem}>
-          新增商品
+          新增商品任务
         </button>
       ) : undefined
     }
@@ -2181,20 +2186,20 @@ export const OrderItemsSection = ({
 )
 
 export const LogisticsSection = () => (
-  <SectionCard title="物流记录区">
+  <SectionCard title="物流记录区" description="物流默认按商品任务关联；当前先保留展示占位。">
     <div className="placeholder-block">首轮先保留物流记录展示占位，后续补弹窗和记录流转。</div>
   </SectionCard>
 )
 
 export const AfterSalesSection = () => (
-  <SectionCard title="售后记录区">
+  <SectionCard title="售后记录区" description="售后默认按商品任务关联；当前先保留展示占位。">
     <div className="placeholder-block">首轮先保留售后记录展示占位，后续补详情与编辑弹窗。</div>
   </SectionCard>
 )
 
 export const OrderAttachmentSection = () => (
-  <SectionCard title="附件区">
-    <div className="placeholder-block">订单侧文件先以区块和展示占位为主，不做复杂上传管理。</div>
+  <SectionCard title="交易附件区">
+    <div className="placeholder-block">交易记录与商品任务侧文件先以区块和展示占位为主，不做复杂上传管理。</div>
   </SectionCard>
 )
 
@@ -2203,9 +2208,9 @@ export const OperationTimelineSection = ({ timeline = [] }: { timeline?: Timelin
 
   return (
     <SectionCard
-      title="日志记录区"
+      title="操作日志区"
       onHeaderClick={() => setExpanded((current) => !current)}
-      headerAriaLabel={`${expanded ? '收起' : '展开'}日志记录区`}
+      headerAriaLabel={`${expanded ? '收起' : '展开'}操作日志区`}
       headerExpanded={expanded}
       actions={
         <button type="button" className="button ghost small" onClick={() => setExpanded((current) => !current)}>

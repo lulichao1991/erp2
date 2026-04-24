@@ -2,136 +2,140 @@
 
 ## 1. 文档定位
 
-本文档用于说明当前仓库 `docs/frontend` 目录中各文档的作用、优先级与阅读顺序。
+本文档用于说明 `docs/frontend` 目录中当前文档与历史归档文档的边界。
 
-当前项目中存在两批文档：
+当前项目主线已经统一为：
 
-- 第一批：已按当前业务主语统一过口径的文档
-- 第二批：仍保留较强 Phase 2 / 历史整单中心语义的文档
+```text
+Customer -> Purchase -> OrderLine -> Product
+```
 
-因此，阅读文档时不要再按“首轮仅做产品管理 + 旧整单中心静态骨架”的理解方式推进，而应优先按：
+当前主入口为：
 
-**产品管理 → 商品任务中心 / 交易记录 → 任务中心**
+- `/order-lines`
+- `/purchases/new`
+- `/purchases/:purchaseId`
+- `/products`
 
-作为当前主链路。
+旧 `/orders` 只作为兼容模块保留，不再作为当前主入口或当前主文档口径。
 
 ---
 
-## 2. 当前最重要的文档
+## 2. 当前主文档
 
-如果你是第一次接手本项目，或者 AI coding 工具准备开始修改代码，请优先阅读以下文档。
+第一次接手项目、准备继续清理或准备修改代码时，优先阅读以下文档。
 
-### 第一优先级：项目执行规则
 1. `AGENTS.md`
 
 作用：
-- 定义当前阶段目标
-- 定义编码行为规则
-- 定义当前页面范围
-- 定义对象模型边界
-- 定义当前阶段不要做什么
+- 定义项目业务口径与 AI coding 行为规则
+- 定义当前主线对象与禁止事项
+- 明确旧 `/orders` 的兼容定位
 
----
+2. `README.md`
 
-### 第二优先级：当前已统一主语的实现文档
-2. `docs/frontend/routes-and-pages.md`
+作用：
+- 提供项目概览、运行方式和当前主线说明
+- 作为新成员快速进入项目的入口
+
+3. `docs/frontend/routes-and-pages.md`
 
 作用：
 - 定义当前主路由与页面职责
-- 明确 `/orders` 的保留路径与新业务语义
-- 用于约束页面跳转与上下文入口
+- 明确 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products` 的主入口地位
+- 明确旧 `/orders` 仅为兼容模块
 
-3. `docs/frontend/ui-structure.md`
-
-作用：
-- 定义商品任务中心、新建交易记录页、交易记录详情页结构
-- 用于约束区块划分与信息层级
-
-4. `docs/frontend/mock-data-schema.md`
+4. `docs/frontend/ui-structure.md`
 
 作用：
-- 定义 `Customer / TransactionRecord / OrderLine / ProductSnapshot` 等主对象
-- 用于约束 mock 与字段语义
+- 定义商品行中心、购买记录新建页、购买记录详情页和产品页的 UI 结构
+- 约束页面信息层级和对象边界
 
-5. `docs/frontend/handoff.md`
-
-作用：
-- 记录当前阶段共识、反馈与推进顺序
-- 若与旧文档冲突，优先按当前 handoff 理解
-
-6. `docs/frontend/frontend-task-board.md`
+5. `docs/frontend/mock-data-schema.md`
 
 作用：
-- 记录当前首轮推荐开发顺序
-- 用于约束页面与主链路的收口范围
+- 定义 `Customer / Purchase / OrderLine / ProductSnapshot` 等当前主对象
+- 明确 `TransactionRecord` 只能作为 `Purchase` 的兼容别名
+- 明确旧 `orders.ts` 只服务旧 `/orders` 兼容模块
 
-7. `docs/frontend/frontend-prd.md`
+6. `docs/frontend/handoff.md`
 
 作用：
-- 记录前端 PRD 基础范围
-- 现已按“交易记录 / 商品任务”语义修正，可作为实现参考
+- 记录阶段推进历史与最新交接信息
+- 若早期段落与当前主线冲突，以最新阶段说明和上述主文档为准
+
+7. `docs/frontend/docs-index.md`
+
+作用：
+- 说明当前主文档、过渡文档与历史归档文档的边界
 
 ---
 
-## 3. 历史规划文档
+## 3. 暂留过渡文档
 
-以下文档仍有参考价值，但保留较强历史 Phase 2 或旧整单中心语义。  
-阅读时应视为**历史规划 / 兼容阅读材料**，不得覆盖前一节已统一主语的文档。
+以下文档仍保留在 `docs/frontend` 根目录，但不再作为当前主线口径来源。
 
-8. `docs/frontend/phase-2-prd.md`
+1. `docs/frontend/frontend-task-board.md`
 
-作用：
-- 记录 Phase 2 旧版总体规划
-- 可用于理解项目演进背景，不作为当前一线实现口径
+保留原因：
+- 当前 `README.md` 和 `AGENTS.md` 仍明确引用该文件
+- 本轮只做历史文档归档，先不修改 README / AGENTS 的引用链
 
-9. `docs/frontend/order-lifecycle-spec.md`
-
-作用：
-- 记录旧版订单状态体系与状态边界
-- 当前阅读时需自行映射到“交易记录 / 商品任务”语义
-
-10. `docs/frontend/task-center-prd.md`
-
-作用：
-- 记录任务中心目标与任务关系
-- 当前阅读时需避免把“订单”继续视为唯一主操作对象
-
-11. `docs/frontend/role-draft.md`
-
-作用：
-- 记录历史角色与页面可见性草案
-- 可作参考，不作为当前权限实现依据
-
-12. `docs/frontend/phase-2-task-board.md`
-
-作用：
-- 记录 Phase 2 历史任务拆解
-- 只可用于理解演进顺序，不作为当前直接执行清单
-
-13. `docs/frontend/api-adapter-plan.md`
-
-作用：
-- 记录历史 API 适配想法
-- 当前阅读时需结合现有兼容层理解，不可直接当成现状接口契约
-
-14. `docs/frontend/state-management-plan.md`
-
-作用：
-- 记录历史状态管理想法
-- 当前阅读时需把 `Order / OrderItem` 理解为兼容命名
-
-15. 其余历史文档
-
-作用：
-- 如 `codex-prompts-phase-2.md`、`odex-prompts-phase-2.md`、`layout-and-navigation.md`、`file-structure.md`
-- 仅作背景参考，若口径冲突，一律不高于当前主文档
+阅读规则：
+- 仅作为早期任务拆解与执行历史参考
+- 如与 `Purchase + OrderLine` 主线冲突，以当前主文档为准
+- 后续若要归档，应先同步更新 `README.md` 和 `AGENTS.md` 的引用
 
 ---
 
-## 4. 推荐阅读顺序
+## 4. 历史归档文档
+
+以下文档已移入 `docs/frontend/archive/`。
+
+这些文档只作历史参考，不代表当前主线，不应继续作为新功能、新页面或新类型命名的依据。
+
+### 4.1 旧 AI 执行 Prompt
+
+- `docs/frontend/archive/codex-prompts-v1.md`
+- `docs/frontend/archive/odex-prompts-phase-2.md`
+
+归档原因：
+- 包含旧订单中心、旧 `/orders` 主入口或旧 Phase 2 执行口径
+- 部分内容带有历史 markdown 包裹和对话残留
+
+### 4.2 旧 Phase 2 / 旧订单中心规划
+
+- `docs/frontend/archive/phase-2-prd.md`
+- `docs/frontend/archive/phase-2-task-board.md`
+- `docs/frontend/archive/order-lifecycle-spec.md`
+- `docs/frontend/archive/task-center-prd.md`
+
+归档原因：
+- 以旧订单中心、订单生命周期或 Phase 2 任务为主线
+- 未按当前 `Purchase + OrderLine` 主线重写
+
+### 4.3 旧前端规划草案
+
+- `docs/frontend/archive/api-adapter-plan.md`
+- `docs/frontend/archive/state-management-plan.md`
+- `docs/frontend/archive/role-draft.md`
+- `docs/frontend/archive/layout-and-navigation.md`
+- `docs/frontend/archive/file-structure.md`
+- `docs/frontend/archive/frontend-prd.md`
+- `docs/frontend/archive/components-plan.md`
+- `docs/frontend/archive/business-rules.md`
+- `docs/frontend/archive/design-tokens.md`
+
+归档原因：
+- 属于早期规划阶段文档
+- 存在旧“订单中心 / 商品任务中心 / TransactionRecord”口径
+- 未作为本轮 Purchase + OrderLine 主线定稿文档维护
+
+---
+
+## 5. 推荐阅读顺序
 
 ### 场景 A：第一次接手项目
-推荐顺序：
 
 1. `AGENTS.md`
 2. `README.md`
@@ -139,128 +143,76 @@
 4. `docs/frontend/ui-structure.md`
 5. `docs/frontend/mock-data-schema.md`
 6. `docs/frontend/handoff.md`
-7. `docs/frontend/frontend-task-board.md`
-8. `docs/frontend/frontend-prd.md`
-9. 第二批历史规划文档（按需）
+7. `docs/frontend/docs-index.md`
 
----
-
-### 场景 B：要开始写代码
-推荐顺序：
+### 场景 B：准备修改代码
 
 1. `AGENTS.md`
 2. `docs/frontend/routes-and-pages.md`
 3. `docs/frontend/ui-structure.md`
 4. `docs/frontend/mock-data-schema.md`
 5. `docs/frontend/handoff.md`
-6. `docs/frontend/frontend-task-board.md`
-7. 对应专题文档，如 `components-plan.md` / `business-rules.md`
+6. 当前任务直接涉及的源码与测试
+
+### 场景 C：只做历史追溯
+
+1. `docs/frontend/docs-index.md`
+2. `docs/frontend/archive/README.md`
+3. `docs/frontend/archive/` 中对应历史文档
 
 ---
 
-### 场景 C：只做 UI / 页面结构
-推荐顺序：
-
-1. `AGENTS.md`
-2. `docs/frontend/routes-and-pages.md`
-3. `docs/frontend/ui-structure.md`
-4. `docs/frontend/components-plan.md`
-5. `docs/frontend/handoff.md`
-6. 第二批历史规划文档（按需）
-
----
-
-### 场景 D：只做 AI coding 执行
-推荐顺序：
-
-1. `AGENTS.md`
-2. `docs/frontend/routes-and-pages.md`
-3. `docs/frontend/mock-data-schema.md`
-4. `docs/frontend/handoff.md`
-5. `docs/frontend/frontend-task-board.md`
-6. 当前对应模块专题文档
-
----
-
-## 5. 文档优先级规则
+## 6. 文档优先级规则
 
 如果不同文档之间出现冲突，优先按以下顺序理解和执行：
 
 1. `AGENTS.md`
-2. 当前阶段 `handoff.md`
+2. `README.md`
 3. `docs/frontend/routes-and-pages.md`
 4. `docs/frontend/ui-structure.md`
 5. `docs/frontend/mock-data-schema.md`
-6. `docs/frontend/frontend-task-board.md`
-7. `docs/frontend/frontend-prd.md`
-8. `docs/frontend/business-rules.md`
-9. `docs/frontend/components-plan.md`
-10. 第二批历史规划文档
+6. `docs/frontend/handoff.md`
+7. `docs/frontend/docs-index.md`
+8. `docs/frontend/frontend-task-board.md`
+9. `docs/frontend/archive/*`
 
 ---
 
-## 6. 当前阶段最容易搞错的地方
+## 7. 当前最容易搞错的地方
 
-### 1. 把项目理解成旧整单中心模式
+### 7.1 把旧 `/orders` 当成当前主入口
+
 错误理解：
-- 还以为当前仍以整单为唯一主操作对象
+- `/orders` 仍是当前订单中心或商品任务中心主入口
 
 正确理解：
-- 当前一线文档已统一为“交易记录归组、商品任务执行”
-- `/orders` 只是保留路径，不代表业务主语仍是旧整单中心
+- 当前主入口是 `/order-lines`
+- 新建购买记录是 `/purchases/new`
+- 购买记录详情是 `/purchases/:purchaseId`
+- 旧 `/orders` 只作为兼容模块保留
 
----
+### 7.2 把 TransactionRecord 当成当前主模型
 
-### 2. 把商品任务当成产品
 错误理解：
-- 商品任务和产品详情共用一个对象
+- 当前归组对象仍叫 `TransactionRecord`
 
 正确理解：
-- 产品 = 模板
-- 商品任务 = 交易记录里的实例
-- 商品任务必须保留来源产品快照语义
+- 当前归组对象是 `Purchase`
+- `TransactionRecord` 只能作为兼容别名或历史文档语境出现
 
----
+### 7.3 把 OrderLine 写回旧商品任务中心口径
 
-### 3. 提前扩展过多模块
 错误理解：
-- 现在就做财务中心、工厂协同、复杂物流、完整权限
+- `OrderLine` 等同旧 `/orders` 页面里的 `OrderItem`
 
 正确理解：
-- 当前只做：
-  - 产品管理
-  - 商品任务中心 / 交易记录页
-  - 任务中心
-  - 其余历史规划只做按需参考
-
----
-
-### 4. 跳过文档直接重写
-错误理解：
-- 不读 docs，直接大改页面和结构
-
-正确理解：
-- 先读 AGENTS 和当前已统一主语的文档
-- 按当前仓库风格做增量修改
-
----
-
-## 7. 当前最推荐的开发主顺序
-
-当前阶段开发顺序固定建议为：
-
-1. 类型与 mock 数据升级
-2. 商品任务中心与交易记录页语义升级
-3. 产品详情 / 编辑升级
-4. 任务中心按需接入
-5. 再回头处理第二批历史规划文档
+- `OrderLine` 是当前系统主操作对象
+- 商品行可以独立推进状态、设计、委外、生产、物流和售后
 
 ---
 
 ## 8. 本文档总结
 
-本索引文档的作用不是增加新需求，而是确保所有参与者都按同一口径理解当前项目。
+当前文档区只保留 Purchase + OrderLine 主线作为执行依据。
 
-当前最重要的认知只有一句话：
-
-**当前一线实现文档的主链路是：产品管理 → 商品任务中心 / 交易记录 → 任务中心。**
+`docs/frontend/archive/` 中的文档用于理解项目演进历史，不用于指导当前新增代码、页面命名或路由入口。

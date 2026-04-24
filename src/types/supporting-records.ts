@@ -2,11 +2,14 @@ export type LogisticsType = 'measurement_tool' | 'goods' | 'after_sales' | 'othe
 
 export type LogisticsDirection = 'outbound' | 'return'
 
+export type LogisticsRecordStatus = 'active' | 'voided'
+
 export type LogisticsRecord = {
   id: string
   orderLineId: string
   purchaseId?: string
   transactionId?: string
+  recordStatus?: LogisticsRecordStatus
   logisticsType?: LogisticsType
   direction?: LogisticsDirection
   company?: string
@@ -15,6 +18,8 @@ export type LogisticsRecord = {
   shippedAt?: string
   signedAt?: string
   deliveredAt?: string
+  voidedAt?: string
+  voidReason?: string
   remark?: string
   note?: string
 }

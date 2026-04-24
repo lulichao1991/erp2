@@ -37,17 +37,15 @@ const getInitialCurrentUserRole = (): TaskAssigneeRole => {
 }
 
 type AppDataContextValue = {
+  // Current mainline state. New modules should prefer these objects.
   products: Product[]
   purchases: Purchase[]
   orderLines: OrderLine[]
-  orders: Order[]
   tasks: Task[]
   productFieldOptions: ProductFieldOptions
   currentUserRole: TaskAssigneeRole
   getProduct: (productId?: string) => Product | undefined
-  getOrder: (orderId?: string) => Order | undefined
   getTask: (taskId?: string) => Task | undefined
-  getTasksByOrder: (orderId?: string) => Task[]
   setCurrentUserRole: (role: TaskAssigneeRole) => void
   saveProduct: (payload: Product) => Product
   updateProduct: (productId: string, updater: (current: Product) => Product) => Product | undefined
@@ -55,10 +53,15 @@ type AppDataContextValue = {
   addGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
   removeGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
   saveGlobalSizeParameterDefinitions: (definitions: ProductSizeParameterDefinition[]) => void
+  updateOrderLineProductionInfo: (orderLineId: string, productionInfo: OrderLineProductionInfo) => OrderLine | undefined
+
+  // Legacy /orders compatibility state and APIs. Keep these for the old route only.
+  orders: Order[]
+  getOrder: (orderId?: string) => Order | undefined
+  getTasksByOrder: (orderId?: string) => Task[]
   saveOrder: (payload: Order) => Order
   updateOrder: (orderId: string, updater: (current: Order) => Order) => Order | undefined
   transitionOrderStatus: (payload: { orderId: string; nextStatus: OrderStatus; reason?: string }) => Order | undefined
-  updateOrderLineProductionInfo: (orderLineId: string, productionInfo: OrderLineProductionInfo) => OrderLine | undefined
   updateOrderItem: (orderId: string, itemId: string, updater: (current: OrderItem) => OrderItem) => Order | undefined
   removeOrderItem: (payload: { orderId: string; itemId: string }) => Order | undefined
   createTaskFromOrder: (payload: { orderId: string; type: TaskType; orderItemId?: string; orderItemName?: string }) => Task | undefined
@@ -68,9 +71,12 @@ type AppDataContextValue = {
 const AppDataContext = createContext<AppDataContextValue | null>(null)
 
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
+  // Current mainline mock state.
   const [products, setProducts] = useState<Product[]>(() => getProductList())
   const [purchases] = useState<Purchase[]>(() => structuredClone(purchasesMock))
   const [orderLines, setOrderLines] = useState<OrderLine[]>(() => structuredClone(orderLinesMock))
+
+  // Legacy /orders compatibility state. Do not expand usage from new modules.
   const [orders, setOrders] = useState<Order[]>(() => getOrderList())
   const [tasks, setTasks] = useState<Task[]>(() => getTaskList())
   const [productFieldOptions, setProductFieldOptions] = useState<ProductFieldOptions>(() => getProductFieldOptions())
@@ -124,6 +130,26 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
       saveGlobalSizeParameterDefinitions: (definitions) => {
         setProductFieldOptions((current) => saveProductFieldOptions(saveSizeParameterDefinitions(current, definitions)))
       },
+      updateOrderLineProductionInfo: (orderLineId, productionInfo) => {
+        const found = orderLines.find((item) => item.id === orderLineId)
+        if (!found) {
+          return undefined
+        }
+
+        const nextOrderLine: OrderLine = {
+          ...found,
+          productionInfo: {
+            ...found.productionInfo,
+            ...productionInfo
+          }
+        }
+
+        setOrderLines((current) => current.map((item) => (item.id === orderLineId ? nextOrderLine : item)))
+        return nextOrderLine
+      },
+
+      // Legacy /orders compatibility APIs. New Purchase + OrderLine flows should not call these
+      // except as an explicit fallback while a page still renders old compatibility data.
       saveOrder: (payload) => {
         setOrders((current) => {
           const exists = current.some((item) => item.id === payload.id)
@@ -170,23 +196,6 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
 
         setOrders((current) => current.map((item) => (item.id === orderId ? nextOrder : item)))
         return nextOrder
-      },
-      updateOrderLineProductionInfo: (orderLineId, productionInfo) => {
-        const found = orderLines.find((item) => item.id === orderLineId)
-        if (!found) {
-          return undefined
-        }
-
-        const nextOrderLine: OrderLine = {
-          ...found,
-          productionInfo: {
-            ...found.productionInfo,
-            ...productionInfo
-          }
-        }
-
-        setOrderLines((current) => current.map((item) => (item.id === orderLineId ? nextOrderLine : item)))
-        return nextOrderLine
       },
       updateOrderItem: (orderId, itemId, updater) => {
         const order = orders.find((item) => item.id === orderId)
@@ -388,6 +397,8 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         }
 
         setTasks((current) => current.map((item) => (item.id === taskId ? nextTask : item)))
+        // Legacy /orders compatibility mirror. Current task data is updated above;
+        // this keeps the old order timeline visible until task timeline is migrated.
         setOrders((current) =>
           current.map((item) =>
             item.id === nextTask.orderId

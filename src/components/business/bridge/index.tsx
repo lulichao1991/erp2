@@ -280,7 +280,7 @@ export const SourceProductDrawer = ({
       <div className="tabs">
         {[
           ['detail', '模板原始详情'],
-          ['compare', '订单参数对比'],
+          ['compare', '商品任务参数对比'],
           ['assets', '文件资料']
         ].map(([key, label]) => (
           <button key={key} className={`tab-button${drawer.activeTab === key ? ' active' : ''}`} onClick={() => drawer.setActiveTab(key as 'detail' | 'compare' | 'assets')}>
@@ -314,7 +314,7 @@ export const SourceProductDrawer = ({
               <div className="quote-value">{sortedSpecs.length}</div>
             </div>
             <div className="subtle-panel">
-              <div className="text-caption">当前订单所选规格</div>
+              <div className="text-caption">当前商品任务所选规格</div>
               <div className="row wrap spacer-top">
                 <strong>{currentSpecValue || '未选择'}</strong>
               </div>
@@ -332,7 +332,7 @@ export const SourceProductDrawer = ({
           </div>
           <div className="subtle-panel">
             <strong>完整规格参数表</strong>
-            <div className="text-muted spacer-top">下表展示模板全部规格参数、参考重量和基础价格，当前订单所选规格会高亮，方便横向核对。</div>
+            <div className="text-muted spacer-top">下表展示模板全部规格参数、参考重量和基础价格，当前商品任务所选规格会高亮，方便横向核对。</div>
             <div className="spacer-top table-shell">
               <table className="table">
                 <thead>
@@ -357,7 +357,7 @@ export const SourceProductDrawer = ({
                           <div className="stack" style={{ gap: 6 }}>
                             <strong>{spec.specValue}</strong>
                             <div className="row wrap">
-                              {isCurrent ? <span className="tag status-warning">当前订单选择</span> : null}
+                              {isCurrent ? <span className="tag status-warning">当前任务选择</span> : null}
                               {isSource ? <span className="tag version">引用时规格</span> : null}
                             </div>
                           </div>

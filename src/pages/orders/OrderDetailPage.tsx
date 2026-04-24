@@ -192,7 +192,7 @@ export const OrderDetailPage = () => {
   if (!order) {
     return (
       <PageContainer>
-        <EmptyState title="未找到订单" description="当前订单不存在，可能是链接失效或 mock 数据尚未包含该订单。" />
+        <EmptyState title="未找到交易记录" description="当前交易记录不存在，可能是链接失效或 mock 数据尚未包含该记录。" />
       </PageContainer>
     )
   }
@@ -225,7 +225,7 @@ export const OrderDetailPage = () => {
     appData.transitionOrderStatus({
       orderId: order.id,
       nextStatus,
-      reason: `订单阶段已推进到${getOrderStatusLabel(nextStatus)}，并同步创建建议任务。`
+      reason: `交易阶段已推进到${getOrderStatusLabel(nextStatus)}，并同步创建建议任务。`
     })
     appData.createTaskFromOrder({
       orderId: order.id,
@@ -270,9 +270,10 @@ export const OrderDetailPage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '订单中心', to: '/orders' }, { label: '订单详情' }, { label: order.orderNo }]} />
+      <AppBreadcrumb items={[{ label: '商品任务中心', to: '/orders' }, { label: '交易记录详情' }, { label: order.orderNo }]} />
       <OrderBusinessStageHeaderStrip order={order} />
       <div className="stack">
+        <div className="subtle-panel">上方展示交易记录公共信息，下方按商品任务卡分开展示执行、协同、物流与售后信息。</div>
         <OrderSummaryCard
           order={order}
           role={currentRole}

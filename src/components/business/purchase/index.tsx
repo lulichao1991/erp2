@@ -314,6 +314,8 @@ const getOrderLineStatusLabel = (status?: string) => (status ? orderLineStatusLa
 
 const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || status : '待确认')
 
+const isActiveLogisticsRecord = (record?: LogisticsRecord) => record?.recordStatus !== 'voided'
+
 const activeAfterSalesStatuses = new Set(['open', 'processing', 'in_progress', 'waiting_return'])
 
 const findCurrentAfterSalesCase = (records: AfterSalesCase[], orderLineId: string) =>
@@ -448,7 +450,7 @@ export const PurchaseOrderLineTable = ({
           </thead>
           <tbody>
             {rows.map(({ line, purchase }) => {
-              const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id)
+              const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id && isActiveLogisticsRecord(item))
               const afterSalesCase = findCurrentAfterSalesCase(afterSalesCases, line.id)
 
               return (

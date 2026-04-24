@@ -1,3 +1,10 @@
+/**
+ * Legacy /orders compatibility types.
+ *
+ * Current system mainline uses Purchase + OrderLine + ProductSnapshot.
+ * Keep Order / OrderItem / SourceProductSnapshot here only for the old
+ * /orders compatibility module and existing legacy page/service imports.
+ */
 import type { ProductSpecRow } from '@/types/product'
 import type { QuoteResult } from '@/types/quote'
 import type {
@@ -14,10 +21,16 @@ import type {
   OrderFinanceInfo,
   OrderFinanceTransaction,
   OrderFinanceTransactionType,
-  TimelineRecord,
+  TimelineRecord as PurchaseTimelineRecord,
   TimelineRecordType,
   TransactionAggregateStatus
 } from '@/types/transaction'
+import type {
+  AfterSalesCase,
+  AfterSalesCaseStatus,
+  AfterSalesCaseType,
+  LogisticsRecord
+} from '@/types/supporting-records'
 
 export type {
   OrderLine,
@@ -31,10 +44,15 @@ export type {
   ProductSnapshot
 } from '@/types/order-line'
 export type {
+  AfterSalesCase,
+  AfterSalesCaseStatus,
+  AfterSalesCaseType,
+  LogisticsRecord
+} from '@/types/supporting-records'
+export type {
   OrderFinanceInfo,
   OrderFinanceTransaction,
   OrderFinanceTransactionType,
-  TimelineRecord,
   TimelineRecordType,
   TransactionAggregateStatus,
   TransactionOrderType,
@@ -42,7 +60,7 @@ export type {
   TransactionSourceChannel
 } from '@/types/transaction'
 
-// Compatibility layer for the existing page/service code.
+// Compatibility layer for the old /orders page/service code.
 
 export type OrderStatus =
   | 'draft'
@@ -56,21 +74,42 @@ export type OrderStatus =
 
 export type OrderPriority = 'normal' | 'high' | 'urgent'
 
+/**
+ * @deprecated Use ProductSnapshot from '@/types/order-line' in current modules.
+ */
 export type SourceProductSnapshot = ProductSnapshot
 
+/**
+ * @deprecated Use OrderLineUploadedFile from '@/types/order-line' in current modules.
+ */
 export type OrderItemUploadedFile = OrderLineUploadedFile
 
+/**
+ * @deprecated Use OrderLineActualRequirements from '@/types/order-line' in current modules.
+ */
 export type OrderItemActualRequirements = OrderLineActualRequirements & {
   engraveImageFiles?: OrderItemUploadedFile[]
   engravePltFiles?: OrderItemUploadedFile[]
 }
 
+/**
+ * @deprecated Use OrderLineDesignInfo from '@/types/order-line' in current modules.
+ */
 export type OrderItemDesignInfo = OrderLineDesignInfo
 
+/**
+ * @deprecated Use OrderLineOutsourceInfo from '@/types/order-line' in current modules.
+ */
 export type OrderItemOutsourceInfo = OrderLineOutsourceInfo
 
+/**
+ * @deprecated Use OrderLineProductionInfo from '@/types/order-line' in current modules.
+ */
 export type OrderItemFactoryFeedback = OrderLineProductionInfo
 
+/**
+ * @deprecated Use OrderLine from '@/types/order-line' in current modules.
+ */
 export type OrderItem = Omit<OrderLine, 'actualRequirements' | 'designInfo' | 'outsourceInfo' | 'productionInfo' | 'quote'> & {
   itemSku: string
   actualRequirements?: OrderItemActualRequirements
@@ -82,8 +121,23 @@ export type OrderItem = Omit<OrderLine, 'actualRequirements' | 'designInfo' | 'o
   selectedSpecSnapshot?: ProductSpecRow
 }
 
+/**
+ * @deprecated Use TimelineRecord from '@/types/purchase' in current modules.
+ * This old /orders timeline keeps relatedOrderItemId for legacy page/service code.
+ */
+export type TimelineRecord = PurchaseTimelineRecord & {
+  orderId?: string
+  relatedOrderItemId?: string
+}
+
+/**
+ * @deprecated Use TimelineRecord from '@/types/purchase' in current modules.
+ */
 export type LegacyTimelineRecord = TimelineRecord
 
+/**
+ * @deprecated Use Purchase from '@/types/purchase' in current modules.
+ */
 export type Order = {
   id: string
   orderNo: string

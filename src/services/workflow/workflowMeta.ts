@@ -53,6 +53,7 @@ export const taskAssigneeRoleLabelMap: Record<TaskAssigneeRole, string> = {
 
 export const timelineRecordLabelMap: Record<TimelineRecordType, string> = {
   order_created: '订单创建',
+  purchase_created: '购买记录创建',
   product_referenced: '引用产品',
   spec_changed: '规格变更',
   quote_recalculated: '报价重算',

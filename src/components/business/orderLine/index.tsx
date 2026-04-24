@@ -80,6 +80,8 @@ export type OrderLineLogisticsDraft = {
 }
 
 export type OrderLineLogisticsCreateHandler = (record: LogisticsRecord) => void
+export type OrderLineLogisticsUpdateHandler = (recordId: string, draft: OrderLineLogisticsDraft) => void
+export type OrderLineLogisticsVoidHandler = (recordId: string, voidReason: string) => void
 
 export type OrderLineAfterSalesDraft = {
   type: AfterSalesCaseType
@@ -92,6 +94,8 @@ export type OrderLineAfterSalesDraft = {
 }
 
 export type OrderLineAfterSalesCreateHandler = (record: AfterSalesCase) => void
+export type OrderLineAfterSalesUpdateHandler = (recordId: string, draft: OrderLineAfterSalesDraft) => void
+export type OrderLineAfterSalesCloseHandler = (recordId: string) => void
 
 const statusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -199,6 +203,8 @@ const defaultLogisticsDraft: OrderLineLogisticsDraft = {
 const getLogisticsCompany = (record: LogisticsRecord) => record.company || record.carrier || '未填写承运商'
 const getLogisticsRemark = (record: LogisticsRecord) => record.remark || record.note || '—'
 const getLogisticsSignedAt = (record: LogisticsRecord) => record.signedAt || record.deliveredAt || ''
+const isActiveLogisticsRecord = (record?: LogisticsRecord) => record?.recordStatus !== 'voided'
+const findCurrentLogisticsRecord = (records: LogisticsRecord[], orderLineId: string) => records.find((item) => item.orderLineId === orderLineId && isActiveLogisticsRecord(item))
 
 const afterSalesStatusLabelMap: Record<string, string> = {
   open: '待处理',
@@ -559,6 +565,16 @@ export const buildOrderLineLogisticsLog = ({
   note: `为商品行 ${line.lineCode || line.id} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
 })
 
+export const buildOrderLineLogisticsDraft = (record?: LogisticsRecord): OrderLineLogisticsDraft => ({
+  logisticsType: record?.logisticsType || 'goods',
+  direction: record?.direction || 'outbound',
+  company: record?.company || record?.carrier || '',
+  trackingNo: record?.trackingNo || '',
+  shippedAt: record?.shippedAt || '',
+  signedAt: record?.signedAt || record?.deliveredAt || '',
+  remark: record?.remark || record?.note || ''
+})
+
 export const buildOrderLineLogisticsRecord = ({
   line,
   purchase,
@@ -572,6 +588,7 @@ export const buildOrderLineLogisticsRecord = ({
   orderLineId: line.id,
   purchaseId: line.purchaseId || line.transactionId || purchase?.id,
   transactionId: line.transactionId || purchase?.id,
+  recordStatus: 'active',
   logisticsType: draft.logisticsType,
   direction: draft.direction,
   company: draft.company,
@@ -584,6 +601,79 @@ export const buildOrderLineLogisticsRecord = ({
 })
 
 export const addLogisticsRecord = (records: LogisticsRecord[], record: LogisticsRecord) => [record, ...records]
+
+export const applyOrderLineLogisticsDraft = (record: LogisticsRecord, draft: OrderLineLogisticsDraft): LogisticsRecord => ({
+  ...record,
+  logisticsType: draft.logisticsType,
+  direction: draft.direction,
+  company: draft.company.trim() || undefined,
+  carrier: draft.company.trim() || undefined,
+  trackingNo: draft.trackingNo.trim() || undefined,
+  shippedAt: draft.shippedAt || undefined,
+  signedAt: draft.signedAt || undefined,
+  deliveredAt: draft.signedAt || undefined,
+  remark: draft.remark.trim() || undefined,
+  note: draft.remark.trim() || undefined
+})
+
+export const updateLogisticsRecordInList = (records: LogisticsRecord[], recordId: string, draft: OrderLineLogisticsDraft) =>
+  records.map((record) => (record.id === recordId ? applyOrderLineLogisticsDraft(record, draft) : record))
+
+export const voidLogisticsRecordInList = (records: LogisticsRecord[], recordId: string, voidReason: string, voidedAt = formatDateTime(new Date())) =>
+  records.map((record) =>
+    record.id === recordId
+      ? {
+          ...record,
+          recordStatus: 'voided' as const,
+          voidedAt,
+          voidReason: voidReason.trim() || '未填写作废原因'
+        }
+      : record
+  )
+
+export const buildOrderLineLogisticsEditLog = ({
+  line,
+  purchase,
+  record,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  record: LogisticsRecord
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-logistics-edit-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'logistics_updated',
+  actionLabel: '编辑物流',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: `编辑了商品行 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}`
+})
+
+export const buildOrderLineLogisticsVoidLog = ({
+  line,
+  purchase,
+  record,
+  voidReason,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  record: LogisticsRecord
+  voidReason: string
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-logistics-void-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'logistics_voided',
+  actionLabel: '作废物流',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: `作废了商品行 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}：${voidReason.trim() || '未填写作废原因'}`
+})
 
 export const buildOrderLineAfterSalesLog = ({
   line,
@@ -631,6 +721,76 @@ export const buildOrderLineAfterSalesCase = ({
 })
 
 export const addAfterSalesCase = (records: AfterSalesCase[], record: AfterSalesCase) => [record, ...records]
+
+export const buildOrderLineAfterSalesDraft = (record?: AfterSalesCase): OrderLineAfterSalesDraft => ({
+  type: record?.type || 'repair',
+  reason: record?.reason || '',
+  status: record?.status || 'open',
+  responsibleParty: record?.responsibleParty || '王客服',
+  createdAt: record?.createdAt || '',
+  closedAt: record?.closedAt || '',
+  remark: record?.remark || record?.note || ''
+})
+
+export const applyOrderLineAfterSalesDraft = (record: AfterSalesCase, draft: OrderLineAfterSalesDraft): AfterSalesCase => ({
+  ...record,
+  type: draft.type,
+  reason: draft.reason.trim() || undefined,
+  status: draft.status,
+  responsibleParty: draft.responsibleParty.trim() || undefined,
+  createdAt: draft.createdAt || undefined,
+  closedAt: draft.closedAt || undefined,
+  remark: draft.remark.trim() || undefined,
+  note: draft.remark.trim() || undefined
+})
+
+export const updateAfterSalesCaseInList = (records: AfterSalesCase[], recordId: string, draft: OrderLineAfterSalesDraft) =>
+  records.map((record) => (record.id === recordId ? applyOrderLineAfterSalesDraft(record, draft) : record))
+
+export const closeAfterSalesCaseInList = (records: AfterSalesCase[], recordId: string, closedAt = formatDateTime(new Date())) =>
+  records.map((record) => (record.id === recordId ? { ...record, status: 'closed' as const, closedAt } : record))
+
+export const buildOrderLineAfterSalesEditLog = ({
+  line,
+  purchase,
+  record,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  record: AfterSalesCase
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-after-sales-edit-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'after_sales_updated',
+  actionLabel: '编辑售后',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: `编辑了商品行 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
+})
+
+export const buildOrderLineAfterSalesCloseLog = ({
+  line,
+  purchase,
+  record,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  record: AfterSalesCase
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-after-sales-close-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'after_sales_closed',
+  actionLabel: '关闭售后',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: `关闭了商品行 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
+})
 
 const OrderLineStatusUpdatePanel = ({
   line,
@@ -1149,30 +1309,29 @@ const OrderLineProductionSection = ({
   )
 }
 
-const OrderLineLogisticsCreateForm = ({
-  line,
-  purchase,
-  onAddLogistics,
+const OrderLineLogisticsDraftForm = ({
+  initialDraft,
+  saveLabel,
+  onSave,
   onCancel
 }: {
-  line: OrderLine
-  purchase?: Purchase
-  onAddLogistics: OrderLineLogisticsCreateHandler
+  initialDraft: OrderLineLogisticsDraft
+  saveLabel: string
+  onSave: (draft: OrderLineLogisticsDraft) => void
   onCancel: () => void
 }) => {
-  const [draft, setDraft] = useState<OrderLineLogisticsDraft>(defaultLogisticsDraft)
+  const [draft, setDraft] = useState<OrderLineLogisticsDraft>(initialDraft)
 
   useEffect(() => {
-    setDraft(defaultLogisticsDraft)
-  }, [line.id])
+    setDraft(initialDraft)
+  }, [initialDraft])
 
   const updateDraft = <K extends keyof OrderLineLogisticsDraft>(field: K, value: OrderLineLogisticsDraft[K]) => {
     setDraft((current) => ({ ...current, [field]: value }))
   }
 
   const handleSave = () => {
-    onAddLogistics(buildOrderLineLogisticsRecord({ line, purchase, draft }))
-    setDraft(defaultLogisticsDraft)
+    onSave(draft)
     onCancel()
   }
 
@@ -1218,7 +1377,7 @@ const OrderLineLogisticsCreateForm = ({
       </div>
       <div className="row spacer-top">
         <button type="button" className="button primary small" onClick={handleSave}>
-          保存物流
+          {saveLabel}
         </button>
         <button type="button" className="button secondary small" onClick={onCancel}>
           取消
@@ -1228,30 +1387,135 @@ const OrderLineLogisticsCreateForm = ({
   )
 }
 
-const OrderLineAfterSalesCreateForm = ({
+const OrderLineLogisticsCreateForm = ({
   line,
   purchase,
-  onAddAfterSales,
+  onAddLogistics,
   onCancel
 }: {
   line: OrderLine
   purchase?: Purchase
-  onAddAfterSales: OrderLineAfterSalesCreateHandler
+  onAddLogistics: OrderLineLogisticsCreateHandler
   onCancel: () => void
+}) => (
+  <OrderLineLogisticsDraftForm
+    initialDraft={defaultLogisticsDraft}
+    saveLabel="保存物流"
+    onSave={(draft) => onAddLogistics(buildOrderLineLogisticsRecord({ line, purchase, draft }))}
+    onCancel={onCancel}
+  />
+)
+
+const OrderLineLogisticsRecordItem = ({
+  record,
+  onUpdateLogistics,
+  onVoidLogistics
+}: {
+  record: LogisticsRecord
+  onUpdateLogistics?: OrderLineLogisticsUpdateHandler
+  onVoidLogistics?: OrderLineLogisticsVoidHandler
 }) => {
-  const [draft, setDraft] = useState<OrderLineAfterSalesDraft>(defaultAfterSalesDraft)
+  const [editing, setEditing] = useState(false)
+  const [voiding, setVoiding] = useState(false)
+  const [voidReason, setVoidReason] = useState('')
+  const isVoided = record.recordStatus === 'voided'
 
   useEffect(() => {
-    setDraft(defaultAfterSalesDraft)
-  }, [line.id])
+    setEditing(false)
+    setVoiding(false)
+    setVoidReason('')
+  }, [record.id])
+
+  if (editing) {
+    return (
+      <OrderLineLogisticsDraftForm
+        initialDraft={buildOrderLineLogisticsDraft(record)}
+        saveLabel="保存物流修改"
+        onSave={(draft) => {
+          onUpdateLogistics?.(record.id, draft)
+          setEditing(false)
+        }}
+        onCancel={() => setEditing(false)}
+      />
+    )
+  }
+
+  return (
+    <li>
+      <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+        <span>{getLogisticsCompany(record)}</span>
+        <div className="row wrap">
+          {isVoided ? <StatusTag value="已作废" /> : null}
+          <span className="text-price">{record.trackingNo || '无单号'}</span>
+        </div>
+      </div>
+      <div className="text-caption">
+        {logisticsTypeLabelMap[record.logisticsType || 'goods']} · {logisticsDirectionLabelMap[record.direction || 'outbound']} · {record.shippedAt || '未发货'}
+        {getLogisticsSignedAt(record) ? ` · 签收 ${getLogisticsSignedAt(record)}` : ''} · {getLogisticsRemark(record)}
+      </div>
+      {isVoided ? (
+        <div className="text-caption">作废时间 {record.voidedAt || '—'} · 作废原因 {record.voidReason || '—'}</div>
+      ) : (
+        <div className="row spacer-top">
+          <button type="button" className="button ghost small" onClick={() => setEditing(true)} disabled={!onUpdateLogistics}>
+            编辑
+          </button>
+          <button type="button" className="button ghost small" onClick={() => setVoiding((current) => !current)} disabled={!onVoidLogistics}>
+            作废
+          </button>
+        </div>
+      )}
+      {voiding && !isVoided ? (
+        <div className="subtle-panel spacer-top">
+          <label className="field-control">
+            <span className="field-label">作废原因</span>
+            <textarea className="textarea" value={voidReason} onChange={(event) => setVoidReason(event.target.value)} />
+          </label>
+          <div className="row spacer-top">
+            <button
+              type="button"
+              className="button primary small"
+              onClick={() => {
+                onVoidLogistics?.(record.id, voidReason)
+                setVoiding(false)
+                setVoidReason('')
+              }}
+            >
+              确认作废
+            </button>
+            <button type="button" className="button secondary small" onClick={() => setVoiding(false)}>
+              取消
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </li>
+  )
+}
+
+const OrderLineAfterSalesDraftForm = ({
+  initialDraft,
+  saveLabel,
+  onSave,
+  onCancel
+}: {
+  initialDraft: OrderLineAfterSalesDraft
+  saveLabel: string
+  onSave: (draft: OrderLineAfterSalesDraft) => void
+  onCancel: () => void
+}) => {
+  const [draft, setDraft] = useState<OrderLineAfterSalesDraft>(initialDraft)
+
+  useEffect(() => {
+    setDraft(initialDraft)
+  }, [initialDraft])
 
   const updateDraft = <K extends keyof OrderLineAfterSalesDraft>(field: K, value: OrderLineAfterSalesDraft[K]) => {
     setDraft((current) => ({ ...current, [field]: value }))
   }
 
   const handleSave = () => {
-    onAddAfterSales(buildOrderLineAfterSalesCase({ line, purchase, draft }))
-    setDraft(defaultAfterSalesDraft)
+    onSave(draft)
     onCancel()
   }
 
@@ -1302,13 +1566,86 @@ const OrderLineAfterSalesCreateForm = ({
       </div>
       <div className="row spacer-top">
         <button type="button" className="button primary small" onClick={handleSave}>
-          保存售后
+          {saveLabel}
         </button>
         <button type="button" className="button secondary small" onClick={onCancel}>
           取消
         </button>
       </div>
     </div>
+  )
+}
+
+const OrderLineAfterSalesCreateForm = ({
+  line,
+  purchase,
+  onAddAfterSales,
+  onCancel
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  onAddAfterSales: OrderLineAfterSalesCreateHandler
+  onCancel: () => void
+}) => (
+  <OrderLineAfterSalesDraftForm
+    initialDraft={defaultAfterSalesDraft}
+    saveLabel="保存售后"
+    onSave={(draft) => onAddAfterSales(buildOrderLineAfterSalesCase({ line, purchase, draft }))}
+    onCancel={onCancel}
+  />
+)
+
+const OrderLineAfterSalesRecordItem = ({
+  record,
+  onUpdateAfterSales,
+  onCloseAfterSales
+}: {
+  record: AfterSalesCase
+  onUpdateAfterSales?: OrderLineAfterSalesUpdateHandler
+  onCloseAfterSales?: OrderLineAfterSalesCloseHandler
+}) => {
+  const [editing, setEditing] = useState(false)
+  const isClosed = record.status === 'closed'
+
+  useEffect(() => {
+    setEditing(false)
+  }, [record.id])
+
+  if (editing) {
+    return (
+      <OrderLineAfterSalesDraftForm
+        initialDraft={buildOrderLineAfterSalesDraft(record)}
+        saveLabel="保存售后修改"
+        onSave={(draft) => {
+          onUpdateAfterSales?.(record.id, draft)
+          setEditing(false)
+        }}
+        onCancel={() => setEditing(false)}
+      />
+    )
+  }
+
+  return (
+    <li>
+      <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+        <span>{getAfterSalesTypeLabel(record.type)}</span>
+        <StatusTag value={getAfterSalesStatusLabel(record.status)} />
+      </div>
+      <div className="text-caption">
+        {record.createdAt || '未记录时间'} · {record.responsibleParty || '未分配'}
+        {record.closedAt ? ` · 关闭 ${record.closedAt}` : ''}
+      </div>
+      <div>{getAfterSalesReason(record)}</div>
+      <div className="text-caption">{getAfterSalesRemark(record)}</div>
+      <div className="row spacer-top">
+        <button type="button" className="button ghost small" onClick={() => setEditing(true)} disabled={!onUpdateAfterSales}>
+          编辑
+        </button>
+        <button type="button" className="button ghost small" onClick={() => onCloseAfterSales?.(record.id)} disabled={!onCloseAfterSales || isClosed}>
+          关闭
+        </button>
+      </div>
+    </li>
   )
 }
 
@@ -1447,7 +1784,7 @@ export const OrderLineTable = ({
         {rows.map(({ line, purchase }) => {
           const row = { line, purchase }
           const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
-          const logistics = logisticsRecords.find((item) => item.orderLineId === line.id)
+          const logistics = findCurrentLogisticsRecord(logisticsRecords, line.id)
           const afterSales = findCurrentAfterSalesCase(afterSalesCases, line.id)
           const pressure = getTimePressure(line.promisedDate)
           const riskLabels = getLineRiskLabels(line, afterSalesCases)
@@ -1551,7 +1888,11 @@ export const OrderLineDetailDrawer = ({
   onUpdateOutsourceInfo,
   onAddLogistics,
   onAddAfterSales,
-  onUpdateProductionInfo
+  onUpdateProductionInfo,
+  onUpdateLogistics,
+  onVoidLogistics,
+  onUpdateAfterSales,
+  onCloseAfterSales
 }: {
   open: boolean
   row?: OrderLineRow
@@ -1565,6 +1906,10 @@ export const OrderLineDetailDrawer = ({
   afterSalesCases?: AfterSalesCase[]
   onAddLogistics?: OrderLineLogisticsCreateHandler
   onAddAfterSales?: OrderLineAfterSalesCreateHandler
+  onUpdateLogistics?: OrderLineLogisticsUpdateHandler
+  onVoidLogistics?: OrderLineLogisticsVoidHandler
+  onUpdateAfterSales?: OrderLineAfterSalesUpdateHandler
+  onCloseAfterSales?: OrderLineAfterSalesCloseHandler
 }) => {
   const [sourceProductOpen, setSourceProductOpen] = useState(false)
   const [logisticsFormOpen, setLogisticsFormOpen] = useState(false)
@@ -1685,16 +2030,7 @@ export const OrderLineDetailDrawer = ({
                 {lineLogisticsRecords.length > 0 ? (
                   <ul className="list-reset stack spacer-top">
                     {lineLogisticsRecords.map((record) => (
-                      <li key={record.id}>
-                        <div className="row wrap" style={{ justifyContent: 'space-between' }}>
-                          <span>{getLogisticsCompany(record)}</span>
-                          <span className="text-price">{record.trackingNo || '无单号'}</span>
-                        </div>
-                        <div className="text-caption">
-                          {logisticsTypeLabelMap[record.logisticsType || 'goods']} · {logisticsDirectionLabelMap[record.direction || 'outbound']} · {record.shippedAt || '未发货'}
-                          {getLogisticsSignedAt(record) ? ` · 签收 ${getLogisticsSignedAt(record)}` : ''} · {getLogisticsRemark(record)}
-                        </div>
-                      </li>
+                      <OrderLineLogisticsRecordItem key={record.id} record={record} onUpdateLogistics={onUpdateLogistics} onVoidLogistics={onVoidLogistics} />
                     ))}
                   </ul>
                 ) : (
@@ -1716,18 +2052,7 @@ export const OrderLineDetailDrawer = ({
                 {lineAfterSalesCases.length > 0 ? (
                   <ul className="list-reset stack spacer-top">
                     {lineAfterSalesCases.map((record) => (
-                      <li key={record.id}>
-                        <div className="row wrap" style={{ justifyContent: 'space-between' }}>
-                          <span>{getAfterSalesTypeLabel(record.type)}</span>
-                          <StatusTag value={getAfterSalesStatusLabel(record.status)} />
-                        </div>
-                        <div className="text-caption">
-                          {record.createdAt || '未记录时间'} · {record.responsibleParty || '未分配'}
-                          {record.closedAt ? ` · 关闭 ${record.closedAt}` : ''}
-                        </div>
-                        <div>{getAfterSalesReason(record)}</div>
-                        <div className="text-caption">{getAfterSalesRemark(record)}</div>
-                      </li>
+                      <OrderLineAfterSalesRecordItem key={record.id} record={record} onUpdateAfterSales={onUpdateAfterSales} onCloseAfterSales={onCloseAfterSales} />
                     ))}
                   </ul>
                 ) : (
