@@ -668,7 +668,7 @@
 - 详情查看
 - 轻量状态操作
 - 工厂反馈 / 回传摘要演示
-- 商品任务级追溯
+- 商品行级追溯
 
 这个页面当前不做：
 
@@ -683,20 +683,34 @@
 
 ### 14.3 数据口径
 
-页面只消费这些现有对象：
+页面优先消费这些当前主线对象：
 
 - `Task`
-- `Order`
-- `OrderItem`
+- `Purchase`
+- `OrderLine`
 - `Product`
 
-并通过前端适配层生成页面专用 view model。
+并通过 `productionPlanAdapter` 生成页面专用 view model。
+
+当前仍保留 legacy fallback：
+
+- `Order`
+- `OrderItem`
+
+适配层输出字段已按当前主线收口为：
+
+- `purchaseId`
+- `purchaseNo`
+- `orderLineId`
+- `orderLineCode`
+- `orderLineName`
 
 注意：
 
 - `factory_production` 仍然只作为当前页面的隔离 mock 任务类型使用
 - 它不代表本轮要把全项目正式升级为工厂协同模式
-- 订单状态体系、任务状态体系和主业务链路不因这个页面而改名或重做
+- legacy 中文工厂状态读取兼容仍保留，但新写入优先使用 `OrderLine.productionInfo`
+- 任务状态体系和主业务链路不因这个页面而改名或重做
 
 ---
 
@@ -704,8 +718,19 @@
 
 - 页面只在 `factory` 角色的侧边栏中暴露入口
 - 非 `factory` 角色仍可通过直达路由查看页面，但不做路由守卫
-- 所有操作继续走现有 `updateTask` / `updateOrderItem`
-- 交易记录时间线仍然是当前唯一追溯主线之一，不额外新建第二套流程引擎
+- 列表和详情优先使用 `tasks + purchases + orderLines + products`
+- 旧 `orders / order.items` 只作为兼容 fallback，不作为当前主线来源
+- 详情写回优先走 `updateOrderLineProductionInfo`
+- legacy 写回 fallback 仍保留为 `updateOrderItem`
+- 页面组件已从旧 `components/business/order` 解耦，使用 `components/business/productionPlan`
+- 购买记录 / 商品行时间线仍然是当前追溯主线，不额外新建第二套流程引擎
+
+当前剩余技术债：
+
+- legacy `/orders` 兼容模块仍保留，本阶段不删除
+- productionPlan 仍有 `orders / order.items` fallback 路径
+- `useOrderLineWorkspaceState` 尚未提升为跨路由共享状态
+- 旧 orders 模块删除需要后续独立处理
 
 ---
 
