@@ -105,27 +105,43 @@ export const mockProducts: Product[] = [
     referenceRecords: [
       {
         id: 'ref-ring-001',
+        purchaseId: 'o-202604-001',
+        purchaseNo: 'SO-202604-001',
+        orderLineId: 'oi-ring-001',
+        orderLineCode: 'OL-202604-001-01',
+        orderLineName: '山形素圈戒指',
+        transactionId: 'o-202604-001',
+        transactionNo: 'SO-202604-001',
         orderId: 'o-202604-001',
         orderNo: 'SO-202604-001',
+        customerId: 'customer-lin-001',
         customerName: '林小姐',
         orderItemName: '山形素圈戒指',
         sourceVersion: 'v3',
         selectedSpecValue: '16号',
         referencedAt: '2026-04-21 10:46',
         status: 'referenced',
-        note: '当前订单沿用模板规格，追加了 18K 金和微镶需求。'
+        note: '当前购买记录下的商品行沿用模板规格，追加了 18K 金和微镶需求。'
       },
       {
         id: 'ref-ring-002',
+        purchaseId: 'o-202603-118',
+        purchaseNo: 'SO-202603-118',
+        orderLineId: 'oi-ring-118',
+        orderLineCode: 'OL-202603-118-01',
+        orderLineName: '山形纪念戒',
+        transactionId: 'o-202603-118',
+        transactionNo: 'SO-202603-118',
         orderId: 'o-202603-118',
         orderNo: 'SO-202603-118',
+        customerId: 'customer-zhao-001',
         customerName: '赵女士',
         orderItemName: '山形纪念戒',
         sourceVersion: 'v2',
         selectedSpecValue: '10号',
         referencedAt: '2026-03-28 14:20',
         status: 'adjusted',
-        note: '订单侧追加内圈加厚，已偏离模板默认底厚。'
+        note: '商品行侧追加内圈加厚，已偏离模板默认底厚。'
       }
     ],
     versionHistory: [
@@ -251,15 +267,23 @@ export const mockProducts: Product[] = [
     referenceRecords: [
       {
         id: 'ref-pendant-001',
+        purchaseId: 'o-202604-001',
+        purchaseNo: 'SO-202604-001',
+        orderLineId: 'oi-pendant-001',
+        orderLineCode: 'OL-202604-001-02',
+        orderLineName: '如意吊坠',
+        transactionId: 'o-202604-001',
+        transactionNo: 'SO-202604-001',
         orderId: 'o-202604-001',
         orderNo: 'SO-202604-001',
+        customerId: 'customer-lin-001',
         customerName: '林小姐',
         orderItemName: '如意吊坠',
         sourceVersion: 'v2',
         selectedSpecValue: '小号',
         referencedAt: '2026-04-21 10:48',
         status: 'referenced',
-        note: '订单沿用小号规格，订单侧增加了加急和礼盒要求。'
+        note: '购买记录下的商品行沿用小号规格，商品行侧增加了加急和礼盒要求。'
       }
     ],
     versionHistory: [

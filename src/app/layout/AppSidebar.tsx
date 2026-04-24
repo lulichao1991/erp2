@@ -7,8 +7,8 @@ import type { TaskAssigneeRole } from '@/types/task'
 const roleOptions: TaskAssigneeRole[] = ['customer_service', 'designer', 'operations', 'factory', 'management']
 
 const getSidebarShortLabel = (label: string) => {
-  if (label === '订单中心') {
-    return '订单'
+  if (label === '商品行中心') {
+    return '商品行'
   }
 
   if (label === '任务中心') {

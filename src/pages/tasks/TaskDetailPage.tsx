@@ -4,7 +4,6 @@ import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import { TaskInfoCardGroup, TaskSummaryCard } from '@/components/business/task'
 import { EmptyState, PageContainer, PageHeader, SectionCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
-import { getAllowedNextStatuses, getOrderStatusLabel } from '@/services/workflow/workflowMeta'
 import type { TaskStatus } from '@/types/task'
 
 const toDateTimeInputValue = (value?: string) => (value ? value.replace(' ', 'T').slice(0, 16) : '')
@@ -17,7 +16,9 @@ export const TaskDetailPage = () => {
   const currentRole = appData.currentUserRole
   const hideCommercialInfo = currentRole === 'factory'
   const task = appData.getTask(taskId)
-  const order = appData.getOrder(task?.orderId)
+  const purchase = appData.getPurchase(task?.purchaseId || task?.transactionId)
+  const orderLine = appData.getOrderLine(task?.orderLineId || task?.orderItemId)
+  const purchaseId = purchase?.id || task?.purchaseId || task?.transactionId
   const [form, setForm] = useState(() =>
     task
       ? {
@@ -34,11 +35,13 @@ export const TaskDetailPage = () => {
         }
   )
 
-  const orderTimeline = useMemo(
-    () => (order?.timeline ?? []).filter((record) => record.relatedTaskId === task?.id).sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
-    [order?.timeline, task?.id]
+  const purchaseTimeline = useMemo(
+    () =>
+      (purchase?.timeline ?? [])
+        .filter((record) => record.relatedTaskId === task?.id || record.relatedOrderLineId === orderLine?.id)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [orderLine?.id, purchase?.timeline, task?.id]
   )
-  const orderNextStatuses = order ? getAllowedNextStatuses(order.status) : []
 
   if (!task) {
     return (
@@ -79,9 +82,14 @@ export const TaskDetailPage = () => {
             <button className="button secondary" onClick={() => navigate('/tasks')}>
               返回列表
             </button>
-            {order ? (
-              <button className="button secondary" onClick={() => navigate(`/orders/${order.id}`)}>
-                返回订单
+            {orderLine ? (
+              <button className="button secondary" onClick={() => navigate('/order-lines')}>
+                查看商品行
+              </button>
+            ) : null}
+            {purchaseId ? (
+              <button className="button secondary" onClick={() => navigate(`/purchases/${purchaseId}`)}>
+                查看购买记录
               </button>
             ) : null}
             <button className="button primary" onClick={handleSave}>
@@ -92,7 +100,7 @@ export const TaskDetailPage = () => {
       />
       <div className="stack">
         <TaskSummaryCard task={task} />
-        <TaskInfoCardGroup task={task} order={order} hideCommercialInfo={hideCommercialInfo} />
+        <TaskInfoCardGroup task={task} purchase={purchase} orderLine={orderLine} hideCommercialInfo={hideCommercialInfo} />
         <SectionCard
           title="任务处理区"
           description="当前先支持责任人、截止时间、描述备注和基础状态流转，后续再补审批和权限。"
@@ -160,43 +168,27 @@ export const TaskDetailPage = () => {
             </div>
           </div>
         </SectionCard>
-        {order && !hideCommercialInfo ? (
-          <SectionCard title="订单推进建议" description="任务完成不等于订单自动完成；这里只给出当前订单的可推进方向，仍由业务人员手动判断是否推进。">
+        {purchaseId && !hideCommercialInfo ? (
+          <SectionCard title="商品行推进建议" description="任务完成不等于购买记录或商品行自动完成；当前只展示主线入口，不再写入旧订单阶段。">
             <div className="stack">
               <div className="text-muted">
-                {task.status === 'done' ? '当前任务已完成，可以结合订单活跃任务和资料完整度继续推进订单状态。' : '建议先完成当前任务，再判断订单是否适合推进到下一阶段。'}
+                阶段推进已迁移到商品行主线，后续接入基于 OrderLine.status 的推进能力。当前可以查看商品行或购买记录详情，由业务人员在主线页面继续跟进。
               </div>
               <div className="row wrap">
-                <button type="button" className="button secondary" onClick={() => navigate(`/orders/${order.id}`)}>
-                  返回订单继续推进
+                <button type="button" className="button secondary" onClick={() => navigate('/order-lines')}>
+                  查看商品行
                 </button>
-                {task.status === 'done'
-                  ? orderNextStatuses.map((status) => (
-                      <button
-                        key={status}
-                        type="button"
-                        className="button primary"
-                        onClick={() => {
-                          appData.transitionOrderStatus({
-                            orderId: order.id,
-                            nextStatus: status,
-                            reason: `任务「${task.title}」已完成，订单阶段推进到${getOrderStatusLabel(status)}。`
-                          })
-                          navigate(`/orders/${order.id}`)
-                        }}
-                      >
-                        推进到{getOrderStatusLabel(status)}
-                      </button>
-                    ))
-                  : null}
+                <button type="button" className="button secondary" onClick={() => navigate(`/purchases/${purchaseId}`)}>
+                  查看购买记录
+                </button>
               </div>
             </div>
           </SectionCard>
         ) : null}
-        <SectionCard title="任务相关时间线" description="这里只筛当前任务关联到订单时间线里的记录，方便核对任务是否推动了订单节点。">
-          {orderTimeline.length > 0 ? (
+        <SectionCard title="任务相关时间线" description="这里只筛当前任务关联到购买记录时间线里的记录，方便核对任务是否推动了购买记录节点。">
+          {purchaseTimeline.length > 0 ? (
             <div className="stack">
-              {orderTimeline.map((record) => (
+              {purchaseTimeline.map((record) => (
                 <div key={record.id} className="subtle-panel stack" style={{ gap: 6 }}>
                   <div className="row wrap" style={{ justifyContent: 'space-between' }}>
                     <strong>{record.title}</strong>
@@ -208,7 +200,7 @@ export const TaskDetailPage = () => {
               ))}
             </div>
           ) : (
-            <EmptyState title="当前任务还没有关联时间线" description="后续任务更新、完成或订单状态变化后，会逐步沉淀到这里。" />
+            <EmptyState title="当前任务还没有关联时间线" description="后续任务更新、完成或购买记录状态变化后，会逐步沉淀到这里。" />
           )}
         </SectionCard>
       </div>

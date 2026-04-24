@@ -1,8 +1,14 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
-import { ProductionPlanStatusBadge, ProductionPlanSummaryCard } from '@/components/business/productionPlan'
-import { FactoryFeedbackBlock, OrderItemFactoryProductionBlock } from '@/components/business/order'
+import {
+  ProductionFeedbackBlock,
+  getProductionFeedbackStatusLabel,
+  ProductionOrderLineInfoBlock,
+  ProductionPlanStatusBadge,
+  ProductionPlanSummaryCard,
+  type ProductionFeedbackValue
+} from '@/components/business/productionPlan'
 import { EmptyState, FileList, ImageGallery, InfoField, InfoGrid, PageContainer, PageHeader, RecordTimeline, SectionCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
 import { buildProductionPlanDetail } from '@/services/productionPlan/productionPlanAdapter'
@@ -17,24 +23,52 @@ export const ProductionPlanDetailPage = () => {
       buildProductionPlanDetail({
         taskId,
         tasks: appData.tasks,
+        purchases: appData.purchases,
+        orderLines: appData.orderLines,
         orders: appData.orders,
         products: appData.products
       }),
-    [appData.orders, appData.products, appData.tasks, taskId]
+    [appData.orderLines, appData.orders, appData.products, appData.purchases, appData.tasks, taskId]
   )
 
   if (!detail) {
     return (
       <PageContainer>
-        <EmptyState title="未找到生产计划任务" description="当前任务不存在、不是工厂生产任务，或其关联订单商品 / 来源产品 mock 数据不完整。" />
+        <EmptyState title="未找到生产计划任务" description="当前任务不存在、不是工厂生产任务，或其关联商品行 / 来源产品 mock 数据不完整。" />
       </PageContainer>
     )
   }
 
   const { row, task, order, orderItem, sourceProduct, timeline, fileGroups, referenceImages } = detail
+  const productionFeedback = orderItem.factoryFeedback || {}
+  const productionLineInfo = {
+    id: detail.orderLineId || orderItem.id,
+    goodsNo: row.goodsNo,
+    sourceProductCode: row.sourceProductCode,
+    selectedSpecValue: orderItem.selectedSpecValue,
+    quantity: orderItem.quantity,
+    selectedMaterial: orderItem.selectedMaterial,
+    selectedProcess: orderItem.selectedProcess,
+    selectedSpecialOptions: orderItem.selectedSpecialOptions,
+    selectedSpecSnapshot: orderItem.selectedSpecSnapshot,
+    actualRequirements: orderItem.actualRequirements
+  }
 
-  const updateFactoryItem = (updater: (current: typeof orderItem) => typeof orderItem) => {
-    appData.updateOrderItem(order.id, orderItem.id, updater)
+  const updateProductionFeedback = (nextFeedback: ProductionFeedbackValue) => {
+    if (detail.orderLineId) {
+      const nextOrderLine = appData.updateOrderLineProductionInfo(detail.orderLineId, nextFeedback)
+      if (nextOrderLine) {
+        return
+      }
+    }
+
+    appData.updateOrderItem(order.id, orderItem.id, (current) => ({
+      ...current,
+      factoryFeedback: {
+        ...current.factoryFeedback,
+        ...nextFeedback
+      }
+    }))
   }
 
   const updateTaskStatus = (status: typeof task.status) => {
@@ -50,45 +84,33 @@ export const ProductionPlanDetailPage = () => {
   }
 
   const handleStartProduction = () => {
-    updateFactoryItem((current) => ({
-      ...current,
-      factoryFeedback: {
-        ...current.factoryFeedback,
-        factoryStatus: '生产中'
-      }
-    }))
+    updateProductionFeedback({
+      ...productionFeedback,
+      factoryStatus: 'in_progress'
+    })
   }
 
   const handleMarkPendingReport = () => {
-    updateFactoryItem((current) => ({
-      ...current,
-      factoryFeedback: {
-        ...current.factoryFeedback,
-        factoryStatus: '待回传'
-      }
-    }))
+    updateProductionFeedback({
+      ...productionFeedback,
+      factoryStatus: 'pending_feedback'
+    })
     updateTaskStatus('pending_confirm')
   }
 
   const handleSubmitReport = () => {
-    updateFactoryItem((current) => ({
-      ...current,
-      factoryFeedback: {
-        ...current.factoryFeedback,
-        factoryStatus: '已回传'
-      }
-    }))
+    updateProductionFeedback({
+      ...productionFeedback,
+      factoryStatus: 'completed'
+    })
     updateTaskStatus('done')
   }
 
   const handleMarkIssue = () => {
-    updateFactoryItem((current) => ({
-      ...current,
-      factoryFeedback: {
-        ...current.factoryFeedback,
-        factoryStatus: '有异常'
-      }
-    }))
+    updateProductionFeedback({
+      ...productionFeedback,
+      factoryStatus: 'issue'
+    })
   }
 
   return (
@@ -104,9 +126,14 @@ export const ProductionPlanDetailPage = () => {
             <button className="button secondary" onClick={() => navigate(`/tasks/${task.id}`)}>
               查看原任务
             </button>
-            <button className="button secondary" onClick={() => navigate(`/orders/${order.id}`)}>
-              返回订单
+            <button className="button secondary" onClick={() => navigate('/order-lines')}>
+              查看商品行
             </button>
+            {row.purchaseId ? (
+              <button className="button secondary" onClick={() => navigate(`/purchases/${row.purchaseId}`)}>
+                查看购买记录
+              </button>
+            ) : null}
           </>
         }
       />
@@ -115,15 +142,14 @@ export const ProductionPlanDetailPage = () => {
           row={row}
           taskId={task.id}
           taskTitle={task.title}
-          orderItemName={orderItem.name}
           sourceProductName={sourceProduct.name}
           sourceProductId={sourceProduct.id}
-          factoryStatus={orderItem.factoryFeedback?.factoryStatus}
+          factoryStatus={productionFeedback.factoryStatus}
         />
         <div className="production-plan-detail-grid">
           <div className="production-plan-detail-main stack">
             <SectionCard title="生产参数" className="production-plan-section">
-              <OrderItemFactoryProductionBlock item={orderItem} embedded showEngravingFiles={false} />
+              <ProductionOrderLineInfoBlock line={productionLineInfo} showEngravingFiles={false} />
             </SectionCard>
             <SectionCard title="文件与刻字资料" className="production-plan-section">
               <div className="stack">
@@ -141,17 +167,11 @@ export const ProductionPlanDetailPage = () => {
               <div className="stack">
                 <InfoGrid columns={2}>
                   <InfoField label="当前显示状态" value={<ProductionPlanStatusBadge stage={row.stage} />} />
-                  <InfoField label="工厂状态" value={orderItem.factoryFeedback?.factoryStatus || '待回传'} />
-                  <InfoField label="回传重量" value={orderItem.factoryFeedback?.returnedWeight || '—'} />
-                  <InfoField label="质检结论" value={orderItem.factoryFeedback?.qualityResult || '—'} />
+                  <InfoField label="工厂状态" value={getProductionFeedbackStatusLabel(productionFeedback.factoryStatus)} />
+                  <InfoField label="回传重量" value={productionFeedback.returnedWeight || '—'} />
+                  <InfoField label="质检结论" value={productionFeedback.qualityResult || '—'} />
                 </InfoGrid>
-                <FactoryFeedbackBlock
-                  item={orderItem}
-                  embedded
-                  onChange={(next) => {
-                    appData.updateOrderItem(order.id, orderItem.id, () => next)
-                  }}
-                />
+                <ProductionFeedbackBlock orderLineId={detail.orderLineId || orderItem.id} feedback={productionFeedback} onChange={updateProductionFeedback} />
               </div>
             </SectionCard>
             <SectionCard title="状态操作" className="production-plan-section production-plan-action-card">
@@ -197,7 +217,7 @@ export const ProductionPlanDetailPage = () => {
               }))}
             />
           ) : (
-            <EmptyState title="当前还没有相关时间线" description="后续工厂状态变化、任务完成或订单商品变更后，会继续沉淀到这里。" />
+            <EmptyState title="当前还没有相关时间线" description="后续工厂状态变化、任务完成或商品行变更后，会继续沉淀到这里。" />
           )}
         </SectionCard>
       </div>

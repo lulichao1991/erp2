@@ -1,5 +1,66 @@
+/**
+ * Legacy /orders compatibility types.
+ *
+ * Current system mainline uses Purchase + OrderLine + ProductSnapshot.
+ * Keep Order / OrderItem / SourceProductSnapshot here only for the old
+ * /orders compatibility module and existing legacy page/service imports.
+ */
 import type { ProductSpecRow } from '@/types/product'
 import type { QuoteResult } from '@/types/quote'
+import type {
+  OrderLine,
+  OrderLineActualRequirements,
+  OrderLineDesignInfo,
+  OrderLineOutsourceInfo,
+  OrderLinePriority,
+  OrderLineProductionInfo,
+  OrderLineUploadedFile,
+  ProductSnapshot
+} from '@/types/order-line'
+import type {
+  OrderFinanceInfo,
+  OrderFinanceTransaction,
+  OrderFinanceTransactionType,
+  TimelineRecord as PurchaseTimelineRecord,
+  TimelineRecordType,
+  TransactionAggregateStatus
+} from '@/types/transaction'
+import type {
+  AfterSalesCase,
+  AfterSalesCaseStatus,
+  AfterSalesCaseType,
+  LogisticsRecord
+} from '@/types/supporting-records'
+
+export type {
+  OrderLine,
+  OrderLineActualRequirements,
+  OrderLineDesignInfo,
+  OrderLineOutsourceInfo,
+  OrderLinePriority,
+  OrderLineProductionInfo,
+  OrderLineStatus,
+  OrderLineUploadedFile,
+  ProductSnapshot
+} from '@/types/order-line'
+export type {
+  AfterSalesCase,
+  AfterSalesCaseStatus,
+  AfterSalesCaseType,
+  LogisticsRecord
+} from '@/types/supporting-records'
+export type {
+  OrderFinanceInfo,
+  OrderFinanceTransaction,
+  OrderFinanceTransactionType,
+  TimelineRecordType,
+  TransactionAggregateStatus,
+  TransactionOrderType,
+  TransactionRecord,
+  TransactionSourceChannel
+} from '@/types/transaction'
+
+// Compatibility layer for the old /orders page/service code.
 
 export type OrderStatus =
   | 'draft'
@@ -13,127 +74,74 @@ export type OrderStatus =
 
 export type OrderPriority = 'normal' | 'high' | 'urgent'
 
-export type OrderFinanceTransactionType =
-  | 'deposit_received'
-  | 'balance_received'
-  | 'platform_refund'
-  | 'offline_refund'
-  | 'after_sales_payment'
-  | 'after_sales_refund'
+/**
+ * @deprecated Use ProductSnapshot from '@/types/order-line' in current modules.
+ */
+export type SourceProductSnapshot = ProductSnapshot
 
-export type SourceProductSnapshot = {
-  sourceProductId: string
-  sourceProductCode: string
-  sourceProductName: string
-  sourceProductVersion: string
-  sourceSpecValue?: string
-}
+/**
+ * @deprecated Use OrderLineUploadedFile from '@/types/order-line' in current modules.
+ */
+export type OrderItemUploadedFile = OrderLineUploadedFile
 
-export type OrderItemUploadedFile = {
-  id: string
-  name: string
-  url: string
-}
-
-export type OrderFinanceTransaction = {
-  id: string
-  type: OrderFinanceTransactionType
-  amount: number
-  occurredAt: string
-  note?: string
-}
-
-export type OrderFinanceInfo = {
-  dealPrice?: number
-  depositAmount?: number
-  balanceAmount?: number
-  invoiced?: boolean
-  remark?: string
-  transactions: OrderFinanceTransaction[]
-}
-
-export type OrderItemActualRequirements = {
-  material?: string
-  process?: string
-  sizeNote?: string
-  engraveText?: string
+/**
+ * @deprecated Use OrderLineActualRequirements from '@/types/order-line' in current modules.
+ */
+export type OrderItemActualRequirements = OrderLineActualRequirements & {
   engraveImageFiles?: OrderItemUploadedFile[]
   engravePltFiles?: OrderItemUploadedFile[]
-  specialNotes?: string[]
-  remark?: string
 }
 
-export type OrderItemDesignInfo = {
-  designStatus?: string
-  assignedDesigner?: string
-  requiresRemodeling?: boolean
-  designDeadline?: string
-  designNote?: string
-}
+/**
+ * @deprecated Use OrderLineDesignInfo from '@/types/order-line' in current modules.
+ */
+export type OrderItemDesignInfo = OrderLineDesignInfo
 
-export type OrderItemOutsourceInfo = {
-  outsourceStatus?: string
-  supplierName?: string
-  plannedDeliveryDate?: string
-  outsourceNote?: string
-}
+/**
+ * @deprecated Use OrderLineOutsourceInfo from '@/types/order-line' in current modules.
+ */
+export type OrderItemOutsourceInfo = OrderLineOutsourceInfo
 
-export type OrderItemFactoryFeedback = {
-  factoryStatus?: string
-  returnedWeight?: string
-  qualityResult?: string
-  factoryNote?: string
-}
+/**
+ * @deprecated Use OrderLineProductionInfo from '@/types/order-line' in current modules.
+ */
+export type OrderItemFactoryFeedback = OrderLineProductionInfo
 
-export type OrderItem = {
-  id: string
-  name: string
+/**
+ * @deprecated Use OrderLine from '@/types/order-line' in current modules.
+ */
+export type OrderItem = Omit<OrderLine, 'actualRequirements' | 'designInfo' | 'outsourceInfo' | 'productionInfo' | 'quote'> & {
   itemSku: string
-  quantity: number
-  status: string
-  isReferencedProduct: boolean
-  sourceProduct?: SourceProductSnapshot
-  selectedSpecValue?: string
-  selectedSpecSnapshot?: ProductSpecRow
-  selectedMaterial?: string
-  selectedProcess?: string
-  selectedSpecialOptions?: string[]
   actualRequirements?: OrderItemActualRequirements
   designInfo?: OrderItemDesignInfo
   outsourceInfo?: OrderItemOutsourceInfo
   factoryFeedback?: OrderItemFactoryFeedback
   quote?: QuoteResult
-  manualAdjustment?: number
-  manualAdjustmentReason?: string
-  finalDisplayQuote?: number
+  priority?: OrderPriority | OrderLinePriority
+  selectedSpecSnapshot?: ProductSpecRow
 }
 
-export type TimelineRecordType =
-  | 'order_created'
-  | 'product_referenced'
-  | 'spec_changed'
-  | 'quote_recalculated'
-  | 'status_changed'
-  | 'task_created'
-  | 'task_updated'
-  | 'task_completed'
-  | 'remark_updated'
-
-export type TimelineRecord = {
-  id: string
-  orderId: string
-  type: TimelineRecordType
-  title: string
-  description?: string
-  actorName: string
-  createdAt: string
-  relatedTaskId?: string
+/**
+ * @deprecated Use TimelineRecord from '@/types/purchase' in current modules.
+ * This old /orders timeline keeps relatedOrderItemId for legacy page/service code.
+ */
+export type TimelineRecord = PurchaseTimelineRecord & {
+  orderId?: string
   relatedOrderItemId?: string
 }
 
+/**
+ * @deprecated Use TimelineRecord from '@/types/purchase' in current modules.
+ */
+export type LegacyTimelineRecord = TimelineRecord
+
+/**
+ * @deprecated Use Purchase from '@/types/purchase' in current modules.
+ */
 export type Order = {
   id: string
   orderNo: string
+  transactionNo?: string
   platformOrderNo?: string
   orderType: string
   ownerName: string
@@ -147,15 +155,23 @@ export type Order = {
   customerAddress?: string
   customerRemark?: string
   status: OrderStatus
+  aggregateStatus?: TransactionAggregateStatus
   priority: OrderPriority
   riskTags: string[]
   promisedDate?: string
   expectedDate?: string
   plannedDate?: string
   paymentDate?: string
+  paymentAt?: string
+  customerId?: string
+  recipientName?: string
+  recipientPhone?: string
+  recipientAddress?: string
   finance?: OrderFinanceInfo
   items: OrderItem[]
+  orderLineCount?: number
+  orderLines?: OrderLine[]
   remark?: string
   latestActivityAt?: string
-  timeline: TimelineRecord[]
+  timeline: LegacyTimelineRecord[]
 }

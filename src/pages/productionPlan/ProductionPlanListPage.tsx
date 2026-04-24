@@ -25,10 +25,12 @@ export const ProductionPlanListPage = () => {
     () =>
       buildProductionPlanRows({
         tasks: appData.tasks,
+        purchases: appData.purchases,
+        orderLines: appData.orderLines,
         orders: appData.orders,
         products: appData.products
       }),
-    [appData.orders, appData.products, appData.tasks]
+    [appData.orderLines, appData.orders, appData.products, appData.purchases, appData.tasks]
   )
 
   const filteredRows = useMemo(
@@ -36,7 +38,11 @@ export const ProductionPlanListPage = () => {
       rows.filter((row) => {
         const matchesKeyword =
           filters.keyword.trim().length === 0 ||
-          [row.goodsNo, row.styleName, row.sourceProductVersion, row.engraveText].filter(Boolean).join(' ').toLowerCase().includes(filters.keyword.toLowerCase())
+          [row.goodsNo, row.orderLineName, row.orderLineCode, row.purchaseNo, row.sourceProductVersion, row.engraveText]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(filters.keyword.toLowerCase())
         const matchesStage = filters.stage === 'all' || row.stage === filters.stage
         const matchesUrgent =
           filters.urgent === 'all' ||

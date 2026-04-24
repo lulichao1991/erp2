@@ -193,27 +193,27 @@ export const OrderCreatePage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '订单中心', to: '/orders' }, { label: '新建订单' }]} />
+      <AppBreadcrumb items={[{ label: '商品任务中心', to: '/orders' }, { label: '新建交易记录' }]} />
       <PageHeader
-        title="新建订单"
+        title="新建交易记录"
         actions={
           <>
             <button className="button secondary" onClick={() => navigate('/orders')}>
-              返回列表
+              返回商品任务中心
             </button>
             <button className="button primary" onClick={handleSave}>
-              创建订单
+              创建交易记录
             </button>
           </>
         }
       />
 
       <div className="stack">
-        <SectionCard title="基础信息区">
+        <SectionCard title="交易公共信息区" description="这里维护一次购买的公共信息；下方每张商品卡代表一条独立商品任务。">
           <div className="field-grid three">
             <div className="field-control">
               <label className="field-label" htmlFor="order-type">
-                订单类型
+                交易类型
               </label>
               <select
                 id="order-type"
@@ -243,7 +243,7 @@ export const OrderCreatePage = () => {
             </div>
             <div className="field-control">
               <label className="field-label" htmlFor="order-owner">
-                接待客服
+                负责人
               </label>
               <select
                 id="order-owner"
@@ -302,15 +302,15 @@ export const OrderCreatePage = () => {
             </div>
             <div className="field-control">
               <label className="field-label" htmlFor="registered-at">
-                订单登记时间
+                交易登记时间
               </label>
               <input id="registered-at" className="input" value={order.registeredAt || ''} readOnly />
-              <span className="text-caption text-muted">新建订单时系统自动生成，不需要客服手动输入。</span>
+              <span className="text-caption text-muted">新建交易记录时系统自动生成，不需要客服手动输入。</span>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="客户信息区">
+        <SectionCard title="客户与收件信息区" description="客户信息沉淀在交易记录层，用于给下方多个商品任务复用。">
           <div className="field-grid two">
             <div className="field-control">
               <label className="field-label" htmlFor="customer-name">
@@ -392,7 +392,7 @@ export const OrderCreatePage = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="时间信息区">
+        <SectionCard title="时间与交付区">
           <div className="field-grid four">
             <div className="field-control">
               <label className="field-label" htmlFor="payment-date">
@@ -445,7 +445,7 @@ export const OrderCreatePage = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="财务信息区" description="系统参考价只用于内部参考，客服最终成交价和后续收退款需要单独记录。">
+        <SectionCard title="交易财务信息区" description="这里记录整笔交易的收退款与成交信息，系统参考价仅作内部参考。">
           <div className="field-grid four">
             <div className="field-control">
               <label className="field-label" htmlFor="reference-price">
@@ -455,7 +455,7 @@ export const OrderCreatePage = () => {
             </div>
             <div className="field-control">
               <label className="field-label" htmlFor="deal-price">
-                实际成交价
+                交易成交价
               </label>
               <input
                 id="deal-price"
