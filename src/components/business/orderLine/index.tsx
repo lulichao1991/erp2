@@ -4,7 +4,7 @@ import { SourceProductDrawer, type SourceProductCompareValue } from '@/component
 import { EmptyState, InfoField, InfoGrid, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
-import type { OrderLine, OrderLineLog, OrderLinePriority, OrderLineStatus } from '@/types/order-line'
+import type { OrderLine, OrderLineLog, OrderLineOutsourceStatus, OrderLinePriority, OrderLineStatus } from '@/types/order-line'
 import type { ProductCategory } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { AfterSalesCase, AfterSalesCaseStatus, AfterSalesCaseType, LogisticsDirection, LogisticsRecord, LogisticsType } from '@/types/supporting-records'
@@ -41,6 +41,18 @@ export type OrderLineDetailsDraft = {
 }
 
 export type OrderLineDetailsUpdateHandler = (lineId: string, draft: OrderLineDetailsDraft) => void
+
+export type OrderLineOutsourceDraft = {
+  followUpOwner: string
+  supplierName: string
+  outsourcedAt: string
+  itemSku: string
+  plannedDeliveryDate: string
+  outsourceNote: string
+  outsourceStatus: OrderLineOutsourceStatus | string
+}
+
+export type OrderLineOutsourceUpdateHandler = (lineId: string, draft: OrderLineOutsourceDraft) => void
 
 export type OrderLineLogisticsDraft = {
   logisticsType: LogisticsType
@@ -117,7 +129,16 @@ const priorityOptions: Array<{ value: OrderLinePriority; label: string }> = [
   { value: 'vip', label: 'VIP' }
 ]
 
+const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus | string; label: string }> = [
+  { value: 'not_required', label: '不需要下厂' },
+  { value: 'pending', label: '待下厂' },
+  { value: 'in_progress', label: '生产中' },
+  { value: 'delivered', label: '已回货' },
+  { value: 'rework', label: '返工中' }
+]
+
 const categoryLabelMap = Object.fromEntries(categoryOptions.map((item) => [item.value, item.label])) as Record<string, string>
+const outsourceStatusLabelMap = Object.fromEntries(outsourceStatusOptions.map((item) => [item.value, item.label])) as Record<string, string>
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
@@ -249,6 +270,8 @@ const getParameterSummary = (line: OrderLine) =>
 
 const getFactorySummary = (line: OrderLine) =>
   line.outsourceInfo?.supplierName && line.outsourceInfo.supplierName !== '待定' ? line.outsourceInfo.supplierName : '待确认工厂'
+
+const getOutsourceStatusLabel = (status?: string) => (status ? outsourceStatusLabelMap[status] || status : '待确认')
 
 const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) => {
   const hasOpenAfterSales = afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
@@ -392,6 +415,52 @@ export const buildOrderLineDetailsLog = ({
   operatorName,
   createdAt: formatDateTime(new Date()),
   note: '修改了商品行基础信息 / 实际需求'
+})
+
+export const buildOrderLineOutsourceDraft = (line: OrderLine): OrderLineOutsourceDraft => ({
+  followUpOwner: line.currentOwner || '',
+  supplierName: line.outsourceInfo?.supplierName || '',
+  outsourcedAt: line.outsourceInfo?.outsourcedAt || '',
+  itemSku: line.itemSku || line.lineCode || '',
+  plannedDeliveryDate: line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '',
+  outsourceNote: line.outsourceInfo?.outsourceNote || '',
+  outsourceStatus: line.outsourceInfo?.outsourceStatus || 'pending'
+})
+
+export const applyOrderLineOutsourceDraft = (line: OrderLine, draft: OrderLineOutsourceDraft): OrderLine => ({
+  ...line,
+  currentOwner: draft.followUpOwner.trim() || undefined,
+  itemSku: draft.itemSku.trim() || undefined,
+  outsourceInfo: {
+    ...line.outsourceInfo,
+    outsourceStatus: draft.outsourceStatus,
+    supplierName: draft.supplierName.trim() || undefined,
+    outsourcedAt: draft.outsourcedAt || undefined,
+    plannedDeliveryDate: draft.plannedDeliveryDate || undefined,
+    outsourceNote: draft.outsourceNote.trim() || undefined
+  }
+})
+
+export const updateOrderLineOutsourceInfoInRows = <T extends OrderLineRow>(rows: T[], lineId: string, draft: OrderLineOutsourceDraft): T[] =>
+  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: applyOrderLineOutsourceDraft(row.line, draft) } as T) : row))
+
+export const buildOrderLineOutsourceLog = ({
+  line,
+  purchase,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-outsource-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'outsource_info_updated',
+  actionLabel: '编辑跟单 / 下厂信息',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: '修改了商品行跟单 / 下厂信息'
 })
 
 export const buildOrderLineLogisticsLog = ({
@@ -737,6 +806,127 @@ const OrderLineDetailsSection = ({
           <InfoField label="是否需要设计" value={line.designInfo?.requiresRemodeling ? '是' : '否'} />
           <InfoField label="当前负责人" value={line.currentOwner || '待分配'} />
           <InfoField label="承诺交期" value={line.promisedDate || '—'} />
+        </InfoGrid>
+      )}
+      {message ? (
+        <div role="status" className="success-alert spacer-top">
+          {message}
+        </div>
+      ) : null}
+    </DetailSection>
+  )
+}
+
+const OrderLineOutsourceSection = ({
+  line,
+  onUpdateOutsourceInfo
+}: {
+  line: OrderLine
+  onUpdateOutsourceInfo?: OrderLineOutsourceUpdateHandler
+}) => {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<OrderLineOutsourceDraft>(() => buildOrderLineOutsourceDraft(line))
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    setDraft(buildOrderLineOutsourceDraft(line))
+    setEditing(false)
+    setMessage('')
+  }, [line.id])
+
+  const updateDraft = <K extends keyof OrderLineOutsourceDraft>(field: K, value: OrderLineOutsourceDraft[K]) => {
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleEdit = () => {
+    setDraft(buildOrderLineOutsourceDraft(line))
+    setMessage('')
+    setEditing(true)
+  }
+
+  const handleCancel = () => {
+    setDraft(buildOrderLineOutsourceDraft(line))
+    setEditing(false)
+    setMessage('')
+  }
+
+  const handleSave = () => {
+    if (!onUpdateOutsourceInfo) {
+      return
+    }
+
+    onUpdateOutsourceInfo(line.id, draft)
+    setEditing(false)
+    setMessage('已保存跟单 / 下厂信息')
+  }
+
+  return (
+    <DetailSection
+      title="跟单 / 下厂"
+      actions={
+        !editing ? (
+          <button type="button" className="button ghost small" aria-label="编辑跟单 / 下厂信息" onClick={handleEdit} disabled={!onUpdateOutsourceInfo}>
+            编辑
+          </button>
+        ) : null
+      }
+    >
+      {editing ? (
+        <div className="stack">
+          <div className="field-grid three">
+            <label className="field-control">
+              <span className="field-label">跟单负责人</span>
+              <input className="input" value={draft.followUpOwner} onChange={(event) => updateDraft('followUpOwner', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">工厂名称</span>
+              <input className="input" value={draft.supplierName} onChange={(event) => updateDraft('supplierName', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">下厂时间</span>
+              <input className="input" value={draft.outsourcedAt} onChange={(event) => updateDraft('outsourcedAt', event.target.value)} placeholder="YYYY-MM-DD" />
+            </label>
+            <label className="field-control">
+              <span className="field-label">生产任务编号 / 货号</span>
+              <input className="input" value={draft.itemSku} onChange={(event) => updateDraft('itemSku', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">工厂计划交期</span>
+              <input className="input" value={draft.plannedDeliveryDate} onChange={(event) => updateDraft('plannedDeliveryDate', event.target.value)} placeholder="YYYY-MM-DD" />
+            </label>
+            <label className="field-control">
+              <span className="field-label">委外状态</span>
+              <select className="select" value={draft.outsourceStatus} onChange={(event) => updateDraft('outsourceStatus', event.target.value)}>
+                {outsourceStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">跟单备注 / 委外备注</span>
+              <textarea className="textarea" value={draft.outsourceNote} onChange={(event) => updateDraft('outsourceNote', event.target.value)} />
+            </label>
+          </div>
+          <div className="row">
+            <button type="button" className="button primary small" onClick={handleSave}>
+              保存跟单
+            </button>
+            <button type="button" className="button secondary small" onClick={handleCancel}>
+              取消编辑
+            </button>
+          </div>
+        </div>
+      ) : (
+        <InfoGrid columns={3}>
+          <InfoField label="跟单负责人" value={line.currentOwner || '待分配'} />
+          <InfoField label="工厂" value={getFactorySummary(line)} />
+          <InfoField label="下厂时间" value={line.outsourceInfo?.outsourcedAt || '待补充'} />
+          <InfoField label="生产任务编号 / 货号" value={line.itemSku || line.lineCode || '—'} />
+          <InfoField label="工厂计划交期" value={line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '—'} />
+          <InfoField label="委外状态" value={getOutsourceStatusLabel(String(line.outsourceInfo?.outsourceStatus || ''))} />
+          <InfoField label="跟单备注 / 委外备注" value={line.outsourceInfo?.outsourceNote || '—'} />
         </InfoGrid>
       )}
       {message ? (
@@ -1144,6 +1334,7 @@ export const OrderLineDetailDrawer = ({
   logisticsRecords = logisticsMock,
   afterSalesCases = afterSalesMock,
   onUpdateLineDetails,
+  onUpdateOutsourceInfo,
   onAddLogistics,
   onAddAfterSales
 }: {
@@ -1152,6 +1343,7 @@ export const OrderLineDetailDrawer = ({
   onClose: () => void
   onStatusChange?: OrderLineStatusUpdateHandler
   onUpdateLineDetails?: OrderLineDetailsUpdateHandler
+  onUpdateOutsourceInfo?: OrderLineOutsourceUpdateHandler
   logs?: OrderLineLog[]
   logisticsRecords?: LogisticsRecord[]
   afterSalesCases?: AfterSalesCase[]
@@ -1257,16 +1449,7 @@ export const OrderLineDetailDrawer = ({
             </InfoGrid>
           </DetailSection>
 
-          <DetailSection title="跟单下厂摘要">
-            <InfoGrid columns={3}>
-              <InfoField label="工厂" value={getFactorySummary(line)} />
-              <InfoField label="下厂时间" value={line.sourceProduct?.snapshotAt || '待补充'} />
-              <InfoField label="生产任务编号 / 货号" value={line.itemSku || line.lineCode || '—'} />
-              <InfoField label="工厂计划交期" value={line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '—'} />
-              <InfoField label="跟单状态" value={line.outsourceInfo?.outsourceStatus || '—'} />
-              <InfoField label="跟单备注" value={line.outsourceInfo?.outsourceNote || '—'} />
-            </InfoGrid>
-          </DetailSection>
+          <OrderLineOutsourceSection line={line} onUpdateOutsourceInfo={onUpdateOutsourceInfo} />
 
           <DetailSection title="工厂回传摘要">
             <InfoGrid columns={3}>

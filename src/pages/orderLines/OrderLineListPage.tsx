@@ -6,6 +6,7 @@ import {
   buildOrderLineAfterSalesLog,
   buildOrderLineDetailsLog,
   buildOrderLineLogisticsLog,
+  buildOrderLineOutsourceLog,
   buildOrderLineStatusLog,
   buildOrderLineRows,
   filterOrderLineRows,
@@ -14,11 +15,13 @@ import {
   OrderLineQuickStats,
   OrderLineTable,
   updateOrderLineDetailsInRows,
+  updateOrderLineOutsourceInfoInRows,
   updateOrderLineStatusInRows,
   type OrderLineAfterSalesCreateHandler,
   type OrderLineCenterFilters,
   type OrderLineDetailsUpdateHandler,
   type OrderLineLogisticsCreateHandler,
+  type OrderLineOutsourceUpdateHandler,
   type OrderLineStatusUpdateHandler
 } from '@/components/business/orderLine'
 import { PageContainer, PageHeader } from '@/components/common'
@@ -78,6 +81,16 @@ export const OrderLineListPage = () => {
     setLogs((current) => [buildOrderLineDetailsLog({ line: currentRow.line, purchase: currentRow.purchase }), ...current])
   }
 
+  const handleUpdateOutsourceInfo: OrderLineOutsourceUpdateHandler = (lineId, draft) => {
+    const currentRow = rows.find(({ line }) => line.id === lineId)
+    if (!currentRow) {
+      return
+    }
+
+    setRows((current) => updateOrderLineOutsourceInfoInRows(current, lineId, draft))
+    setLogs((current) => [buildOrderLineOutsourceLog({ line: currentRow.line, purchase: currentRow.purchase }), ...current])
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -106,6 +119,7 @@ export const OrderLineListPage = () => {
         onClose={() => setSelectedLineId(undefined)}
         onStatusChange={handleStatusChange}
         onUpdateLineDetails={handleUpdateLineDetails}
+        onUpdateOutsourceInfo={handleUpdateOutsourceInfo}
         logs={logs}
         logisticsRecords={logisticsRecords}
         afterSalesCases={afterSalesCases}

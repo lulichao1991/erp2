@@ -1041,3 +1041,60 @@
 - 物流 / 售后记录编辑和作废
 
 下一步建议做“跟单 / 下厂信息编辑第一版”，继续把商品行从查看页推进为可操作页。
+
+---
+
+### 15.11 商品行跟单 / 下厂信息编辑第一版
+
+本轮将商品行详情抽屉里的“跟单 / 下厂”区块从只读展示，推进为可维护区块。
+
+新增能力：
+
+- 在商品行详情抽屉新增“跟单 / 下厂”编辑入口
+- 区块支持编辑、保存、取消
+- 保存后只更新当前商品行
+- `/order-lines` 列表同步更新跟单负责人和工厂名称
+- `/purchases/:purchaseId` 购买记录详情页中的当前商品行同步更新跟单负责人
+- 保存后追加一条 `OrderLineLog`
+
+第一版支持编辑字段：
+
+- 跟单负责人
+- 工厂名称
+- 下厂时间
+- 生产任务编号 / 货号
+- 工厂计划交期
+- 跟单备注 / 委外备注
+- 委外状态
+
+新增 / 扩展字段：
+
+- `OrderLineOutsourceInfo.outsourcedAt`
+
+实现口径：
+
+- 新增 `OrderLineOutsourceDraft`
+- 新增 `buildOrderLineOutsourceDraft`
+- 新增 `applyOrderLineOutsourceDraft`
+- 新增 `updateOrderLineOutsourceInfoInRows`
+- 新增 `buildOrderLineOutsourceLog`
+- 跟单负责人复用当前商品行的 `currentOwner`
+- 生产任务编号 / 货号复用 `itemSku`
+- 状态更新仍按 `line.id` 定位当前商品行
+- 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
+- 不直接 mutate mock、rows 数组或 line 对象
+- 不修改 `Product`
+- 不修改来源产品快照字段
+- 不打开工厂回传完整字段编辑
+- 不打开财务字段编辑
+
+当前仍未做：
+
+- 后端持久化
+- 具体字段 diff 展示
+- 权限 / 审批
+- 工厂回传编辑
+- 物流 / 售后记录编辑和作废
+- 财务字段编辑
+
+下一步建议做“工厂回传编辑第一版”，继续让商品行生产执行过程可维护。

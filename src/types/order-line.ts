@@ -92,6 +92,7 @@ export type OrderLineOutsourceStatus =
 export type OrderLineOutsourceInfo = {
   outsourceStatus?: OrderLineOutsourceStatus | string
   supplierName?: string
+  outsourcedAt?: string
   plannedDeliveryDate?: string
   outsourceNote?: string
 }
