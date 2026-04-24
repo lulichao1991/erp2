@@ -919,6 +919,35 @@ describe('router smoke', () => {
     expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条商品行')
   })
 
+  it('renders lightweight customer center list from current mainline data', () => {
+    renderRoute('/customers')
+
+    expect(screen.getByRole('heading', { name: '客户中心' })).toBeInTheDocument()
+    expect(screen.getByText('客户中心第一版只读展示客户历史购买记录、商品行和售后摘要。')).toBeInTheDocument()
+    expect(screen.getByText('张三')).toBeInTheDocument()
+    expect(screen.getByText('13800001234')).toBeInTheDocument()
+    expect(screen.getByText('zhangsan_jewelry')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '查看客户' })).toHaveAttribute('href', '/customers/customer-zhang-001')
+  })
+
+  it('renders customer detail with purchase, order-line and after-sales history', () => {
+    renderRoute('/customers/customer-zhang-001')
+
+    expect(screen.getByRole('heading', { name: '客户详情' })).toBeInTheDocument()
+    expect(screen.getByText('客户详情只做历史归集；购买执行仍进入购买记录和商品行中心。')).toBeInTheDocument()
+    expect(screen.getByText('客户基础信息')).toBeInTheDocument()
+    expect(screen.getByText('历史购买记录')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'PUR-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getByText('历史商品行')).toBeInTheDocument()
+    expect(screen.getByText('OL-202604-001-01')).toBeInTheDocument()
+    expect(screen.getByText('OL-202604-001-02')).toBeInTheDocument()
+    expect(screen.getByText('OL-202604-001-03')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '查看商品行' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getByText('历史售后摘要')).toBeInTheDocument()
+    expect(screen.getByText('客户反馈戒围可能偏紧')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '返回客户中心' })).toHaveAttribute('href', '/customers')
+  })
+
   it('expands order item when clicking summary area', async () => {
     const user = userEvent.setup()
     renderRoute('/orders/o-202604-001')
