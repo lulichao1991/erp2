@@ -879,6 +879,45 @@ describe('router smoke', () => {
     )
   })
 
+  it('validates, duplicates and removes purchase draft order-line cards', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    renderRoute('/purchases/new')
+
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('请至少填写客户姓名或手机。')
+
+    await user.type(screen.getByLabelText('客户姓名'), '李四')
+    await user.type(screen.getByLabelText('应收总额'), '1000')
+    await user.type(screen.getByLabelText('已收金额'), '1200')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('已收金额不能大于应收总额。')
+
+    await user.clear(screen.getByLabelText('已收金额'))
+    await user.type(screen.getByLabelText('已收金额'), '500')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 需要填写商品名称或引用产品。')
+
+    const firstLineCard = screen.getByText('商品行 TEMP-01').closest('.subtle-panel')
+    expect(firstLineCard).not.toBeNull()
+    expect(within(firstLineCard as HTMLElement).getByRole('button', { name: '删除商品行' })).toBeDisabled()
+
+    await user.type(within(firstLineCard as HTMLElement).getByLabelText('商品名称'), '手动定制戒指')
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '复制商品行' }))
+
+    expect(screen.getByText('本次购买共 2 条商品行')).toBeInTheDocument()
+    const secondLineCard = screen.getByText('商品行 TEMP-02').closest('.subtle-panel')
+    expect(secondLineCard).not.toBeNull()
+    expect(within(secondLineCard as HTMLElement).getByLabelText('商品名称')).toHaveValue('手动定制戒指')
+
+    await user.click(within(secondLineCard as HTMLElement).getByRole('button', { name: '删除商品行' }))
+    expect(screen.getByText('本次购买共 1 条商品行')).toBeInTheDocument()
+    expect(screen.queryByText('商品行 TEMP-02')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条商品行')
+  })
+
   it('expands order item when clicking summary area', async () => {
     const user = userEvent.setup()
     renderRoute('/orders/o-202604-001')

@@ -18,6 +18,7 @@ export const PurchaseCreatePage = () => {
     updatePurchaseDraft,
     addOrderLine,
     removeOrderLine,
+    duplicateOrderLine,
     updateOrderLine,
     applyProductToOrderLine,
     selectOrderLineSpec,
@@ -66,6 +67,7 @@ export const PurchaseCreatePage = () => {
           orderLines={orderLineDrafts}
           onAdd={addOrderLine}
           onRemove={removeOrderLine}
+          onDuplicate={duplicateOrderLine}
           onChange={updateOrderLine}
           onApplyProduct={applyProductToOrderLine}
           onSelectSpec={selectOrderLineSpec}

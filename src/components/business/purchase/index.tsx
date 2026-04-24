@@ -112,8 +112,10 @@ const defaultPurchaseDraft: PurchaseDraftFormValue = {
 
 let draftLineSeed = 1
 
+const createOrderLineDraftId = () => `order-line-draft-${draftLineSeed++}`
+
 const createOrderLineDraft = (): OrderLineDraft => ({
-  id: `order-line-draft-${draftLineSeed++}`,
+  id: createOrderLineDraftId(),
   selectedSpecialOptions: [],
   productName: '',
   category: '',
@@ -125,6 +127,11 @@ const createOrderLineDraft = (): OrderLineDraft => ({
   urgent: false,
   ownerName: '客服A',
   promisedDate: ''
+})
+
+const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => ({
+  ...line,
+  id: createOrderLineDraftId()
 })
 
 const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
@@ -270,6 +277,27 @@ const buildDraftPayload = (
     quoteResult: buildOrderLineDraftQuote(line)
   }))
 })
+
+const validatePurchaseDraft = (
+  draft: PurchaseDraftFormValue,
+  paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary>,
+  orderLines: OrderLineDraft[]
+) => {
+  if (!draft.customerName.trim() && !draft.customerPhone.trim()) {
+    return '请至少填写客户姓名或手机。'
+  }
+
+  if (paymentSummary.receivableAmount > 0 && paymentSummary.receivedAmount > paymentSummary.receivableAmount) {
+    return '已收金额不能大于应收总额。'
+  }
+
+  const invalidLineIndex = orderLines.findIndex((line) => !line.sourceProductId && !line.productName.trim())
+  if (invalidLineIndex >= 0) {
+    return `商品行 ${getTempLineNo(invalidLineIndex)} 需要填写商品名称或引用产品。`
+  }
+
+  return ''
+}
 
 const purchaseAggregateStatusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -526,7 +554,19 @@ export const usePurchaseDraftForm = () => {
   }
 
   const removeOrderLine = (lineId: string) => {
-    setOrderLineDrafts((current) => (current.length > 1 ? current.filter((line) => line.id !== lineId) : current))
+    if (orderLineDrafts.length <= 1) {
+      setErrorMessage('至少需要保留 1 条商品行。')
+      setSuccessMessage('')
+      return
+    }
+
+    setOrderLineDrafts((current) => current.filter((line) => line.id !== lineId))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const duplicateOrderLine = (lineId: string) => {
+    setOrderLineDrafts((current) => current.flatMap((line) => (line.id === lineId ? [line, duplicateOrderLineDraft(line)] : [line])))
     setSuccessMessage('')
     setErrorMessage('')
   }
@@ -564,6 +604,13 @@ export const usePurchaseDraftForm = () => {
       return
     }
 
+    const validationError = validatePurchaseDraft(purchaseDraft, paymentSummary, orderLineDrafts)
+    if (validationError) {
+      setErrorMessage(validationError)
+      setSuccessMessage('')
+      return
+    }
+
     const payload = buildDraftPayload(purchaseDraft, paymentSummary, orderLineDrafts)
     console.log('purchaseDraft', payload.purchaseDraft)
     console.log('orderLineDrafts', payload.orderLineDrafts)
@@ -580,6 +627,7 @@ export const usePurchaseDraftForm = () => {
     updatePurchaseDraft,
     addOrderLine,
     removeOrderLine,
+    duplicateOrderLine,
     updateOrderLine,
     applyProductToOrderLine,
     selectOrderLineSpec,
@@ -731,6 +779,7 @@ export const OrderLineDraftCard = ({
   canRemove,
   onChange,
   onRemove,
+  onDuplicate,
   onApplyProduct,
   onSelectSpec,
   onToggleSpecialOption,
@@ -741,6 +790,7 @@ export const OrderLineDraftCard = ({
   canRemove: boolean
   onChange: (patch: Partial<OrderLineDraft>) => void
   onRemove: () => void
+  onDuplicate: () => void
   onApplyProduct: (productId: string) => void
   onSelectSpec: (specId: string) => void
   onToggleSpecialOption: (option: string, checked: boolean) => void
@@ -755,9 +805,14 @@ export const OrderLineDraftCard = ({
     <div className="subtle-panel">
       <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <strong>商品行 {tempLineNo}</strong>
-        <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
-          删除商品行
-        </button>
+        <div className="row wrap">
+          <button type="button" className="button ghost small" onClick={onDuplicate}>
+            复制商品行
+          </button>
+          <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
+            删除商品行
+          </button>
+        </div>
       </div>
       <div className="field-grid three">
         <label className="field-control">
@@ -889,6 +944,7 @@ export const PurchaseDraftOrderLinesSection = ({
   orderLines,
   onAdd,
   onRemove,
+  onDuplicate,
   onChange,
   onApplyProduct,
   onSelectSpec,
@@ -897,6 +953,7 @@ export const PurchaseDraftOrderLinesSection = ({
   orderLines: OrderLineDraft[]
   onAdd: () => void
   onRemove: (lineId: string) => void
+  onDuplicate: (lineId: string) => void
   onChange: (lineId: string, patch: Partial<OrderLineDraft>) => void
   onApplyProduct: (lineId: string, productId: string) => void
   onSelectSpec: (lineId: string, specId: string) => void
@@ -932,6 +989,7 @@ export const PurchaseDraftOrderLinesSection = ({
               canRemove={orderLines.length > 1}
               onChange={(patch) => onChange(line.id, patch)}
               onRemove={() => onRemove(line.id)}
+              onDuplicate={() => onDuplicate(line.id)}
               onApplyProduct={(productId) => onApplyProduct(line.id, productId)}
               onSelectSpec={(specId) => onSelectSpec(line.id, specId)}
               onToggleSpecialOption={(option, checked) => onToggleSpecialOption(line.id, option, checked)}
