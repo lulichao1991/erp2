@@ -1047,9 +1047,9 @@ describe('router smoke', () => {
     expect(screen.getByRole('link', { name: /生产/ })).toBeInTheDocument()
   })
 
-  it('updates production plan status actions and writes timeline records', async () => {
+  it('updates production plan status actions through order-line production info', async () => {
     const user = userEvent.setup()
-    renderRoute('/production-plan/task-factory-001')
+    const { container } = renderRoute('/production-plan/task-factory-001')
 
     await user.click(screen.getByRole('button', { name: '接收任务' }))
 
@@ -1059,7 +1059,19 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '开始生产' }))
 
     expect(screen.getByLabelText('工厂状态')).toHaveValue('生产中')
-    expect(screen.getByText('商品 山形戒指 工厂状态更新为生产中')).toBeInTheDocument()
+    expect(screen.getAllByText('生产中').length).toBeGreaterThan(0)
+
+    await user.clear(screen.getByLabelText('回传重量'))
+    await user.type(screen.getByLabelText('回传重量'), '5.8g')
+    await user.clear(screen.getByLabelText('质检结论'))
+    await user.type(screen.getByLabelText('质检结论'), '生产计划回传通过')
+    await user.clear(screen.getByLabelText('工厂备注'))
+    await user.type(screen.getByLabelText('工厂备注'), '生产计划详情页写回商品行生产信息')
+
+    expect(screen.getByLabelText('回传重量')).toHaveValue('5.8g')
+    expect(screen.getByLabelText('质检结论')).toHaveValue('生产计划回传通过')
+    expect(screen.getByLabelText('工厂备注')).toHaveValue('生产计划详情页写回商品行生产信息')
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
   it('collapses non-primary item blocks by default in operations view', async () => {

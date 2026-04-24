@@ -43,6 +43,7 @@ type ProductionPlanSource = {
   orderLine: ProductionPlanLineSource
   order?: Order
   orderItem?: OrderItem
+  usesOrderLineInput: boolean
   sourceProduct: Product
 }
 
@@ -289,6 +290,7 @@ const resolveProductionPlanSource = ({
     orderLine: line,
     order,
     orderItem,
+    usesOrderLineInput: Boolean(orderLine),
     sourceProduct
   }
 }
@@ -352,7 +354,7 @@ export const buildProductionPlanDetail = ({
 
   const row = buildProductionPlanRow(source)
   const order = buildCompatibleOrder(source.purchase, source.order, source.orderLine)
-  const orderItem = source.orderItem || buildCompatibleOrderItem(source.orderLine)
+  const orderItem = source.usesOrderLineInput ? buildCompatibleOrderItem(source.orderLine) : source.orderItem || buildCompatibleOrderItem(source.orderLine)
 
   return {
     purchaseId: row.purchaseId,

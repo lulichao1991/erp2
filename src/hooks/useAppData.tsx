@@ -14,7 +14,7 @@ import { buildQuoteResult } from '@/services/quote/quoteService'
 import { createTaskDraft, getTaskList } from '@/services/task/taskQueries'
 import { getOrderStatusLabel, getTaskStatusLabel } from '@/services/workflow/workflowMeta'
 import type { Order, OrderItem, OrderStatus, TimelineRecord } from '@/types/order'
-import type { OrderLine } from '@/types/order-line'
+import type { OrderLine, OrderLineProductionInfo } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
 import type { Purchase } from '@/types/purchase'
@@ -58,6 +58,7 @@ type AppDataContextValue = {
   saveOrder: (payload: Order) => Order
   updateOrder: (orderId: string, updater: (current: Order) => Order) => Order | undefined
   transitionOrderStatus: (payload: { orderId: string; nextStatus: OrderStatus; reason?: string }) => Order | undefined
+  updateOrderLineProductionInfo: (orderLineId: string, productionInfo: OrderLineProductionInfo) => OrderLine | undefined
   updateOrderItem: (orderId: string, itemId: string, updater: (current: OrderItem) => OrderItem) => Order | undefined
   removeOrderItem: (payload: { orderId: string; itemId: string }) => Order | undefined
   createTaskFromOrder: (payload: { orderId: string; type: TaskType; orderItemId?: string; orderItemName?: string }) => Task | undefined
@@ -69,7 +70,7 @@ const AppDataContext = createContext<AppDataContextValue | null>(null)
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(() => getProductList())
   const [purchases] = useState<Purchase[]>(() => structuredClone(purchasesMock))
-  const [orderLines] = useState<OrderLine[]>(() => structuredClone(orderLinesMock))
+  const [orderLines, setOrderLines] = useState<OrderLine[]>(() => structuredClone(orderLinesMock))
   const [orders, setOrders] = useState<Order[]>(() => getOrderList())
   const [tasks, setTasks] = useState<Task[]>(() => getTaskList())
   const [productFieldOptions, setProductFieldOptions] = useState<ProductFieldOptions>(() => getProductFieldOptions())
@@ -169,6 +170,23 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
 
         setOrders((current) => current.map((item) => (item.id === orderId ? nextOrder : item)))
         return nextOrder
+      },
+      updateOrderLineProductionInfo: (orderLineId, productionInfo) => {
+        const found = orderLines.find((item) => item.id === orderLineId)
+        if (!found) {
+          return undefined
+        }
+
+        const nextOrderLine: OrderLine = {
+          ...found,
+          productionInfo: {
+            ...found.productionInfo,
+            ...productionInfo
+          }
+        }
+
+        setOrderLines((current) => current.map((item) => (item.id === orderLineId ? nextOrderLine : item)))
+        return nextOrderLine
       },
       updateOrderItem: (orderId, itemId, updater) => {
         const order = orders.find((item) => item.id === orderId)

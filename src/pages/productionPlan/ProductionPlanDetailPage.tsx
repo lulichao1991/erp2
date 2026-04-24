@@ -36,6 +36,15 @@ export const ProductionPlanDetailPage = () => {
   const { row, task, order, orderItem, sourceProduct, timeline, fileGroups, referenceImages } = detail
 
   const updateFactoryItem = (updater: (current: typeof orderItem) => typeof orderItem) => {
+    const nextOrderItem = updater(orderItem)
+
+    if (detail.orderLineId) {
+      const nextOrderLine = appData.updateOrderLineProductionInfo(detail.orderLineId, nextOrderItem.factoryFeedback || {})
+      if (nextOrderLine) {
+        return
+      }
+    }
+
     appData.updateOrderItem(order.id, orderItem.id, updater)
   }
 
@@ -155,7 +164,7 @@ export const ProductionPlanDetailPage = () => {
                   item={orderItem}
                   embedded
                   onChange={(next) => {
-                    appData.updateOrderItem(order.id, orderItem.id, () => next)
+                    updateFactoryItem(() => next)
                   }}
                 />
               </div>
