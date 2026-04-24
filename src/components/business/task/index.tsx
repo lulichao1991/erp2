@@ -53,6 +53,20 @@ type TaskFilterValue = {
 
 const getCurrentTaskTypeLabel = (type: TaskType) => (type === 'order_process' ? '购买处理' : getTaskTypeLabel(type))
 
+const getTaskPurchaseId = (task: Task) => task.purchaseId || task.transactionId || task.orderId
+
+const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || task.orderNo || '未关联购买记录'
+
+const getTaskOrderLineLabel = (task: Task) =>
+  [task.orderLineCode, task.orderLineName || task.orderItemName].filter(Boolean).join(' · ') || '购买记录级任务'
+
+const renderTaskPurchaseLink = (task: Task) => {
+  const purchaseId = getTaskPurchaseId(task)
+  const purchaseNo = getTaskPurchaseNo(task)
+
+  return purchaseId ? <Link to={`/purchases/${purchaseId}`}>{purchaseNo}</Link> : purchaseNo
+}
+
 export const TaskFilterBar = ({
   value,
   onChange
@@ -121,14 +135,14 @@ export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
                 <Link to={`/tasks/${task.id}`} className="text-price">
                   {task.title}
                 </Link>
-                <span className="text-caption">{task.orderItemName || '购买记录级任务'}</span>
+                <span className="text-caption">{getTaskOrderLineLabel(task)}</span>
               </div>
             </td>
             <td>{getCurrentTaskTypeLabel(task.type)}</td>
             <td>
               <div className="stack" style={{ gap: 6 }}>
-                <Link to="/order-lines">{task.orderItemName || task.orderNo}</Link>
-                <span className="text-caption">{task.orderItemName ? task.orderNo : '购买记录级任务'}</span>
+                <Link to="/order-lines">{getTaskOrderLineLabel(task)}</Link>
+                <span className="text-caption">{renderTaskPurchaseLink(task)}</span>
               </div>
             </td>
             <td>
@@ -160,7 +174,7 @@ export const TaskSummaryCard = ({ task }: { task: Task }) => (
         <div>
           <h2 style={{ margin: 0 }}>{task.title}</h2>
           <p className="text-muted">
-            {getCurrentTaskTypeLabel(task.type)} · {task.orderNo}
+            {getCurrentTaskTypeLabel(task.type)} · {getTaskPurchaseNo(task)}
           </p>
         </div>
         <div className="row wrap">
@@ -196,10 +210,10 @@ export const TaskInfoCardGroup = ({ task, order, hideCommercialInfo = false }: {
     </SummaryCard>
     <SummaryCard title="关联购买记录">
       <InfoGrid columns={2}>
-        <InfoField label="购买记录编号" value={order ? <Link to="/order-lines">{order.orderNo}</Link> : task.orderNo} />
+        <InfoField label="购买记录编号" value={renderTaskPurchaseLink(task)} />
         <InfoField label="购买记录阶段" value={order ? getOrderStatusLabel(order.status) : '—'} />
         <InfoField label="购买记录负责人" value={order?.ownerName || '—'} />
-        <InfoField label="关联商品行" value={task.orderItemName || '购买记录级任务'} />
+        <InfoField label="关联商品行" value={getTaskOrderLineLabel(task)} />
         {!hideCommercialInfo ? <InfoField label="客户姓名" value={order?.customerName || '—'} /> : null}
         <InfoField label="风险标签" value={order?.riskTags.join(' / ') || '—'} />
       </InfoGrid>

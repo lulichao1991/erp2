@@ -895,18 +895,31 @@ describe('router smoke', () => {
   })
 
   it('renders task list route', () => {
-    renderRoute('/tasks')
+    const { container } = renderRoute('/tasks')
 
     expect(screen.getByRole('heading', { name: '任务中心' })).toBeInTheDocument()
     expect(screen.getByText('确认戒指最终圈号')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '返回商品行中心' })).toHaveAttribute('href', '/order-lines')
+    expect(screen.getAllByRole('link', { name: 'OL-202604-001-01 · 山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
+    expect(screen.queryByText('返回订单')).not.toBeInTheDocument()
+    expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
   it('renders task detail route', () => {
-    renderRoute('/tasks/task-order-001')
+    const { container } = renderRoute('/tasks/task-order-001')
 
     expect(screen.getByRole('heading', { name: '任务详情' })).toBeInTheDocument()
     expect(screen.getByText('顶部任务概览')).toBeInTheDocument()
     expect(screen.getAllByText('SO-202604-001').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: '查看商品行' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
+    expect(screen.queryByText('返回订单')).not.toBeInTheDocument()
+    expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
   it('renders production plan list route without requiring factory role', () => {

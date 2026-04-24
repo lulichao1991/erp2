@@ -11,13 +11,22 @@ export type Task = {
   type: TaskType
   title: string
   status: TaskStatus
-  transactionId?: string
-  transactionNo?: string
-  orderId: string
-  orderNo: string
+  purchaseId?: string
+  purchaseNo?: string
   orderLineId?: string
+  orderLineCode?: string
   orderLineName?: string
+  /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseId。 */
+  transactionId?: string
+  /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseNo。 */
+  transactionNo?: string
+  /** @deprecated 兼容旧 /orders 模块和旧 useAppData API，请优先使用 purchaseId。 */
+  orderId: string
+  /** @deprecated 兼容旧 /orders 模块，请优先使用 purchaseNo。 */
+  orderNo: string
+  /** @deprecated 兼容旧 /orders 模块，请优先使用 orderLineId。 */
   orderItemId?: string
+  /** @deprecated 兼容旧 /orders 模块，请优先使用 orderLineName。 */
   orderItemName?: string
   assigneeRole: TaskAssigneeRole
   assigneeName: string
