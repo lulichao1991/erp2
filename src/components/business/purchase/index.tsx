@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag } from '@/components/common'
+import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag, TimePressureBadge } from '@/components/common'
 import { afterSalesMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import type { Customer } from '@/types/customer'
@@ -334,6 +334,15 @@ const factoryStatusLabelMap: Record<string, string> = {
   issue: '异常'
 }
 
+const afterSalesStatusLabelMap: Record<string, string> = {
+  open: '待处理',
+  processing: '处理中',
+  in_progress: '处理中',
+  waiting_return: '待寄回',
+  resolved: '已解决',
+  closed: '已关闭'
+}
+
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '待确认')
@@ -342,7 +351,32 @@ const getOrderLineStatusLabel = (status?: string) => (status ? orderLineStatusLa
 
 const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || status : '待确认')
 
+const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
+
+const getTimePressure = (promisedDate?: string) => {
+  if (!promisedDate) {
+    return { label: '待确认交期', variant: 'normal' as const }
+  }
+
+  const promised = new Date(`${promisedDate}T23:59:59`)
+  const now = new Date()
+  const diffDays = Math.ceil((promised.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return { label: `已超时 ${Math.abs(diffDays)} 天`, variant: 'overdue' as const }
+  }
+
+  if (diffDays <= 3) {
+    return { label: `剩余 ${diffDays} 天`, variant: 'dueSoon' as const }
+  }
+
+  return { label: `剩余 ${diffDays} 天`, variant: 'normal' as const }
+}
+
 const isActiveLogisticsRecord = (record?: LogisticsRecord) => record?.recordStatus !== 'voided'
+
+const isInteractiveTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement && Boolean(target.closest('a, button, input, select, textarea, label'))
 
 const activeAfterSalesStatuses = new Set(['open', 'processing', 'in_progress', 'waiting_return'])
 
@@ -393,20 +427,25 @@ const getPaymentSummary = (purchase: Purchase) => {
   }
 }
 
-export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => (
-  <SectionCard title="购买记录摘要" description="购买记录只汇总一次购买的公共信息；商品推进以商品行为准。">
-    <InfoGrid columns={3}>
-      <InfoField label="购买记录编号" value={purchase.purchaseNo} />
-      <InfoField label="平台订单号" value={purchase.platformOrderNo || '—'} />
-      <InfoField label="渠道" value={purchase.sourceChannel} />
-      <InfoField label="客户姓名" value={customer?.name || '—'} />
-      <InfoField label="付款时间" value={purchase.paymentAt || '—'} />
-      <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
-      <InfoField label="商品行数量" value={purchase.orderLines.length} />
-      <InfoField label="聚合状态" value={<StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />} />
-    </InfoGrid>
-  </SectionCard>
-)
+export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => {
+  const paymentSummary = getPaymentSummary(purchase)
+
+  return (
+    <SectionCard title="购买记录摘要" description="Purchase 是一次购买的归组对象；OrderLine 才是设计、生产、物流和售后的执行对象。">
+      <InfoGrid columns={3}>
+        <InfoField label="购买记录编号" value={purchase.purchaseNo} />
+        <InfoField label="客户" value={customer?.name || '—'} />
+        <InfoField label="渠道" value={purchase.sourceChannel} />
+        <InfoField label="平台订单号" value={purchase.platformOrderNo || '—'} />
+        <InfoField label="商品行数量" value={`${purchase.orderLines.length} 条`} />
+        <InfoField label="聚合状态" value={<StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />} />
+        <InfoField label="付款摘要" value={`${formatPrice(paymentSummary.receivedAmount)} / ${formatPrice(paymentSummary.receivableAmount)}`} />
+        <InfoField label="付款状态" value={<StatusTag value={paymentSummary.paymentStatus} />} />
+        <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
+      </InfoGrid>
+    </SectionCard>
+  )
+}
 
 export const PurchaseCustomerSection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => (
   <SectionCard title="客户与收货信息">
@@ -480,9 +519,26 @@ export const PurchaseOrderLineTable = ({
             {rows.map(({ line, purchase }) => {
               const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id && isActiveLogisticsRecord(item))
               const afterSalesCase = findCurrentAfterSalesCase(afterSalesCases, line.id)
+              const pressure = getTimePressure(line.promisedDate || purchase.promisedDate)
+              const row = { line, purchase }
+              const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
+                if (isInteractiveTarget(event.target)) {
+                  return
+                }
+                onOpenOrderLine(row)
+              }
+              const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
+                if (isInteractiveTarget(event.target)) {
+                  return
+                }
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onOpenOrderLine(row)
+                }
+              }
 
               return (
-                <tr key={line.id}>
+                <tr key={line.id} role="button" tabIndex={0} onClick={handleRowClick} onKeyDown={handleRowKeyDown}>
                   <td>{line.lineCode || line.id}</td>
                   <td>
                     <div>{line.name}</div>
@@ -493,12 +549,24 @@ export const PurchaseOrderLineTable = ({
                     <div className="text-caption">工厂 {getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))}</div>
                   </td>
                   <td>{line.currentOwner || purchase.ownerName || '待分配'}</td>
-                  <td>{line.promisedDate || purchase.promisedDate || '—'}</td>
-                  <td>{getParameterSummary(line)}</td>
-                  <td>{logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'}</td>
-                  <td>{afterSalesCase ? `售后 ${afterSalesCase.status || 'open'}` : '无售后'}</td>
                   <td>
-                    <button type="button" className="button ghost small" onClick={() => onOpenOrderLine({ line, purchase })}>
+                    <div>{line.promisedDate || purchase.promisedDate || '—'}</div>
+                    <div className="spacer-top">
+                      <TimePressureBadge label={pressure.label} variant={pressure.variant} />
+                    </div>
+                  </td>
+                  <td>
+                    <div>{getParameterSummary(line)}</div>
+                    <div className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</div>
+                  </td>
+                  <td>
+                    <StatusTag value={logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'} />
+                  </td>
+                  <td>
+                    <StatusTag value={afterSalesCase ? `售后 ${getAfterSalesStatusLabel(afterSalesCase.status)}` : '无售后'} />
+                  </td>
+                  <td>
+                    <button type="button" className="button ghost small" onClick={() => onOpenOrderLine(row)}>
                       查看商品行
                     </button>
                   </td>

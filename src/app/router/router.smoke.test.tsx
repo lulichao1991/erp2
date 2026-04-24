@@ -529,6 +529,7 @@ describe('router smoke', () => {
     expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
     expect(screen.getByText('客户与收货信息')).toBeInTheDocument()
     expect(screen.getByText('付款总览')).toBeInTheDocument()
+    expect(screen.getByText('付款摘要')).toBeInTheDocument()
     expect(screen.getByText('商品行数量')).toBeInTheDocument()
     expect(screen.getByText('本次商品行列表')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
@@ -752,8 +753,8 @@ describe('router smoke', () => {
 
     expect(screen.getByText('项链扣头需要维修')).toBeInTheDocument()
     expect(screen.getByText('为商品行 OL-202604-001-03 新增维修售后：项链扣头需要维修')).toBeInTheDocument()
-    expect(within(necklaceRow as HTMLElement).getByText('售后 waiting_return')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('售后 待寄回')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('无售后')).toBeInTheDocument()
 
     const afterSalesPanel = screen.getByText('售后记录').closest('.subtle-panel')
@@ -768,8 +769,8 @@ describe('router smoke', () => {
 
     await user.click(within(afterSalesPanel as HTMLElement).getByRole('button', { name: '关闭' }))
     expect(screen.getByText('关闭售后')).toBeInTheDocument()
-    expect(within(necklaceRow as HTMLElement).getByText('售后 closed')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('售后 已关闭')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
   })
 
   it('creates a purchase draft with multiple order-line cards', async () => {
