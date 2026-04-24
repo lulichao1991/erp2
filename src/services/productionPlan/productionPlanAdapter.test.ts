@@ -52,6 +52,70 @@ describe('productionPlanAdapter', () => {
     expect(detail?.timeline.map((record) => record.id)).toContain('tl-purchase-001-ring-production')
   })
 
+  it('prefers current order line production info over stale legacy order item feedback', () => {
+    const currentOrderLines = orderLinesMock.map((line) =>
+      line.id === 'oi-ring-001'
+        ? {
+            ...line,
+            productionInfo: {
+              ...line.productionInfo,
+              factoryStatus: 'completed',
+              factoryNote: 'current order line feedback'
+            }
+          }
+        : line
+    )
+    const staleLegacyOrders = mockOrders.map((order) =>
+      order.id === 'o-202604-001'
+        ? {
+            ...order,
+            items: order.items.map((item) =>
+              item.id === 'oi-ring-001'
+                ? {
+                    ...item,
+                    factoryFeedback: {
+                      ...item.factoryFeedback,
+                      factoryStatus: 'in_progress',
+                      factoryNote: 'stale legacy order item feedback'
+                    }
+                  }
+                : item
+            )
+          }
+        : order
+    )
+
+    const rows = buildProductionPlanRows({
+      tasks: mockTasks,
+      purchases: purchasesMock,
+      orderLines: currentOrderLines,
+      orders: staleLegacyOrders,
+      products: mockProducts
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      stage: 'reported',
+      stageLabel: '已回传'
+    })
+
+    const detail = buildProductionPlanDetail({
+      taskId: 'task-factory-001',
+      tasks: mockTasks,
+      purchases: purchasesMock,
+      orderLines: currentOrderLines,
+      orders: staleLegacyOrders,
+      products: mockProducts
+    })
+
+    expect(detail?.row).toMatchObject({
+      stage: 'reported',
+      stageLabel: '已回传'
+    })
+    expect(detail?.orderItem.factoryFeedback?.factoryStatus).toBe('completed')
+    expect(detail?.orderItem.factoryFeedback?.factoryNote).toBe('current order line feedback')
+  })
+
   it('builds one production plan row from the factory production task', () => {
     const rows = buildProductionPlanRows({
       tasks: mockTasks,

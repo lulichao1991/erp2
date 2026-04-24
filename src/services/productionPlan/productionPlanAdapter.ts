@@ -117,10 +117,13 @@ const buildProductionTimeline = (source: ProductionPlanSource): TimelineRecord[]
 
 const getLineFactoryFeedback = (orderLine: ProductionPlanLineSource) => {
   const line = orderLine as OrderItem & OrderLine
-  return line.factoryFeedback || line.productionInfo
+  return line.productionInfo || line.factoryFeedback
 }
 
 const getLineSku = (orderLine: ProductionPlanLineSource) => orderLine.itemSku || orderLine.lineCode
+
+const getCurrentFirstProductionLine = (source: ProductionPlanSource) =>
+  source.usesOrderLineInput ? source.orderLine : source.orderItem || source.orderLine
 
 const legacyFactoryStatusMap: Record<string, OrderLineProductionStatus> = {
   待回传: 'pending_feedback',
@@ -138,8 +141,9 @@ const normalizeFactoryStatus = (status?: string): OrderLineProductionStatus | un
 }
 
 const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow => {
-  const { task, purchase, orderLine, order, orderItem, sourceProduct } = source
-  const stage = getProductionPlanStage(task, orderItem || orderLine)
+  const { task, purchase, orderLine, order, sourceProduct } = source
+  const productionLine = getCurrentFirstProductionLine(source)
+  const stage = getProductionPlanStage(task, productionLine)
   const purchaseId = purchase?.id || order?.id || task.purchaseId || task.orderId
   const purchaseNo = purchase?.purchaseNo || order?.orderNo || task.purchaseNo || task.orderNo
   const orderLineId = orderLine.id
@@ -368,8 +372,9 @@ export const buildProductionPlanDetail = ({
   }
 
   const row = buildProductionPlanRow(source)
-  const order = buildCompatibleOrder(source.purchase, source.order, source.orderLine)
-  const orderItem = source.usesOrderLineInput ? buildCompatibleOrderItem(source.orderLine) : source.orderItem || buildCompatibleOrderItem(source.orderLine)
+  const productionLine = getCurrentFirstProductionLine(source)
+  const order = buildCompatibleOrder(source.purchase, source.order, productionLine)
+  const orderItem = buildCompatibleOrderItem(productionLine)
 
   return {
     purchaseId: row.purchaseId,
@@ -383,7 +388,7 @@ export const buildProductionPlanDetail = ({
     orderItem,
     sourceProduct: source.sourceProduct,
     timeline: buildProductionTimeline(source),
-    fileGroups: buildProductionPlanFileGroups(source.orderItem || source.orderLine, source.sourceProduct),
+    fileGroups: buildProductionPlanFileGroups(productionLine, source.sourceProduct),
     referenceImages: source.sourceProduct.assets.detailImages
   }
 }
