@@ -9,6 +9,7 @@ import type { OrderLine } from '@/types/order-line'
 import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { QuoteResult } from '@/types/quote'
+import type { LogisticsRecord } from '@/types/supporting-records'
 import { buildQuoteResult } from '@/utils/quote/buildQuoteResult'
 
 type PurchaseLineRow = {
@@ -395,10 +396,12 @@ export const PurchasePaymentSection = ({ purchase }: { purchase: Purchase }) => 
 
 export const PurchaseOrderLineTable = ({
   rows,
-  onOpenOrderLine
+  onOpenOrderLine,
+  logisticsRecords = logisticsMock
 }: {
   rows: PurchaseLineRow[]
   onOpenOrderLine: (row: PurchaseLineRow) => void
+  logisticsRecords?: LogisticsRecord[]
 }) => (
   <SectionCard
     title="本次商品行列表"
@@ -427,7 +430,7 @@ export const PurchaseOrderLineTable = ({
           </thead>
           <tbody>
             {rows.map(({ line, purchase }) => {
-              const logisticsRecord = logisticsMock.find((item) => item.orderLineId === line.id)
+              const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id)
               const afterSalesCase = afterSalesMock.find((item) => item.orderLineId === line.id && item.status !== 'closed')
 
               return (

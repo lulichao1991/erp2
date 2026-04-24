@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { buildOrderLineStatusLog, OrderLineDetailDrawer, updateOrderLineStatusInRows, type OrderLineStatusUpdateHandler } from '@/components/business/orderLine'
+import {
+  addLogisticsRecord,
+  buildOrderLineLogisticsLog,
+  buildOrderLineStatusLog,
+  OrderLineDetailDrawer,
+  updateOrderLineStatusInRows,
+  type OrderLineLogisticsCreateHandler,
+  type OrderLineStatusUpdateHandler
+} from '@/components/business/orderLine'
 import {
   PurchaseCustomerSection,
   PurchaseNotesTimelineSection,
@@ -9,8 +17,9 @@ import {
   PurchaseSummarySection
 } from '@/components/business/purchase'
 import { EmptyState, PageContainer, PageHeader } from '@/components/common'
-import { customersMock, orderLineLogsMock, orderLinesMock, purchasesMock } from '@/mocks'
+import { customersMock, logisticsMock, orderLineLogsMock, orderLinesMock, purchasesMock } from '@/mocks'
 import type { OrderLineLog } from '@/types/order-line'
+import type { LogisticsRecord } from '@/types/supporting-records'
 
 export const PurchaseDetailPage = () => {
   const { purchaseId } = useParams()
@@ -32,11 +41,13 @@ export const PurchaseDetailPage = () => {
   }, [purchase])
   const [orderLineRows, setOrderLineRows] = useState(initialOrderLineRows)
   const [orderLineLogs, setOrderLineLogs] = useState<OrderLineLog[]>(orderLineLogsMock)
+  const [logisticsRecords, setLogisticsRecords] = useState<LogisticsRecord[]>(logisticsMock)
   const selectedOrderLineRow = orderLineRows.find(({ line }) => line.id === selectedOrderLineId)
 
   useEffect(() => {
     setOrderLineRows(initialOrderLineRows)
     setOrderLineLogs(orderLineLogsMock)
+    setLogisticsRecords(logisticsMock)
     setSelectedOrderLineId(undefined)
   }, [initialOrderLineRows])
 
@@ -48,6 +59,15 @@ export const PurchaseDetailPage = () => {
 
     setOrderLineRows((current) => updateOrderLineStatusInRows(current, lineId, nextStatus))
     setOrderLineLogs((current) => [buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus }), ...current])
+  }
+
+  const handleAddLogistics: OrderLineLogisticsCreateHandler = (record) => {
+    const currentRow = orderLineRows.find(({ line }) => line.id === record.orderLineId)
+    setLogisticsRecords((current) => addLogisticsRecord(current, record))
+
+    if (currentRow) {
+      setOrderLineLogs((current) => [buildOrderLineLogisticsLog({ line: currentRow.line, purchase: currentRow.purchase, record }), ...current])
+    }
   }
 
   if (!purchase) {
@@ -74,7 +94,7 @@ export const PurchaseDetailPage = () => {
         <PurchaseSummarySection purchase={purchase} customer={customer} />
         <PurchaseCustomerSection purchase={purchase} customer={customer} />
         <PurchasePaymentSection purchase={purchase} />
-        <PurchaseOrderLineTable rows={orderLineRows} onOpenOrderLine={(row) => setSelectedOrderLineId(row.line.id)} />
+        <PurchaseOrderLineTable rows={orderLineRows} logisticsRecords={logisticsRecords} onOpenOrderLine={(row) => setSelectedOrderLineId(row.line.id)} />
         <PurchaseNotesTimelineSection purchase={purchase} />
       </div>
       <OrderLineDetailDrawer
@@ -83,6 +103,8 @@ export const PurchaseDetailPage = () => {
         onClose={() => setSelectedOrderLineId(undefined)}
         onStatusChange={handleStatusChange}
         logs={orderLineLogs}
+        logisticsRecords={logisticsRecords}
+        onAddLogistics={handleAddLogistics}
       />
     </PageContainer>
   )

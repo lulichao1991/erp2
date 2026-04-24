@@ -234,6 +234,38 @@ describe('router smoke', () => {
     expect(screen.getByText('将商品行 OL-202604-001-02 从「生产中」改为「待发货」')).toBeInTheDocument()
   })
 
+  it('adds logistics to only the selected order line from the detail drawer', async () => {
+    const user = userEvent.setup()
+    renderRoute('/order-lines')
+
+    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
+    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    expect(ringRow).not.toBeNull()
+    expect(pendantRow).not.toBeNull()
+    expect(necklaceRow).not.toBeNull()
+
+    await user.click(within(ringRow as HTMLElement).getByRole('button', { name: '查看' }))
+    await user.click(screen.getByRole('button', { name: '新增物流' }))
+    await user.selectOptions(screen.getByLabelText('物流类型'), 'goods')
+    await user.selectOptions(screen.getByLabelText('物流方向'), 'outbound')
+    await user.type(screen.getByLabelText('快递公司'), '顺丰速运')
+    await user.type(screen.getByLabelText('运单号'), 'SF-RING-NEW-001')
+    await user.type(screen.getByLabelText('物流备注'), '戒指单独发货')
+    await user.click(screen.getByRole('button', { name: '保存物流' }))
+
+    expect(screen.getByText('SF-RING-NEW-001')).toBeInTheDocument()
+    expect(screen.getByText('为商品行 OL-202604-001-01 新增货品物流 SF-RING-NEW-001')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('物流 SF-RING-NEW-001')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('物流 SF202604280001')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('未发货')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '关闭' }))
+    await user.click(necklaceRow as HTMLElement)
+    expect(screen.queryByText('SF-RING-NEW-001')).not.toBeInTheDocument()
+    expect(screen.getByText('暂无物流记录')).toBeInTheDocument()
+  })
+
   it('shows non-referenced custom order line details in drawer', async () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
@@ -307,6 +339,33 @@ describe('router smoke', () => {
     expect(within(necklaceRow as HTMLElement).getByText('已完成')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('生产中')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
+  })
+
+  it('adds logistics from purchase detail to only the selected order line', async () => {
+    const user = userEvent.setup()
+    renderRoute('/purchases/o-202604-001')
+
+    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
+    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    expect(ringRow).not.toBeNull()
+    expect(pendantRow).not.toBeNull()
+    expect(necklaceRow).not.toBeNull()
+
+    await user.click(within(necklaceRow as HTMLElement).getByRole('button', { name: '查看商品行' }))
+    await user.click(screen.getByRole('button', { name: '新增物流' }))
+    await user.selectOptions(screen.getByLabelText('物流类型'), 'goods')
+    await user.selectOptions(screen.getByLabelText('物流方向'), 'outbound')
+    await user.type(screen.getByLabelText('快递公司'), '中通快递')
+    await user.type(screen.getByLabelText('运单号'), 'ZT-NECK-NEW-001')
+    await user.type(screen.getByLabelText('物流备注'), '项链单独发货')
+    await user.click(screen.getByRole('button', { name: '保存物流' }))
+
+    expect(screen.getByText('ZT-NECK-NEW-001')).toBeInTheDocument()
+    expect(screen.getByText('为商品行 OL-202604-001-03 新增货品物流 ZT-NECK-NEW-001')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('物流 ZT-NECK-NEW-001')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('无物流')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('物流 SF202604280001')).toBeInTheDocument()
   })
 
   it('creates a purchase draft with multiple order-line cards', async () => {

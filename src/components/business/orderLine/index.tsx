@@ -6,6 +6,7 @@ import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/m
 import { mockProducts } from '@/mocks/products'
 import type { OrderLine, OrderLineLog, OrderLineStatus } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
+import type { LogisticsDirection, LogisticsRecord, LogisticsType } from '@/types/supporting-records'
 
 export type OrderLineCenterFilters = {
   keyword: string
@@ -19,6 +20,18 @@ export type OrderLineRow = {
 }
 
 export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineStatus | string) => void
+
+export type OrderLineLogisticsDraft = {
+  logisticsType: LogisticsType
+  direction: LogisticsDirection
+  company: string
+  trackingNo: string
+  shippedAt: string
+  signedAt: string
+  remark: string
+}
+
+export type OrderLineLogisticsCreateHandler = (record: LogisticsRecord) => void
 
 const statusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -64,6 +77,32 @@ const formatDateTime = (date: Date) => {
 }
 
 const getStatusLabel = (status?: string) => (status ? statusLabelMap[status] || status : '待确认')
+
+const logisticsTypeLabelMap: Record<LogisticsType, string> = {
+  measurement_tool: '量尺工具',
+  goods: '货品',
+  after_sales: '售后',
+  other: '其他'
+}
+
+const logisticsDirectionLabelMap: Record<LogisticsDirection, string> = {
+  outbound: '发出',
+  return: '退回'
+}
+
+const defaultLogisticsDraft: OrderLineLogisticsDraft = {
+  logisticsType: 'goods',
+  direction: 'outbound',
+  company: '',
+  trackingNo: '',
+  shippedAt: '',
+  signedAt: '',
+  remark: ''
+}
+
+const getLogisticsCompany = (record: LogisticsRecord) => record.company || record.carrier || '未填写承运商'
+const getLogisticsRemark = (record: LogisticsRecord) => record.remark || record.note || '—'
+const getLogisticsSignedAt = (record: LogisticsRecord) => record.signedAt || record.deliveredAt || ''
 
 const designStatusLabelMap: Record<string, string> = {
   not_required: '不需要设计',
@@ -193,6 +232,53 @@ export const buildOrderLineStatusLog = ({
   }
 }
 
+export const buildOrderLineLogisticsLog = ({
+  line,
+  purchase,
+  record,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  record: LogisticsRecord
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-logistics-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'logistics_created',
+  actionLabel: '新增物流',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: `为商品行 ${line.lineCode || line.id} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
+})
+
+export const buildOrderLineLogisticsRecord = ({
+  line,
+  purchase,
+  draft
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  draft: OrderLineLogisticsDraft
+}): LogisticsRecord => ({
+  id: `logistics-${line.id}-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  transactionId: line.transactionId || purchase?.id,
+  logisticsType: draft.logisticsType,
+  direction: draft.direction,
+  company: draft.company,
+  carrier: draft.company,
+  trackingNo: draft.trackingNo,
+  shippedAt: draft.shippedAt,
+  signedAt: draft.signedAt,
+  remark: draft.remark,
+  note: draft.remark
+})
+
+export const addLogisticsRecord = (records: LogisticsRecord[], record: LogisticsRecord) => [record, ...records]
+
 const OrderLineStatusUpdatePanel = ({
   line,
   onStatusChange
@@ -280,6 +366,85 @@ const OrderLineLogSection = ({ logs }: { logs: OrderLineLog[] }) => {
         <EmptyState title="暂无操作日志" description="当前商品行还没有记录操作。" />
       )}
     </DetailSection>
+  )
+}
+
+const OrderLineLogisticsCreateForm = ({
+  line,
+  purchase,
+  onAddLogistics,
+  onCancel
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  onAddLogistics: OrderLineLogisticsCreateHandler
+  onCancel: () => void
+}) => {
+  const [draft, setDraft] = useState<OrderLineLogisticsDraft>(defaultLogisticsDraft)
+
+  useEffect(() => {
+    setDraft(defaultLogisticsDraft)
+  }, [line.id])
+
+  const updateDraft = <K extends keyof OrderLineLogisticsDraft>(field: K, value: OrderLineLogisticsDraft[K]) => {
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleSave = () => {
+    onAddLogistics(buildOrderLineLogisticsRecord({ line, purchase, draft }))
+    setDraft(defaultLogisticsDraft)
+    onCancel()
+  }
+
+  return (
+    <div className="subtle-panel">
+      <div className="field-grid three">
+        <label className="field-control">
+          <span className="field-label">物流类型</span>
+          <select className="select" value={draft.logisticsType} onChange={(event) => updateDraft('logisticsType', event.target.value as LogisticsType)}>
+            <option value="measurement_tool">量尺工具</option>
+            <option value="goods">货品</option>
+            <option value="after_sales">售后</option>
+            <option value="other">其他</option>
+          </select>
+        </label>
+        <label className="field-control">
+          <span className="field-label">物流方向</span>
+          <select className="select" value={draft.direction} onChange={(event) => updateDraft('direction', event.target.value as LogisticsDirection)}>
+            <option value="outbound">发出</option>
+            <option value="return">退回</option>
+          </select>
+        </label>
+        <label className="field-control">
+          <span className="field-label">快递公司</span>
+          <input className="input" value={draft.company} onChange={(event) => updateDraft('company', event.target.value)} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">运单号</span>
+          <input className="input" value={draft.trackingNo} onChange={(event) => updateDraft('trackingNo', event.target.value)} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">发货时间</span>
+          <input className="input" type="datetime-local" value={draft.shippedAt} onChange={(event) => updateDraft('shippedAt', event.target.value)} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">签收时间</span>
+          <input className="input" type="datetime-local" value={draft.signedAt} onChange={(event) => updateDraft('signedAt', event.target.value)} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">物流备注</span>
+          <textarea className="textarea" value={draft.remark} onChange={(event) => updateDraft('remark', event.target.value)} />
+        </label>
+      </div>
+      <div className="row spacer-top">
+        <button type="button" className="button primary small" onClick={handleSave}>
+          保存物流
+        </button>
+        <button type="button" className="button secondary small" onClick={onCancel}>
+          取消
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -387,10 +552,12 @@ export const OrderLineFilterBar = ({
 
 export const OrderLineTable = ({
   rows,
-  onOpenDetail
+  onOpenDetail,
+  logisticsRecords = logisticsMock
 }: {
   rows: OrderLineRow[]
   onOpenDetail?: (row: OrderLineRow) => void
+  logisticsRecords?: LogisticsRecord[]
 }) => (
   <div className="table-shell">
     <table className="table">
@@ -414,7 +581,7 @@ export const OrderLineTable = ({
         {rows.map(({ line, purchase }) => {
           const row = { line, purchase }
           const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
-          const logistics = logisticsMock.find((item) => item.orderLineId === line.id)
+          const logistics = logisticsRecords.find((item) => item.orderLineId === line.id)
           const afterSales = afterSalesMock.find((item) => item.orderLineId === line.id && item.status !== 'closed')
           const pressure = getTimePressure(line.promisedDate)
           const riskLabels = getLineRiskLabels(line)
@@ -487,7 +654,7 @@ export const OrderLineTable = ({
               </td>
               <td>{getFactorySummary(line)}</td>
               <td>
-                <div>{logistics ? `物流 ${logistics.trackingNo}` : '未发货'}</div>
+                <div>{logistics ? `物流 ${logistics.trackingNo || '已创建'}` : '未发货'}</div>
                 <div className="text-caption">{afterSales ? `售后 ${afterSales.status || 'open'}` : '无售后'}</div>
               </td>
               <td>
@@ -508,26 +675,35 @@ export const OrderLineDetailDrawer = ({
   row,
   onClose,
   onStatusChange,
-  logs = []
+  logs = [],
+  logisticsRecords = logisticsMock,
+  onAddLogistics
 }: {
   open: boolean
   row?: OrderLineRow
   onClose: () => void
   onStatusChange?: OrderLineStatusUpdateHandler
   logs?: OrderLineLog[]
+  logisticsRecords?: LogisticsRecord[]
+  onAddLogistics?: OrderLineLogisticsCreateHandler
 }) => {
   const [sourceProductOpen, setSourceProductOpen] = useState(false)
+  const [logisticsFormOpen, setLogisticsFormOpen] = useState(false)
   const line = row?.line
   const purchase = row?.purchase
   const customer = customersMock.find((item) => item.id === line?.customerId || item.id === purchase?.customerId)
-  const logisticsRecords = line ? logisticsMock.filter((item) => item.orderLineId === line.id) : []
+  const lineLogisticsRecords = line ? logisticsRecords.filter((item) => item.orderLineId === line.id) : []
   const afterSalesCases = line ? afterSalesMock.filter((item) => item.orderLineId === line.id) : []
   const riskLabels = line ? getLineRiskLabels(line) : []
   const lineLogs = line ? logs.filter((log) => log.orderLineId === line.id) : []
   const sourceProduct = line ? mockProducts.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
   const sourceProductCompareValue = line ? buildOrderLineSourceProductCompareValue(line) : undefined
+  useEffect(() => {
+    setLogisticsFormOpen(false)
+  }, [line?.id])
   const handleClose = () => {
     setSourceProductOpen(false)
+    setLogisticsFormOpen(false)
     onClose()
   }
 
@@ -641,16 +817,29 @@ export const OrderLineDetailDrawer = ({
           <DetailSection title="物流 / 售后摘要">
             <div className="stack">
               <div className="subtle-panel">
-                <strong>物流记录</strong>
-                {logisticsRecords.length > 0 ? (
+                <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+                  <strong>物流记录</strong>
+                  <button type="button" className="button ghost small" onClick={() => setLogisticsFormOpen((current) => !current)} disabled={!onAddLogistics}>
+                    新增物流
+                  </button>
+                </div>
+                {logisticsFormOpen && onAddLogistics ? (
+                  <div className="spacer-top">
+                    <OrderLineLogisticsCreateForm line={line} purchase={purchase} onAddLogistics={onAddLogistics} onCancel={() => setLogisticsFormOpen(false)} />
+                  </div>
+                ) : null}
+                {lineLogisticsRecords.length > 0 ? (
                   <ul className="list-reset stack spacer-top">
-                    {logisticsRecords.map((record) => (
+                    {lineLogisticsRecords.map((record) => (
                       <li key={record.id}>
                         <div className="row wrap" style={{ justifyContent: 'space-between' }}>
-                          <span>{record.carrier || '未填写承运商'}</span>
+                          <span>{getLogisticsCompany(record)}</span>
                           <span className="text-price">{record.trackingNo || '无单号'}</span>
                         </div>
-                        <div className="text-caption">{record.shippedAt || '未发货'} · {record.note || '—'}</div>
+                        <div className="text-caption">
+                          {logisticsTypeLabelMap[record.logisticsType || 'goods']} · {logisticsDirectionLabelMap[record.direction || 'outbound']} · {record.shippedAt || '未发货'}
+                          {getLogisticsSignedAt(record) ? ` · 签收 ${getLogisticsSignedAt(record)}` : ''} · {getLogisticsRemark(record)}
+                        </div>
                       </li>
                     ))}
                   </ul>

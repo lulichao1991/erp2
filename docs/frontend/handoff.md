@@ -893,3 +893,43 @@
 - 日志编辑 / 删除
 
 下一步建议做轻量物流新增 / 售后新增，让商品行具备独立发货和独立售后的前端演示能力。
+
+---
+
+### 15.8 商品行级新增物流第一版
+
+本轮在商品行详情抽屉的“物流 / 售后摘要”中新增轻量物流创建能力。
+
+新增 / 扩展字段：
+
+- `logisticsType`: `measurement_tool` / `goods` / `after_sales` / `other`
+- `direction`: `outbound` / `return`
+- `company`
+- `trackingNo`
+- `shippedAt`
+- `signedAt`
+- `remark`
+
+兼容保留：
+
+- `carrier`
+- `deliveredAt`
+- `note`
+
+实现口径：
+
+- 物流记录 state 独立存在，不存入 `Purchase`
+- 新增物流时，记录默认带当前 `orderLineId`
+- `purchaseId` 只作为归组信息
+- 商品行中心列表、商品行详情抽屉、购买记录详情页都按 `orderLineId` 查找物流
+- 新增物流使用不可变更新追加到物流数组
+- 同时追加一条 `OrderLineLog`，记录“新增物流”
+
+当前仍未做：
+
+- 后端持久化
+- 复杂物流中心
+- 物流状态机
+- 权限 / 审批
+
+下一步建议做商品行级售后新增第一版，继续证明同一购买记录下的商品可以独立售后。

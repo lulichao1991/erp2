@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  addLogisticsRecord,
+  buildOrderLineLogisticsLog,
   buildOrderLineStatusLog,
   buildOrderLineRows,
   filterOrderLineRows,
@@ -10,11 +12,13 @@ import {
   OrderLineTable,
   updateOrderLineStatusInRows,
   type OrderLineCenterFilters,
+  type OrderLineLogisticsCreateHandler,
   type OrderLineStatusUpdateHandler
 } from '@/components/business/orderLine'
 import { PageContainer, PageHeader } from '@/components/common'
-import { orderLineLogsMock } from '@/mocks'
+import { logisticsMock, orderLineLogsMock } from '@/mocks'
 import type { OrderLineLog } from '@/types/order-line'
+import type { LogisticsRecord } from '@/types/supporting-records'
 
 export const OrderLineListPage = () => {
   const [filters, setFilters] = useState<OrderLineCenterFilters>({
@@ -24,6 +28,7 @@ export const OrderLineListPage = () => {
   })
   const [rows, setRows] = useState(buildOrderLineRows)
   const [logs, setLogs] = useState<OrderLineLog[]>(orderLineLogsMock)
+  const [logisticsRecords, setLogisticsRecords] = useState<LogisticsRecord[]>(logisticsMock)
   const [selectedLineId, setSelectedLineId] = useState<string>()
   const filteredRows = useMemo(() => filterOrderLineRows(rows, filters), [filters, rows])
   const selectedRow = rows.find(({ line }) => line.id === selectedLineId)
@@ -36,6 +41,15 @@ export const OrderLineListPage = () => {
 
     setRows((current) => updateOrderLineStatusInRows(current, lineId, nextStatus))
     setLogs((current) => [buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus }), ...current])
+  }
+
+  const handleAddLogistics: OrderLineLogisticsCreateHandler = (record) => {
+    const currentRow = rows.find(({ line }) => line.id === record.orderLineId)
+    setLogisticsRecords((current) => addLogisticsRecord(current, record))
+
+    if (currentRow) {
+      setLogs((current) => [buildOrderLineLogisticsLog({ line: currentRow.line, purchase: currentRow.purchase, record }), ...current])
+    }
   }
 
   return (
@@ -53,7 +67,7 @@ export const OrderLineListPage = () => {
       <div className="stack">
         <OrderLineQuickStats rows={rows} />
         <OrderLineFilterBar value={filters} onChange={setFilters} />
-        <OrderLineTable rows={filteredRows} onOpenDetail={(row) => setSelectedLineId(row.line.id)} />
+        <OrderLineTable rows={filteredRows} logisticsRecords={logisticsRecords} onOpenDetail={(row) => setSelectedLineId(row.line.id)} />
       </div>
       <OrderLineDetailDrawer
         open={Boolean(selectedRow)}
@@ -61,6 +75,8 @@ export const OrderLineListPage = () => {
         onClose={() => setSelectedLineId(undefined)}
         onStatusChange={handleStatusChange}
         logs={logs}
+        logisticsRecords={logisticsRecords}
+        onAddLogistics={handleAddLogistics}
       />
     </PageContainer>
   )
