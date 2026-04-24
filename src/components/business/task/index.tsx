@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom'
 import { InfoField, InfoGrid, PageHeader, RiskTag, SectionCard, StatusTag, SummaryCard } from '@/components/common'
 import {
   getOrderPriorityLabel,
-  getOrderStatusLabel,
   getTaskAssigneeRoleLabel,
   getTaskStatusLabel,
   getTaskTypeLabel
 } from '@/services/workflow/workflowMeta'
-import type { Order } from '@/types/order'
+import type { OrderLine } from '@/types/order-line'
+import type { Purchase } from '@/types/purchase'
 import type { Task, TaskStatus, TaskType } from '@/types/task'
 
 export const TaskListHeader = () => (
@@ -59,6 +59,21 @@ const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo 
 
 const getTaskOrderLineLabel = (task: Task) =>
   [task.orderLineCode, task.orderLineName || task.orderItemName].filter(Boolean).join(' · ') || '购买记录级任务'
+
+const purchaseAggregateStatusLabelMap: Record<string, string> = {
+  draft: '草稿',
+  in_progress: '进行中',
+  partially_shipped: '部分发货',
+  completed: '已完成',
+  after_sales: '售后中',
+  exception: '异常',
+  cancelled: '已取消'
+}
+
+const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '—')
+
+const getOrderLineDisplayLabel = (task: Task, orderLine?: OrderLine) =>
+  [orderLine?.lineCode || task.orderLineCode, orderLine?.name || task.orderLineName || task.orderItemName].filter(Boolean).join(' · ') || '购买记录级任务'
 
 const renderTaskPurchaseLink = (task: Task) => {
   const purchaseId = getTaskPurchaseId(task)
@@ -196,7 +211,17 @@ export const TaskSummaryCard = ({ task }: { task: Task }) => (
   </SummaryCard>
 )
 
-export const TaskInfoCardGroup = ({ task, order, hideCommercialInfo = false }: { task: Task; order?: Order; hideCommercialInfo?: boolean }) => (
+export const TaskInfoCardGroup = ({
+  task,
+  purchase,
+  orderLine,
+  hideCommercialInfo = false
+}: {
+  task: Task
+  purchase?: Purchase
+  orderLine?: OrderLine
+  hideCommercialInfo?: boolean
+}) => (
   <div className="field-grid three">
     <SummaryCard title="任务信息">
       <InfoGrid columns={2}>
@@ -211,11 +236,11 @@ export const TaskInfoCardGroup = ({ task, order, hideCommercialInfo = false }: {
     <SummaryCard title="关联购买记录">
       <InfoGrid columns={2}>
         <InfoField label="购买记录编号" value={renderTaskPurchaseLink(task)} />
-        <InfoField label="购买记录阶段" value={order ? getOrderStatusLabel(order.status) : '—'} />
-        <InfoField label="购买记录负责人" value={order?.ownerName || '—'} />
-        <InfoField label="关联商品行" value={getTaskOrderLineLabel(task)} />
-        {!hideCommercialInfo ? <InfoField label="客户姓名" value={order?.customerName || '—'} /> : null}
-        <InfoField label="风险标签" value={order?.riskTags.join(' / ') || '—'} />
+        <InfoField label="购买记录阶段" value={getPurchaseAggregateStatusLabel(purchase?.aggregateStatus)} />
+        <InfoField label="购买记录负责人" value={purchase?.ownerName || '—'} />
+        <InfoField label="关联商品行" value={getOrderLineDisplayLabel(task, orderLine)} />
+        {!hideCommercialInfo ? <InfoField label="收件人" value={purchase?.recipientName || '—'} /> : null}
+        <InfoField label="风险标签" value={purchase?.riskTags.join(' / ') || '—'} />
       </InfoGrid>
     </SummaryCard>
     <SummaryCard title="处理说明">

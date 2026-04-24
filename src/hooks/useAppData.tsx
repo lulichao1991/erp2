@@ -45,6 +45,8 @@ type AppDataContextValue = {
   productFieldOptions: ProductFieldOptions
   currentUserRole: TaskAssigneeRole
   getProduct: (productId?: string) => Product | undefined
+  getPurchase: (purchaseId?: string) => Purchase | undefined
+  getOrderLine: (orderLineId?: string) => OrderLine | undefined
   getTask: (taskId?: string) => Task | undefined
   setCurrentUserRole: (role: TaskAssigneeRole) => void
   saveProduct: (payload: Product) => Product
@@ -92,6 +94,8 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
       productFieldOptions,
       currentUserRole,
       getProduct: (productId) => products.find((item) => item.id === productId),
+      getPurchase: (purchaseId) => purchases.find((item) => item.id === purchaseId),
+      getOrderLine: (orderLineId) => orderLines.find((item) => item.id === orderLineId),
       getOrder: (orderId) => orders.find((item) => item.id === orderId),
       getTask: (taskId) => tasks.find((item) => item.id === taskId),
       getTasksByOrder: (orderId) => tasks.filter((item) => item.orderId === orderId),
