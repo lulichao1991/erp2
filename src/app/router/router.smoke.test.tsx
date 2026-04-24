@@ -216,9 +216,35 @@ describe('router smoke', () => {
     renderRoute('/purchases/o-202604-001')
 
     expect(screen.getByRole('heading', { name: '购买记录详情' })).toBeInTheDocument()
+    expect(screen.getByText('购买记录详情是归组页，用来查看一次购买的公共信息和本次购买下的所有商品行。')).toBeInTheDocument()
     expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
+    expect(screen.getByText('客户与收货信息')).toBeInTheDocument()
+    expect(screen.getByText('付款总览')).toBeInTheDocument()
     expect(screen.getByText('商品行数量')).toBeInTheDocument()
+    expect(screen.getByText('本次商品行列表')).toBeInTheDocument()
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
+    expect(screen.getByText('生产中')).toBeInTheDocument()
+    expect(screen.getByText('待发货')).toBeInTheDocument()
+    expect(screen.getByText('设计中')).toBeInTheDocument()
+    expect(screen.getByText('备注与日志')).toBeInTheDocument()
+  })
+
+  it('opens order-line drawer from purchase detail line table', async () => {
+    const user = userEvent.setup()
+    renderRoute('/purchases/o-202604-001')
+
+    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    expect(pendantRow).not.toBeNull()
+
+    await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: '查看商品行' }))
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getAllByText('山形吊坠').length).toBeGreaterThan(0)
+    expect(screen.getByText('顺丰速运')).toBeInTheDocument()
+    expect(screen.getByText('暂无售后记录')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '打开购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
   })
 
   it('expands order item when clicking summary area', async () => {
