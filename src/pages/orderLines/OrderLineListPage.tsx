@@ -1,48 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  addAfterSalesCase,
-  addLogisticsRecord,
-  buildOrderLineAfterSalesCloseLog,
-  buildOrderLineAfterSalesEditLog,
-  buildOrderLineAfterSalesLog,
-  buildOrderLineDetailsLog,
-  buildOrderLineLogisticsEditLog,
-  buildOrderLineLogisticsLog,
-  buildOrderLineLogisticsVoidLog,
-  buildOrderLineOutsourceLog,
-  buildOrderLineProductionLog,
-  buildOrderLineStatusLog,
-  closeAfterSalesCaseInList,
-  buildOrderLineRows,
   filterOrderLineRows,
   OrderLineFilterBar,
   OrderLineDetailDrawer,
   OrderLineQuickStats,
   OrderLineTable,
-  updateAfterSalesCaseInList,
-  updateOrderLineDetailsInRows,
-  updateOrderLineOutsourceInfoInRows,
-  updateOrderLineProductionInfoInRows,
-  updateOrderLineStatusInRows,
-  updateLogisticsRecordInList,
-  voidLogisticsRecordInList,
-  type OrderLineAfterSalesCreateHandler,
-  type OrderLineAfterSalesCloseHandler,
-  type OrderLineAfterSalesUpdateHandler,
-  type OrderLineCenterFilters,
-  type OrderLineDetailsUpdateHandler,
-  type OrderLineLogisticsCreateHandler,
-  type OrderLineLogisticsUpdateHandler,
-  type OrderLineLogisticsVoidHandler,
-  type OrderLineOutsourceUpdateHandler,
-  type OrderLineProductionUpdateHandler,
-  type OrderLineStatusUpdateHandler
+  type OrderLineCenterFilters
 } from '@/components/business/orderLine'
 import { PageContainer, PageHeader } from '@/components/common'
-import { afterSalesMock, logisticsMock, orderLineLogsMock } from '@/mocks'
-import type { OrderLineLog } from '@/types/order-line'
-import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
+import { useOrderLineWorkspaceState } from '@/hooks/useOrderLineWorkspaceState'
 
 export const OrderLineListPage = () => {
   const [filters, setFilters] = useState<OrderLineCenterFilters>({
@@ -50,115 +17,8 @@ export const OrderLineListPage = () => {
     status: 'all',
     owner: ''
   })
-  const [rows, setRows] = useState(buildOrderLineRows)
-  const [logs, setLogs] = useState<OrderLineLog[]>(orderLineLogsMock)
-  const [logisticsRecords, setLogisticsRecords] = useState<LogisticsRecord[]>(logisticsMock)
-  const [afterSalesCases, setAfterSalesCases] = useState<AfterSalesCase[]>(afterSalesMock)
-  const [selectedLineId, setSelectedLineId] = useState<string>()
-  const filteredRows = useMemo(() => filterOrderLineRows(rows, filters), [filters, rows])
-  const selectedRow = rows.find(({ line }) => line.id === selectedLineId)
-
-  const handleStatusChange: OrderLineStatusUpdateHandler = (lineId, nextStatus) => {
-    const currentRow = rows.find(({ line }) => line.id === lineId)
-    if (!currentRow || currentRow.line.status === nextStatus) {
-      return
-    }
-
-    setRows((current) => updateOrderLineStatusInRows(current, lineId, nextStatus))
-    setLogs((current) => [buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus }), ...current])
-  }
-
-  const handleAddLogistics: OrderLineLogisticsCreateHandler = (record) => {
-    const currentRow = rows.find(({ line }) => line.id === record.orderLineId)
-    setLogisticsRecords((current) => addLogisticsRecord(current, record))
-
-    if (currentRow) {
-      setLogs((current) => [buildOrderLineLogisticsLog({ line: currentRow.line, purchase: currentRow.purchase, record }), ...current])
-    }
-  }
-
-  const handleUpdateLogistics: OrderLineLogisticsUpdateHandler = (recordId, draft) => {
-    const currentRecord = logisticsRecords.find((record) => record.id === recordId)
-    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
-    if (!currentRecord || !currentRow) {
-      return
-    }
-
-    setLogisticsRecords((current) => updateLogisticsRecordInList(current, recordId, draft))
-    setLogs((current) => [buildOrderLineLogisticsEditLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord }), ...current])
-  }
-
-  const handleVoidLogistics: OrderLineLogisticsVoidHandler = (recordId, voidReason) => {
-    const currentRecord = logisticsRecords.find((record) => record.id === recordId)
-    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
-    if (!currentRecord || !currentRow) {
-      return
-    }
-
-    setLogisticsRecords((current) => voidLogisticsRecordInList(current, recordId, voidReason))
-    setLogs((current) => [buildOrderLineLogisticsVoidLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord, voidReason }), ...current])
-  }
-
-  const handleAddAfterSales: OrderLineAfterSalesCreateHandler = (record) => {
-    const currentRow = rows.find(({ line }) => line.id === record.orderLineId)
-    setAfterSalesCases((current) => addAfterSalesCase(current, record))
-
-    if (currentRow) {
-      setLogs((current) => [buildOrderLineAfterSalesLog({ line: currentRow.line, purchase: currentRow.purchase, record }), ...current])
-    }
-  }
-
-  const handleUpdateAfterSales: OrderLineAfterSalesUpdateHandler = (recordId, draft) => {
-    const currentRecord = afterSalesCases.find((record) => record.id === recordId)
-    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
-    if (!currentRecord || !currentRow) {
-      return
-    }
-
-    setAfterSalesCases((current) => updateAfterSalesCaseInList(current, recordId, draft))
-    setLogs((current) => [buildOrderLineAfterSalesEditLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord }), ...current])
-  }
-
-  const handleCloseAfterSales: OrderLineAfterSalesCloseHandler = (recordId) => {
-    const currentRecord = afterSalesCases.find((record) => record.id === recordId)
-    const currentRow = rows.find(({ line }) => line.id === currentRecord?.orderLineId)
-    if (!currentRecord || !currentRow) {
-      return
-    }
-
-    setAfterSalesCases((current) => closeAfterSalesCaseInList(current, recordId))
-    setLogs((current) => [buildOrderLineAfterSalesCloseLog({ line: currentRow.line, purchase: currentRow.purchase, record: currentRecord }), ...current])
-  }
-
-  const handleUpdateLineDetails: OrderLineDetailsUpdateHandler = (lineId, draft) => {
-    const currentRow = rows.find(({ line }) => line.id === lineId)
-    if (!currentRow) {
-      return
-    }
-
-    setRows((current) => updateOrderLineDetailsInRows(current, lineId, draft))
-    setLogs((current) => [buildOrderLineDetailsLog({ line: currentRow.line, purchase: currentRow.purchase }), ...current])
-  }
-
-  const handleUpdateOutsourceInfo: OrderLineOutsourceUpdateHandler = (lineId, draft) => {
-    const currentRow = rows.find(({ line }) => line.id === lineId)
-    if (!currentRow) {
-      return
-    }
-
-    setRows((current) => updateOrderLineOutsourceInfoInRows(current, lineId, draft))
-    setLogs((current) => [buildOrderLineOutsourceLog({ line: currentRow.line, purchase: currentRow.purchase }), ...current])
-  }
-
-  const handleUpdateProductionInfo: OrderLineProductionUpdateHandler = (lineId, draft) => {
-    const currentRow = rows.find(({ line }) => line.id === lineId)
-    if (!currentRow) {
-      return
-    }
-
-    setRows((current) => updateOrderLineProductionInfoInRows(current, lineId, draft))
-    setLogs((current) => [buildOrderLineProductionLog({ line: currentRow.line, purchase: currentRow.purchase }), ...current])
-  }
+  const workspace = useOrderLineWorkspaceState()
+  const filteredRows = useMemo(() => filterOrderLineRows(workspace.rows, filters), [filters, workspace.rows])
 
   return (
     <PageContainer>
@@ -173,32 +33,32 @@ export const OrderLineListPage = () => {
       />
       <p className="text-muted">一行代表一件商品，支持独立推进设计、生产、发货与售后。</p>
       <div className="stack">
-        <OrderLineQuickStats rows={rows} afterSalesCases={afterSalesCases} />
+        <OrderLineQuickStats rows={workspace.rows} afterSalesCases={workspace.afterSalesCases} />
         <OrderLineFilterBar value={filters} onChange={setFilters} />
         <OrderLineTable
           rows={filteredRows}
-          logisticsRecords={logisticsRecords}
-          afterSalesCases={afterSalesCases}
-          onOpenDetail={(row) => setSelectedLineId(row.line.id)}
+          logisticsRecords={workspace.logisticsRecords}
+          afterSalesCases={workspace.afterSalesCases}
+          onOpenDetail={workspace.openOrderLineDetail}
         />
       </div>
       <OrderLineDetailDrawer
-        open={Boolean(selectedRow)}
-        row={selectedRow}
-        onClose={() => setSelectedLineId(undefined)}
-        onStatusChange={handleStatusChange}
-        onUpdateLineDetails={handleUpdateLineDetails}
-        onUpdateOutsourceInfo={handleUpdateOutsourceInfo}
-        onUpdateProductionInfo={handleUpdateProductionInfo}
-        logs={logs}
-        logisticsRecords={logisticsRecords}
-        afterSalesCases={afterSalesCases}
-        onAddLogistics={handleAddLogistics}
-        onAddAfterSales={handleAddAfterSales}
-        onUpdateLogistics={handleUpdateLogistics}
-        onVoidLogistics={handleVoidLogistics}
-        onUpdateAfterSales={handleUpdateAfterSales}
-        onCloseAfterSales={handleCloseAfterSales}
+        open={Boolean(workspace.selectedRow)}
+        row={workspace.selectedRow}
+        onClose={workspace.closeOrderLineDetail}
+        onStatusChange={workspace.handleStatusChange}
+        onUpdateLineDetails={workspace.handleUpdateLineDetails}
+        onUpdateOutsourceInfo={workspace.handleUpdateOutsourceInfo}
+        onUpdateProductionInfo={workspace.handleUpdateProductionInfo}
+        logs={workspace.logs}
+        logisticsRecords={workspace.logisticsRecords}
+        afterSalesCases={workspace.afterSalesCases}
+        onAddLogistics={workspace.handleAddLogistics}
+        onAddAfterSales={workspace.handleAddAfterSales}
+        onUpdateLogistics={workspace.handleUpdateLogistics}
+        onVoidLogistics={workspace.handleVoidLogistics}
+        onUpdateAfterSales={workspace.handleUpdateAfterSales}
+        onCloseAfterSales={workspace.handleCloseAfterSales}
       />
     </PageContainer>
   )
