@@ -4,7 +4,7 @@ import { SourceProductDrawer, type SourceProductCompareValue } from '@/component
 import { EmptyState, InfoField, InfoGrid, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
-import type { OrderLine, OrderLineLog, OrderLineOutsourceStatus, OrderLinePriority, OrderLineStatus } from '@/types/order-line'
+import type { OrderLine, OrderLineLog, OrderLineOutsourceStatus, OrderLinePriority, OrderLineProductionStatus, OrderLineStatus } from '@/types/order-line'
 import type { ProductCategory } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { AfterSalesCase, AfterSalesCaseStatus, AfterSalesCaseType, LogisticsDirection, LogisticsRecord, LogisticsType } from '@/types/supporting-records'
@@ -53,6 +53,21 @@ export type OrderLineOutsourceDraft = {
 }
 
 export type OrderLineOutsourceUpdateHandler = (lineId: string, draft: OrderLineOutsourceDraft) => void
+
+export type OrderLineProductionDraft = {
+  factoryStatus: OrderLineProductionStatus | string
+  actualMaterial: string
+  totalWeight: string
+  netWeight: string
+  mainStoneInfo: string
+  sideStoneInfo: string
+  laborCostDetail: string
+  factoryShippedAt: string
+  qualityResult: string
+  factoryNote: string
+}
+
+export type OrderLineProductionUpdateHandler = (lineId: string, draft: OrderLineProductionDraft) => void
 
 export type OrderLineLogisticsDraft = {
   logisticsType: LogisticsType
@@ -137,8 +152,17 @@ const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus | string; 
   { value: 'rework', label: '返工中' }
 ]
 
+const productionStatusOptions: Array<{ value: OrderLineProductionStatus | string; label: string }> = [
+  { value: 'not_started', label: '未开始' },
+  { value: 'in_progress', label: '生产中' },
+  { value: 'pending_feedback', label: '待回传' },
+  { value: 'completed', label: '已完成' },
+  { value: 'issue', label: '异常' }
+]
+
 const categoryLabelMap = Object.fromEntries(categoryOptions.map((item) => [item.value, item.label])) as Record<string, string>
 const outsourceStatusLabelMap = Object.fromEntries(outsourceStatusOptions.map((item) => [item.value, item.label])) as Record<string, string>
+const factoryStatusLabelMap = Object.fromEntries(productionStatusOptions.map((item) => [item.value, item.label])) as Record<string, string>
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
@@ -223,14 +247,6 @@ const designStatusLabelMap: Record<string, string> = {
   completed: '已完成',
   delivered: '已交付',
   rework: '返工中'
-}
-
-const factoryStatusLabelMap: Record<string, string> = {
-  not_started: '未开始',
-  in_progress: '生产中',
-  pending_feedback: '待回传',
-  completed: '已完成',
-  issue: '异常'
 }
 
 const getDesignStatusLabel = (status?: string) => (status ? designStatusLabelMap[status] || status : '待确认')
@@ -461,6 +477,65 @@ export const buildOrderLineOutsourceLog = ({
   operatorName,
   createdAt: formatDateTime(new Date()),
   note: '修改了商品行跟单 / 下厂信息'
+})
+
+const getProductionTotalWeight = (line: OrderLine) => line.productionInfo?.totalWeight || line.productionInfo?.returnedWeight || ''
+
+export const buildOrderLineProductionDraft = (line: OrderLine): OrderLineProductionDraft => ({
+  factoryStatus: line.productionInfo?.factoryStatus || 'not_started',
+  actualMaterial: line.productionInfo?.actualMaterial || line.actualRequirements?.material || line.selectedMaterial || '',
+  totalWeight: getProductionTotalWeight(line),
+  netWeight: line.productionInfo?.netWeight || '',
+  mainStoneInfo: line.productionInfo?.mainStoneInfo || '',
+  sideStoneInfo: line.productionInfo?.sideStoneInfo || '',
+  laborCostDetail: line.productionInfo?.laborCostDetail || '',
+  factoryShippedAt: line.productionInfo?.factoryShippedAt || '',
+  qualityResult: line.productionInfo?.qualityResult || '',
+  factoryNote: line.productionInfo?.factoryNote || ''
+})
+
+export const applyOrderLineProductionDraft = (line: OrderLine, draft: OrderLineProductionDraft): OrderLine => {
+  const totalWeight = draft.totalWeight.trim()
+
+  return {
+    ...line,
+    productionInfo: {
+      ...line.productionInfo,
+      factoryStatus: draft.factoryStatus,
+      actualMaterial: draft.actualMaterial.trim() || undefined,
+      totalWeight: totalWeight || undefined,
+      returnedWeight: totalWeight || undefined,
+      netWeight: draft.netWeight.trim() || undefined,
+      mainStoneInfo: draft.mainStoneInfo.trim() || undefined,
+      sideStoneInfo: draft.sideStoneInfo.trim() || undefined,
+      laborCostDetail: draft.laborCostDetail.trim() || undefined,
+      factoryShippedAt: draft.factoryShippedAt || undefined,
+      qualityResult: draft.qualityResult.trim() || undefined,
+      factoryNote: draft.factoryNote.trim() || undefined
+    }
+  }
+}
+
+export const updateOrderLineProductionInfoInRows = <T extends OrderLineRow>(rows: T[], lineId: string, draft: OrderLineProductionDraft): T[] =>
+  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: applyOrderLineProductionDraft(row.line, draft) } as T) : row))
+
+export const buildOrderLineProductionLog = ({
+  line,
+  purchase,
+  operatorName = '系统用户'
+}: {
+  line: OrderLine
+  purchase?: Purchase
+  operatorName?: string
+}): OrderLineLog => ({
+  id: `log-${line.id}-production-${Date.now()}`,
+  orderLineId: line.id,
+  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
+  actionType: 'production_info_updated',
+  actionLabel: '编辑工厂回传信息',
+  operatorName,
+  createdAt: formatDateTime(new Date()),
+  note: '修改了商品行工厂回传信息'
 })
 
 export const buildOrderLineLogisticsLog = ({
@@ -938,6 +1013,142 @@ const OrderLineOutsourceSection = ({
   )
 }
 
+const OrderLineProductionSection = ({
+  line,
+  onUpdateProductionInfo
+}: {
+  line: OrderLine
+  onUpdateProductionInfo?: OrderLineProductionUpdateHandler
+}) => {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<OrderLineProductionDraft>(() => buildOrderLineProductionDraft(line))
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    setDraft(buildOrderLineProductionDraft(line))
+    setEditing(false)
+    setMessage('')
+  }, [line.id])
+
+  const updateDraft = <K extends keyof OrderLineProductionDraft>(field: K, value: OrderLineProductionDraft[K]) => {
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleEdit = () => {
+    setDraft(buildOrderLineProductionDraft(line))
+    setMessage('')
+    setEditing(true)
+  }
+
+  const handleCancel = () => {
+    setDraft(buildOrderLineProductionDraft(line))
+    setEditing(false)
+    setMessage('')
+  }
+
+  const handleSave = () => {
+    if (!onUpdateProductionInfo) {
+      return
+    }
+
+    onUpdateProductionInfo(line.id, draft)
+    setEditing(false)
+    setMessage('已保存工厂回传信息')
+  }
+
+  return (
+    <DetailSection
+      title="工厂回传"
+      actions={
+        !editing ? (
+          <button type="button" className="button ghost small" aria-label="编辑工厂回传信息" onClick={handleEdit} disabled={!onUpdateProductionInfo}>
+            编辑
+          </button>
+        ) : null
+      }
+    >
+      {editing ? (
+        <div className="stack">
+          <div className="field-grid three">
+            <label className="field-control">
+              <span className="field-label">工厂状态</span>
+              <select className="select" value={draft.factoryStatus} onChange={(event) => updateDraft('factoryStatus', event.target.value)}>
+                {productionStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">实际材质</span>
+              <input className="input" value={draft.actualMaterial} onChange={(event) => updateDraft('actualMaterial', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">总重</span>
+              <input className="input" value={draft.totalWeight} onChange={(event) => updateDraft('totalWeight', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">净重</span>
+              <input className="input" value={draft.netWeight} onChange={(event) => updateDraft('netWeight', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">主石信息</span>
+              <input className="input" value={draft.mainStoneInfo} onChange={(event) => updateDraft('mainStoneInfo', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">辅石信息</span>
+              <input className="input" value={draft.sideStoneInfo} onChange={(event) => updateDraft('sideStoneInfo', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">工费明细</span>
+              <input className="input" value={draft.laborCostDetail} onChange={(event) => updateDraft('laborCostDetail', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">工厂出货日期</span>
+              <input className="input" value={draft.factoryShippedAt} onChange={(event) => updateDraft('factoryShippedAt', event.target.value)} placeholder="YYYY-MM-DD" />
+            </label>
+            <label className="field-control">
+              <span className="field-label">质检结果</span>
+              <input className="input" value={draft.qualityResult} onChange={(event) => updateDraft('qualityResult', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">工厂备注</span>
+              <textarea className="textarea" value={draft.factoryNote} onChange={(event) => updateDraft('factoryNote', event.target.value)} />
+            </label>
+          </div>
+          <div className="row">
+            <button type="button" className="button primary small" onClick={handleSave}>
+              保存回传
+            </button>
+            <button type="button" className="button secondary small" onClick={handleCancel}>
+              取消编辑
+            </button>
+          </div>
+        </div>
+      ) : (
+        <InfoGrid columns={3}>
+          <InfoField label="工厂状态" value={getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))} />
+          <InfoField label="实际材质" value={line.productionInfo?.actualMaterial || line.actualRequirements?.material || line.selectedMaterial || '—'} />
+          <InfoField label="总重" value={getProductionTotalWeight(line) || '—'} />
+          <InfoField label="净重" value={line.productionInfo?.netWeight || '—'} />
+          <InfoField label="主石信息" value={line.productionInfo?.mainStoneInfo || '—'} />
+          <InfoField label="辅石信息" value={line.productionInfo?.sideStoneInfo || '—'} />
+          <InfoField label="工费明细" value={line.productionInfo?.laborCostDetail || '—'} />
+          <InfoField label="工厂出货日期" value={line.productionInfo?.factoryShippedAt || '—'} />
+          <InfoField label="质检结果" value={line.productionInfo?.qualityResult || '—'} />
+          <InfoField label="工厂备注" value={line.productionInfo?.factoryNote || '—'} />
+        </InfoGrid>
+      )}
+      {message ? (
+        <div role="status" className="success-alert spacer-top">
+          {message}
+        </div>
+      ) : null}
+    </DetailSection>
+  )
+}
+
 const OrderLineLogisticsCreateForm = ({
   line,
   purchase,
@@ -1307,7 +1518,10 @@ export const OrderLineTable = ({
                   <TimePressureBadge label={pressure.label} variant={pressure.variant} />
                 </div>
               </td>
-              <td>{getFactorySummary(line)}</td>
+              <td>
+                <div>{getFactorySummary(line)}</div>
+                <div className="text-caption">工厂 {getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))}</div>
+              </td>
               <td>
                 <div>{logistics ? `物流 ${logistics.trackingNo || '已创建'}` : '未发货'}</div>
                 <div className="text-caption">{afterSales ? `售后 ${afterSales.status || 'open'}` : '无售后'}</div>
@@ -1336,7 +1550,8 @@ export const OrderLineDetailDrawer = ({
   onUpdateLineDetails,
   onUpdateOutsourceInfo,
   onAddLogistics,
-  onAddAfterSales
+  onAddAfterSales,
+  onUpdateProductionInfo
 }: {
   open: boolean
   row?: OrderLineRow
@@ -1344,6 +1559,7 @@ export const OrderLineDetailDrawer = ({
   onStatusChange?: OrderLineStatusUpdateHandler
   onUpdateLineDetails?: OrderLineDetailsUpdateHandler
   onUpdateOutsourceInfo?: OrderLineOutsourceUpdateHandler
+  onUpdateProductionInfo?: OrderLineProductionUpdateHandler
   logs?: OrderLineLog[]
   logisticsRecords?: LogisticsRecord[]
   afterSalesCases?: AfterSalesCase[]
@@ -1450,17 +1666,7 @@ export const OrderLineDetailDrawer = ({
           </DetailSection>
 
           <OrderLineOutsourceSection line={line} onUpdateOutsourceInfo={onUpdateOutsourceInfo} />
-
-          <DetailSection title="工厂回传摘要">
-            <InfoGrid columns={3}>
-              <InfoField label="工厂状态" value={getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))} />
-              <InfoField label="实际材质" value={line.actualRequirements?.material || line.selectedMaterial || '—'} />
-              <InfoField label="总重" value={line.productionInfo?.returnedWeight || '—'} />
-              <InfoField label="净重" value="—" />
-              <InfoField label="质检结果" value={line.productionInfo?.qualityResult || '—'} />
-              <InfoField label="工厂备注" value={line.productionInfo?.factoryNote || '—'} />
-            </InfoGrid>
-          </DetailSection>
+          <OrderLineProductionSection line={line} onUpdateProductionInfo={onUpdateProductionInfo} />
 
           <DetailSection title="物流 / 售后摘要">
             <div className="stack">

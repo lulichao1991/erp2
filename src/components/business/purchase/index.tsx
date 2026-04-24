@@ -298,11 +298,21 @@ const orderLineStatusLabelMap: Record<string, string> = {
   exception: '异常'
 }
 
+const factoryStatusLabelMap: Record<string, string> = {
+  not_started: '未开始',
+  in_progress: '生产中',
+  pending_feedback: '待回传',
+  completed: '已完成',
+  issue: '异常'
+}
+
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '待确认')
 
 const getOrderLineStatusLabel = (status?: string) => (status ? orderLineStatusLabelMap[status] || status : '待确认')
+
+const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || status : '待确认')
 
 const activeAfterSalesStatuses = new Set(['open', 'processing', 'in_progress', 'waiting_return'])
 
@@ -450,6 +460,7 @@ export const PurchaseOrderLineTable = ({
                   </td>
                   <td>
                     <StatusTag value={getOrderLineStatusLabel(String(line.status))} />
+                    <div className="text-caption">工厂 {getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))}</div>
                   </td>
                   <td>{line.currentOwner || purchase.ownerName || '待分配'}</td>
                   <td>{line.promisedDate || purchase.promisedDate || '—'}</td>

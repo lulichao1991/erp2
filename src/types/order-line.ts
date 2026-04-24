@@ -106,7 +106,14 @@ export type OrderLineProductionStatus =
 
 export type OrderLineProductionInfo = {
   factoryStatus?: OrderLineProductionStatus | string
+  actualMaterial?: string
+  totalWeight?: string
   returnedWeight?: string
+  netWeight?: string
+  mainStoneInfo?: string
+  sideStoneInfo?: string
+  laborCostDetail?: string
+  factoryShippedAt?: string
   qualityResult?: string
   factoryNote?: string
 }
