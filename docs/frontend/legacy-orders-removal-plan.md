@@ -146,6 +146,28 @@ Legacy `useAppData` orders APIs can be removed only when all are true:
 - task updates have a current-mainline timeline/log destination
 - `/orders` route tests have been removed or replaced by current-mainline tests
 
+## 4.1 Task Timeline Dependency Audit
+
+Current task page state:
+
+- `src/pages/tasks/*` reads current `tasks`, `purchases`, and `orderLines`.
+- task list and detail do not read `appData.orders`.
+- task pages do not call `updateOrderItem`.
+- task detail filters current `Purchase.timeline` by `relatedTaskId` and `relatedOrderLineId`.
+- task detail links to `/order-lines` and `/purchases/:purchaseId`, not `/orders`.
+
+Remaining legacy dependency:
+
+- `useAppData.updateTask` updates current `tasks`, but still mirrors a task timeline record into legacy `orders.timeline`.
+- that mirror is only for old `/orders` visibility and should not remain part of the current task timeline path.
+
+Next implementation direction:
+
+1. Make current task updates append a `Purchase.timeline` record with `purchaseId` and `relatedOrderLineId`.
+2. Stop mirroring current task updates into legacy `orders.timeline`.
+3. Keep `createTaskFromOrder` for legacy `/orders` compatibility until the old route is retired.
+4. Keep `useAppData.orders` and `updateOrderItem` APIs until `/orders` compatibility is removed in a later approved PR.
+
 ## 5. Phase 12: Deletion Decision Checklist
 
 Do not delete legacy `/orders` until this checklist is complete.
