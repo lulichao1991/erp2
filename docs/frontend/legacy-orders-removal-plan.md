@@ -67,19 +67,19 @@ The `/orders` route tests can be removed only when all are true:
 Current productionPlan state:
 
 - list and detail pages now pass only `tasks + purchases + orderLines + products` into the adapter
-- adapter resolves current `Purchase + OrderLine` first
-- legacy `orders / order.items` remains an adapter read fallback for compatibility tests and later deletion work
+- adapter resolves production plan rows and details only from current `Purchase + OrderLine + Product` data
+- legacy `orders / order.items` read fallback has been removed from the productionPlan adapter
 - detail writes production feedback through `updateOrderLineProductionInfo` only
-- tests intentionally cover both current-first behavior and legacy fallback behavior
-- current-only tests cover list rendering and status actions without legacy `orders` input
+- tests intentionally cover current-only behavior without legacy `orders` input
+- route smoke confirms productionPlan list and detail do not link back to `/orders`
 
 ### Keep For Now
 
 Keep these compatibility points until legacy `/orders` removal is explicitly approved:
 
-- `orders?: Order[]` adapter inputs
-- `Order / OrderItem` compatible detail fields used by productionPlan components
-- legacy fallback tests that prove old `orders / order.items` still work
+- the legacy `/orders` routes, pages, mocks, types, and services
+- `useAppData.orders/updateOrderItem` for old `/orders` pages
+- the `OrderItem`-compatible detail shape used by productionPlan UI, currently built from current `OrderLine` data
 
 ### Migration Steps
 
@@ -88,11 +88,12 @@ Completed:
 1. Added current-only productionPlan tests that pass no `orders` input.
 2. Made productionPlan pages stop passing `appData.orders`.
 3. Removed the productionPlan detail `updateOrderItem` write fallback.
+4. Removed productionPlan adapter legacy `orders / order.items` read fallback.
 
 Remaining:
 
-1. Keep adapter fallback internally for one transition period.
-2. Remove adapter `Order / OrderItem` output compatibility only after productionPlan components stop accepting compatible legacy fields.
+1. Keep the old `/orders` compatibility pages and legacy `useAppData` APIs until route deletion is explicitly approved.
+2. Remove adapter `OrderItem` output compatibility only after productionPlan components stop accepting compatible legacy-shaped fields.
 
 ### Deletion Gate For productionPlan Fallback
 
@@ -102,7 +103,9 @@ Legacy productionPlan fallback can be removed only when all are true:
 - productionPlan list and detail work without `orders`
 - status actions update `OrderLine.productionInfo` only
 - current route smoke still asserts no links to `/orders`
-- legacy fallback tests are either migrated to current-mainline tests or intentionally deleted with `/orders`
+- legacy fallback tests are migrated to current-mainline tests or intentionally deleted with `/orders`
+
+Current result: these gates are now satisfied for productionPlan read/write fallback. productionPlan remains current-only while legacy `/orders` itself stays reachable.
 
 ## 4. Phase 10: useAppData Legacy Orders API Replacement Plan
 
@@ -209,11 +212,31 @@ Reason:
 
 - compatibility routes are still intentionally reachable
 - route smoke tests still protect old demo behavior
-- productionPlan adapter still has a deliberate legacy read fallback path
 - `useAppData.orders` and legacy order APIs still support old `/orders` compatibility pages
+- `src/pages/orders/*`, `src/components/business/order/*`, `src/services/order/*`, `src/mocks/orders.ts`, and `src/types/order.ts` are still retained as the compatibility boundary
 
 Next safe implementation step:
 
 1. keep legacy route tests until the route itself is hidden or redirected
-2. plan productionPlan adapter legacy read fallback removal separately
+2. audit remaining legacy imports outside `src/pages/orders/*` and compatibility tests
 3. remove `useAppData.orders` only after old `/orders` route deletion is approved
+
+## 6. Final Guardrails After productionPlan Read Fallback Removal
+
+Current remaining legacy orders references are expected only in these compatibility zones:
+
+- `/orders`, `/orders/new`, and `/orders/:orderId` router entries
+- `src/pages/orders/*`
+- `src/components/business/order/*`
+- `src/services/order/*`
+- `src/mocks/orders.ts`
+- `src/types/order.ts`
+- `useAppData.orders`, `useAppData.updateOrderItem`, and old `/orders` helper APIs
+- route smoke tests that explicitly protect legacy `/orders` compatibility
+
+Current workflow guardrails:
+
+- productionPlan views are generated from `tasks + purchases + orderLines + products`
+- task timeline writes go to current `Purchase.timeline`
+- current workflow routes must not link to `/orders`
+- legacy `/orders/o-202604-001` must remain reachable until a later approved deletion PR

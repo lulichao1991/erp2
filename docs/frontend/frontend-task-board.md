@@ -364,7 +364,7 @@ Customer -> Purchase -> OrderLine -> Product
 - 已梳理 productionPlan fallback 迁移顺序
 - productionPlan 页面正常路径已 current-only，不再传 `appData.orders`
 - productionPlan legacy write fallback 已迁移，生产反馈只写 `OrderLine.productionInfo`
-- productionPlan adapter legacy read fallback 暂时保留
+- productionPlan adapter legacy read fallback 已移除，生产计划视图只从 `tasks + purchases + orderLines + products` 生成
 - 已梳理 `useAppData` legacy orders APIs 替代顺序
 - task timeline 已迁移到 current `Purchase.timeline`
 - current task 更新不再 mirror 到 legacy `orders.timeline`
@@ -382,6 +382,7 @@ Customer -> Purchase -> OrderLine -> Product
 - 当前导航不展示旧 `/orders`
 - `/orders` 仅作为兼容路由存在
 - `/orders` 页面自身明确标记为旧订单兼容入口
+- productionPlan 和 task 当前路径不再依赖 legacy orders 写回或读取 fallback
 - 每个旧依赖都有“保留 / 迁移 / 可删除”的判断
 
 ### 6.3 低风险删除旧页面 / 旧组件
