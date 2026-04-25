@@ -919,7 +919,7 @@ describe('router smoke', () => {
     renderRoute('/purchases/new')
 
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('请至少填写客户姓名或手机。')
+    expect(screen.getByRole('alert')).toHaveTextContent('请填写客户姓名。')
 
     await user.type(screen.getByLabelText('客户姓名'), '李四')
     await user.type(screen.getByLabelText('已收金额'), '100')
@@ -936,12 +936,17 @@ describe('router smoke', () => {
     await user.clear(screen.getByLabelText('已收金额'))
     await user.type(screen.getByLabelText('已收金额'), '500')
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 需要填写商品名称或引用产品。')
+    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 需要填写商品名称。')
 
     const firstLineCard = screen.getByText('商品行 TEMP-01').closest('.subtle-panel')
     expect(firstLineCard).not.toBeNull()
     expect(within(firstLineCard as HTMLElement).getByRole('button', { name: '删除商品行' })).toBeDisabled()
 
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用产品'), 'p-ring-001')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 引用产品时需要选择规格。')
+
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用产品'), '')
     await user.type(within(firstLineCard as HTMLElement).getByLabelText('商品名称'), '手动定制戒指')
     await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '复制商品行' }))
 
