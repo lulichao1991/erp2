@@ -25,10 +25,9 @@ export const ProductionPlanDetailPage = () => {
         tasks: appData.tasks,
         purchases: appData.purchases,
         orderLines: appData.orderLines,
-        orders: appData.orders,
         products: appData.products
       }),
-    [appData.orderLines, appData.orders, appData.products, appData.purchases, appData.tasks, taskId]
+    [appData.orderLines, appData.products, appData.purchases, appData.tasks, taskId]
   )
 
   if (!detail) {
@@ -39,7 +38,7 @@ export const ProductionPlanDetailPage = () => {
     )
   }
 
-  const { row, task, order, orderItem, sourceProduct, timeline, fileGroups, referenceImages } = detail
+  const { row, task, orderItem, sourceProduct, timeline, fileGroups, referenceImages } = detail
   const productionFeedback = orderItem.factoryFeedback || {}
   const productionLineInfo = {
     id: detail.orderLineId || orderItem.id,
@@ -56,19 +55,8 @@ export const ProductionPlanDetailPage = () => {
 
   const updateProductionFeedback = (nextFeedback: ProductionFeedbackValue) => {
     if (detail.orderLineId) {
-      const nextOrderLine = appData.updateOrderLineProductionInfo(detail.orderLineId, nextFeedback)
-      if (nextOrderLine) {
-        return
-      }
+      appData.updateOrderLineProductionInfo(detail.orderLineId, nextFeedback)
     }
-
-    appData.updateOrderItem(order.id, orderItem.id, (current) => ({
-      ...current,
-      factoryFeedback: {
-        ...current.factoryFeedback,
-        ...nextFeedback
-      }
-    }))
   }
 
   const updateTaskStatus = (status: typeof task.status) => {
