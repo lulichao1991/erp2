@@ -450,6 +450,7 @@ export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purch
         <InfoField label="付款摘要" value={`${formatPrice(paymentSummary.receivedAmount)} / ${formatPrice(paymentSummary.receivableAmount)}`} />
         <InfoField label="付款状态" value={<StatusTag value={paymentSummary.paymentStatus} />} />
         <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
+        <InfoField label="当前整体提示" value="本页只做购买记录归组；每条商品行独立推进执行。" />
       </InfoGrid>
     </SectionCard>
   )
@@ -518,6 +519,7 @@ export const PurchaseOrderLineTable = ({
               <th>当前负责人</th>
               <th>承诺交期</th>
               <th>参数摘要</th>
+              <th>报价摘要</th>
               <th>物流状态</th>
               <th>售后状态</th>
               <th>操作</th>
@@ -565,7 +567,11 @@ export const PurchaseOrderLineTable = ({
                   </td>
                   <td>
                     <div>{getParameterSummary(line)}</div>
-                    <div className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</div>
+                    <div className="text-caption">{line.sourceProduct?.sourceProductName || '手动填写'}</div>
+                  </td>
+                  <td>
+                    <div>{formatPrice(line.finalDisplayQuote || line.quote?.systemQuote)}</div>
+                    <div className="text-caption">系统参考 {formatPrice(line.quote?.systemQuote)}</div>
                   </td>
                   <td>
                     <StatusTag value={logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'} />
