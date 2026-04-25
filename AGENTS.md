@@ -108,6 +108,8 @@
 - `/purchases/new` = 新建购买记录
 - `/purchases/:purchaseId` = 购买记录详情
 - `/products` = 产品管理
+- `/customers` = 客户中心
+- `/customers/:customerId` = 客户详情
 
 说明：
 - `/order-lines` 是当前主入口，一行代表一件商品
@@ -116,27 +118,26 @@
 
 ---
 
-## 旧模块兼容边界
+## 旧模块删除边界
 
-旧 `/orders` 路由只作为旧模块兼容路由保留，不再作为当前主入口。
+legacy `/orders` 模块已经删除，不再作为可访问路由、主导航入口或兼容入口保留。
 
-允许短期保留：
+当前已删除：
 - `/orders`
 - `/orders/new`
 - `/orders/:orderId`
-- `Order`
-- `OrderItem`
-- `SourceProductSnapshot`
-- `TransactionRecord`
+- `src/pages/orders/*`
+- `src/components/business/order/*`
+- `src/services/order/*`
+- `src/mocks/orders.ts`
+- `src/types/order.ts`
 
-兼容含义：
+历史兼容含义：
 - `TransactionRecord` 只能作为 `Purchase` 的历史兼容别名
-- `Order` 只能作为旧购买记录兼容模型
-- `OrderItem` 只能作为 `OrderLine` 的历史兼容命名
 - `SourceProductSnapshot` 只能作为 `ProductSnapshot` 的历史兼容命名
-- 旧 `/orders` 后续应迁移、隐藏或删除，但本阶段不删除旧代码文件
+- `orderId / orderNo / orderItemId / orderItemName` 等字段仅可作为历史数据读取 fallback，不得作为新代码主模型
 
-新代码不得继续扩大旧命名的使用范围。
+新代码不得重新引入 `/orders`、`Order`、`OrderItem`、`orders.timeline` 或旧 orders store。
 
 ---
 
@@ -213,14 +214,14 @@
 - `AfterSalesCase`
 
 ### 历史兼容命名
-如果仓库中暂时还存在：
+如果历史文档或旧数据字段中仍出现：
 
 - `TransactionRecord`
 - `Order`
 - `OrderItem`
 - `SourceProductSnapshot`
 
-允许短期保留兼容层，但新代码不得继续扩大旧命名使用范围。
+只能按历史语境理解，新代码不得继续扩大旧命名使用范围。
 
 ---
 
@@ -289,15 +290,15 @@
 - `docs/frontend/mock-data-schema.md`
 - `docs/frontend/handoff.md`
 
-### 7. 优先保留兼容层，不要一次性改爆
-当前项目允许分阶段过渡。
+### 7. 保留必要历史字段，不重建旧兼容模块
+当前项目已经删除 legacy `/orders` runtime 模块。
 
-第一阶段可以保留兼容导出层，避免一次性把页面改坏。
+如遇历史字段，仅在 current model 内做只读 fallback 或迁移说明，不要重新创建旧 `/orders` 页面、store、mock、service 或类型。
 
 ### 8. 页面改造先改语义，再改路径
 当前主入口已经是 `/order-lines` 与 `/purchases/*`。
 
-旧 `/orders` 仅作为兼容模块保留，不在导航中作为当前主入口展示。
+旧 `/orders` runtime 模块已删除，不在导航中展示，也不作为 current workflow fallback。
 
 ---
 
@@ -305,9 +306,9 @@
 
 AI 在当前阶段不得擅自做以下事情：
 
-1. 不得把旧 `/orders` 继续写成当前主模块
-2. 不得删除旧 `/orders` 页面文件
-3. 不得删除旧 `services/order`、`mocks/orders`、`types/order`
+1. 不得重新引入旧 `/orders` 模块
+2. 不得重新创建旧 `services/order`、`mocks/orders`、`types/order`
+3. 不得把 `Order / OrderItem / order.items` 作为新功能主模型
 4. 不得推翻产品管理模块
 5. 不得新增复杂后端流转设计冒充前端需求
 6. 不得把物流、售后默认设计成整笔购买唯一归属
@@ -364,7 +365,6 @@ src/
     quote.ts
     supporting-records.ts
     transaction.ts # Purchase 的历史兼容别名
-    order.ts       # 旧 /orders 模块兼容层，后续逐步弱化
 
   mocks/
     customers.ts
@@ -373,7 +373,6 @@ src/
     products.ts
     supporting-records.ts
     transactions.ts # Purchase mock 的历史兼容别名
-    orders.ts       # 旧 /orders 模块兼容 mock，后续逐步弱化
 ```
 
 ---

@@ -25,7 +25,7 @@ Customer -> Purchase -> OrderLine -> Product
 - `/purchases/:purchaseId`
 - `/products`
 
-旧 `/orders` 只作为兼容路由保留，不作为当前任务板主线，不再指导新功能或新页面开发。
+legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板主线存在。
 
 ---
 
@@ -47,7 +47,7 @@ Customer -> Purchase -> OrderLine -> Product
 - 工厂协同中心
 - 客户中心完整页面
 - 真实后端接口接入
-- 旧 `/orders` 的迁移删除实施
+- 旧 `/orders` 的重新引入
 - 产品管理模块重做
 - 新审批流、新权限系统或复杂流程引擎
 
@@ -305,22 +305,21 @@ Customer -> Purchase -> OrderLine -> Product
 - 兼容命名和旧模块依赖审计完成
 - 当前页面字段与数据边界稳定
 
-### 5.5 旧 `/orders` 迁移删除
+### 5.5 legacy `/orders` 删除
 
-状态：暂停
+状态：已完成
 
-暂停说明：
-- 旧 `/orders` 可继续作为兼容路由访问
-- 不在侧边栏展示
-- 不作为当前任务板主线
-- 旧 `/orders` 页面自身需要明确标记为兼容入口
+完成说明：
+- `/orders`、`/orders/new`、`/orders/:orderId` 已删除
+- 旧 pages / components / services / types / mocks 已删除
+- `useAppData.orders / updateOrderItem / createTaskFromOrder` 已删除
 - 当前新建和执行主流程入口是 `/purchases/new` 与 `/order-lines`
-- 本阶段先做依赖审计，不直接删除旧页面、旧组件和旧 mock
+- 如需回看旧实现，使用 git 历史 / 删除前 PR
 
-恢复条件：
+验收结果：
 - 所有当前主入口不再依赖旧 `/orders` 模块
-- 测试和演示路径全部切到 `/order-lines` 与 `/purchases/*`
-- 完成低风险删除清单
+- 测试和演示路径已切到 `/order-lines`、`/purchases/*`、`/customers/*`、`/tasks` 和 `/production-plan`
+- current workflow route smoke 保持覆盖
 
 ---
 
@@ -333,7 +332,7 @@ Customer -> Purchase -> OrderLine -> Product
 目标：
 - 将当前主线类型统一到 `Customer / Purchase / OrderLine / Product / ProductSnapshot`
 - 将 `TransactionRecord` 收口为 `Purchase` 的兼容别名
-- 将 `OrderItem` 收口为 `OrderLine` 的兼容命名
+- 删除 `OrderItem` runtime 类型，历史字段只作为旧数据 fallback
 - 将 `SourceProductSnapshot` 收口为 `ProductSnapshot`
 
 检查范围：
@@ -351,12 +350,12 @@ Customer -> Purchase -> OrderLine -> Product
 
 ### 6.2 旧 `/orders` 依赖迁移审计
 
-状态：进行中
+状态：已完成
 
 目标：
-- 梳理哪些页面、组件、mock、类型和测试仍依赖旧 `/orders`
-- 区分“必须保留的兼容层”和“可迁移到 Purchase + OrderLine 主线的引用”
-- 输出可执行的迁移清单
+- 确认当前 runtime 不再依赖旧 `/orders`
+- 确认旧模块已删除
+- 输出删除完成后的回滚口径
 
 当前记录：
 - 迁移准备文档：`docs/frontend/legacy-orders-removal-plan.md`
@@ -366,46 +365,36 @@ Customer -> Purchase -> OrderLine -> Product
 - productionPlan legacy write fallback 已迁移，生产反馈只写 `OrderLine.productionInfo`
 - productionPlan adapter legacy read fallback 已移除，生产计划视图只从 `tasks + purchases + orderLines + products` 生成
 - productionPlan 已移除 `OrderItem` 兼容详情形状，详情页直接使用 current `OrderLine`
-- 已梳理 `useAppData` legacy orders APIs 替代顺序
+- `useAppData` legacy orders APIs 已移除
 - task timeline 已迁移到 current `Purchase.timeline`
 - current task 更新不再 mirror 到 legacy `orders.timeline`
+- legacy `/orders` route smoke 已移除，current workflow smoke 保留
 
 检查范围：
 - `src/app/router/*`
-- `src/pages/orders/*`
-- `src/components/business/order/*`
-- `src/services/order/*`
-- `src/mocks/orders.ts`
-- `src/types/order.ts`
+- current workflow runtime 代码
 - 路由测试和 smoke 测试
 
 验收标准：
 - 当前导航不展示旧 `/orders`
-- `/orders` 仅作为兼容路由存在
-- `/orders` 页面自身明确标记为旧订单兼容入口
+- `/orders` 不再作为可访问路由存在
 - productionPlan 和 task 当前路径不再依赖 legacy orders 写回或读取 fallback
-- current workflow route smoke 已覆盖主入口，并保留 legacy `/orders` 兼容 smoke
-- 每个旧依赖都有“保留 / 迁移 / 可删除”的判断
+- current workflow route smoke 已覆盖主入口
+- 每个旧依赖都有“已删除 / 历史文档保留”的判断
 
 ### 6.3 低风险删除旧页面 / 旧组件
 
-状态：待清理
+状态：已完成
 
 目标：
-- 在完成依赖审计后，删除不再被引用的旧页面、旧组件和旧 mock 片段
-- 优先删除无入口、无测试依赖、无兼容价值的文件
-- 不一次性大规模删除仍有演示或测试价值的旧模块
-
-建议顺序：
-1. 删除无引用的旧展示组件
-2. 删除无入口的旧页面局部组件
-3. 删除已被 Purchase + OrderLine 替代的 mock 片段
-4. 最后处理旧 `/orders` 页面和路由兼容层
+- 删除不再被 current workflow 引用的旧页面、旧组件和旧 mock/type/service
+- 删除旧 route smoke
+- 保留 current workflow smoke
 
 验收标准：
 - 每轮删除前有引用搜索结果
 - 删除后测试通过
-- 不破坏 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products`
+- 不破坏 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products`、`/customers`、`/tasks`、`/production-plan`
 
 ---
 

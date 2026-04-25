@@ -22,10 +22,6 @@ export const getModuleLabel = (pathname: string) => {
     return '客户中心'
   }
 
-  if (pathname.startsWith('/orders')) {
-    return '旧订单兼容模块'
-  }
-
   if (pathname.startsWith('/tasks')) {
     return '任务中心'
   }

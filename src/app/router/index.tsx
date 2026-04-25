@@ -1,8 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/app/layout/AppLayout'
-import { OrderCreatePage } from '@/pages/orders/OrderCreatePage'
-import { OrderDetailPage } from '@/pages/orders/OrderDetailPage'
-import { OrderListPage } from '@/pages/orders/OrderListPage'
 import { OrderLineListPage } from '@/pages/orderLines/OrderLineListPage'
 import { ProductCreatePage } from '@/pages/products/ProductCreatePage'
 import { ProductDetailPage } from '@/pages/products/ProductDetailPage'
@@ -28,9 +25,6 @@ export const AppRouter = () => (
       <Route path="/purchases/:purchaseId" element={<PurchaseDetailPage />} />
       <Route path="/customers" element={<CustomerListPage />} />
       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
-      <Route path="/orders" element={<OrderListPage />} />
-      <Route path="/orders/new" element={<OrderCreatePage />} />
-      <Route path="/orders/:orderId" element={<OrderDetailPage />} />
       <Route path="/tasks" element={<TaskListPage />} />
       <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
       <Route path="/production-plan" element={<ProductionPlanListPage />} />

@@ -19,12 +19,10 @@ const createCurrentOnlyAppData = () => ({
   tasks: mockTasks,
   purchases: purchasesMock,
   orderLines: orderLinesMock,
-  orders: [],
   getTask: vi.fn((taskId?: string) => mockTasks.find((task) => task.id === taskId)),
   getPurchase: vi.fn((purchaseId?: string) => purchasesMock.find((purchase) => purchase.id === purchaseId)),
   getOrderLine: vi.fn((orderLineId?: string) => orderLinesMock.find((orderLine) => orderLine.id === orderLineId)),
-  updateTask: vi.fn(),
-  updateOrderItem: vi.fn()
+  updateTask: vi.fn()
 })
 
 afterEach(() => {
@@ -64,7 +62,7 @@ describe('task timeline current-only flow', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
-  it('updates task status without calling legacy order item fallback', async () => {
+  it('updates task status through current task API', async () => {
     const user = userEvent.setup()
     const appData = createCurrentOnlyAppData()
     mockUseAppData.mockReturnValue(appData)
@@ -80,6 +78,5 @@ describe('task timeline current-only flow', () => {
     await user.click(screen.getByRole('button', { name: '标记完成' }))
 
     expect(appData.updateTask).toHaveBeenCalledWith('task-order-001', expect.any(Function))
-    expect(appData.updateOrderItem).not.toHaveBeenCalled()
   })
 })

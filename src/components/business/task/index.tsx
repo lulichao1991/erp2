@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 import { InfoField, InfoGrid, PageHeader, RiskTag, SectionCard, StatusTag, SummaryCard } from '@/components/common'
 import {
-  getOrderPriorityLabel,
   getTaskAssigneeRoleLabel,
+  getTaskPriorityLabel,
   getTaskStatusLabel,
   getTaskTypeLabel
 } from '@/services/workflow/workflowMeta'
@@ -144,7 +144,7 @@ export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
       <tbody>
         {tasks.map((task) => (
           <tr key={task.id}>
-            <td>{task.priority === 'normal' ? <span className="text-muted">普通</span> : <RiskTag value={getOrderPriorityLabel(task.priority)} />}</td>
+            <td>{task.priority === 'normal' ? <span className="text-muted">普通</span> : <RiskTag value={getTaskPriorityLabel(task.priority)} />}</td>
             <td>
               <div className="stack" style={{ gap: 6 }}>
                 <Link to={`/tasks/${task.id}`} className="text-price">
@@ -194,7 +194,7 @@ export const TaskSummaryCard = ({ task }: { task: Task }) => (
         </div>
         <div className="row wrap">
           <StatusTag value={getTaskStatusLabel(task.status)} />
-          {task.priority === 'normal' ? <StatusTag value={getOrderPriorityLabel(task.priority)} /> : <RiskTag value={getOrderPriorityLabel(task.priority)} />}
+          {task.priority === 'normal' ? <StatusTag value={getTaskPriorityLabel(task.priority)} /> : <RiskTag value={getTaskPriorityLabel(task.priority)} />}
         </div>
       </div>
       <InfoGrid columns={3}>
@@ -227,7 +227,7 @@ export const TaskInfoCardGroup = ({
       <InfoGrid columns={2}>
         <InfoField label="任务类型" value={getCurrentTaskTypeLabel(task.type)} />
         <InfoField label="当前状态" value={getTaskStatusLabel(task.status)} />
-        <InfoField label="优先级" value={getOrderPriorityLabel(task.priority)} />
+        <InfoField label="优先级" value={getTaskPriorityLabel(task.priority)} />
         <InfoField label="责任角色" value={getTaskAssigneeRoleLabel(task.assigneeRole)} />
         <InfoField label="责任人" value={task.assigneeName || '待分配'} />
         <InfoField label="截止时间" value={task.dueAt || '未设置'} />

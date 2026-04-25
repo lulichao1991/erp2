@@ -443,14 +443,13 @@ src/mocks/
   products.ts
   supporting-records.ts
   transactions.ts # Purchase mock 的历史兼容别名
-  orders.ts       # 旧 /orders 模块兼容 mock
 ```
 
 说明：
 - `purchases.ts` 是当前购买记录 mock 主线
 - `order-lines.ts` 是当前商品行 mock 主线
 - `transactions.ts` 只能作为 `Purchase` 的历史兼容导出
-- `orders.ts` 只能作为旧 `/orders` 模块兼容 mock
+- legacy `orders.ts` 已删除，不再作为 mock 入口
 
 ---
 
@@ -460,9 +459,8 @@ src/mocks/
 
 允许保留的兼容关系：
 - `TransactionRecord` = `Purchase` 的历史兼容别名
-- `OrderItem` = `OrderLine` 的历史兼容命名
 - `SourceProductSnapshot` = `ProductSnapshot` 的历史兼容命名
-- `order.items` = 旧 `/orders` 兼容模块内部结构，不得作为新主线继续扩大
+- `orderId / orderNo / orderItemId / orderItemName` = 历史数据字段，不得作为新主线继续扩大
 
 ---
 
@@ -505,4 +503,4 @@ src/mocks/
 - `OrderLine` 能承载来源产品、规格、报价、设计、委外、生产、物流、售后关联
 - `LogisticsRecord` 和 `AfterSalesCase` 默认关联 `orderLineId`
 - `TransactionRecord` 只作为兼容别名出现
-- 旧 `orders.ts` 只作为旧 `/orders` 兼容 mock 保留
+- legacy `orders.ts` 不再作为 runtime mock 保留
