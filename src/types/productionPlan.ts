@@ -30,18 +30,6 @@ export type ProductionPlanRow = {
   orderLineId: string
   orderLineCode: string
   orderLineName: string
-  /**
-   * @deprecated Compatibility alias for purchaseId.
-   */
-  orderId: string
-  /**
-   * @deprecated Compatibility alias for purchaseNo.
-   */
-  orderNo: string
-  /**
-   * @deprecated Compatibility alias for orderLineId.
-   */
-  orderItemId: string
   goodsNo: string
   styleName: string
   sourceProductId: string

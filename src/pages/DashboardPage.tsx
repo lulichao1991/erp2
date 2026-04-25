@@ -17,7 +17,7 @@ const purchaseAggregateStatusLabelMap: Record<string, string> = {
 
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '—')
 
-const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || task.orderNo || '未关联购买记录'
+const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || '未关联购买记录'
 
 export const DashboardPage = () => {
   const { orderLines, products, purchases, tasks } = useAppData()

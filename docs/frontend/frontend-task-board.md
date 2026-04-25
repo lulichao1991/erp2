@@ -332,7 +332,7 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 目标：
 - 将当前主线类型统一到 `Customer / Purchase / OrderLine / Product / ProductSnapshot`
 - 将 `TransactionRecord` 收口为 `Purchase` 的兼容别名
-- 删除 `OrderItem` runtime 类型，历史字段只作为旧数据 fallback
+- 删除 `OrderItem` runtime 类型，并移除 current runtime 中的旧 `order*` 字段 fallback
 - 将 `SourceProductSnapshot` 收口为 `ProductSnapshot`
 
 检查范围：

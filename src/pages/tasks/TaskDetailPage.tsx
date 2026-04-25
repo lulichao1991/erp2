@@ -17,7 +17,7 @@ export const TaskDetailPage = () => {
   const hideCommercialInfo = currentRole === 'factory'
   const task = appData.getTask(taskId)
   const purchase = appData.getPurchase(task?.purchaseId || task?.transactionId)
-  const orderLine = appData.getOrderLine(task?.orderLineId || task?.orderItemId)
+  const orderLine = appData.getOrderLine(task?.orderLineId)
   const purchaseId = purchase?.id || task?.purchaseId || task?.transactionId
   const [form, setForm] = useState(() =>
     task

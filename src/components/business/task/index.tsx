@@ -53,12 +53,12 @@ type TaskFilterValue = {
 
 const getCurrentTaskTypeLabel = (type: TaskType) => (type === 'order_process' ? '购买处理' : getTaskTypeLabel(type))
 
-const getTaskPurchaseId = (task: Task) => task.purchaseId || task.transactionId || task.orderId
+const getTaskPurchaseId = (task: Task) => task.purchaseId || task.transactionId
 
-const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || task.orderNo || '未关联购买记录'
+const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || '未关联购买记录'
 
 const getTaskOrderLineLabel = (task: Task) =>
-  [task.orderLineCode, task.orderLineName || task.orderItemName].filter(Boolean).join(' · ') || '购买记录级任务'
+  [task.orderLineCode, task.orderLineName].filter(Boolean).join(' · ') || '购买记录级任务'
 
 const purchaseAggregateStatusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -73,7 +73,7 @@ const purchaseAggregateStatusLabelMap: Record<string, string> = {
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '—')
 
 const getOrderLineDisplayLabel = (task: Task, orderLine?: OrderLine) =>
-  [orderLine?.lineCode || task.orderLineCode, orderLine?.name || task.orderLineName || task.orderItemName].filter(Boolean).join(' · ') || '购买记录级任务'
+  [orderLine?.lineCode || task.orderLineCode, orderLine?.name || task.orderLineName].filter(Boolean).join(' · ') || '购买记录级任务'
 
 const renderTaskPurchaseLink = (task: Task) => {
   const purchaseId = getTaskPurchaseId(task)

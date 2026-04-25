@@ -85,10 +85,10 @@ const versionRecordStatusLabel: Record<ProductVersionRecord['status'], string> =
 const renderReferenceStatus = (status: ProductReferenceRecord['status']) =>
   status === 'adjusted' ? <RiskTag value={referenceRecordStatusLabel[status]} /> : <StatusTag value={referenceRecordStatusLabel[status]} />
 
-const getReferencePurchaseLabel = (record: ProductReferenceRecord) => record.purchaseNo || record.transactionNo || record.orderNo || '未关联购买记录'
+const getReferencePurchaseLabel = (record: ProductReferenceRecord) => record.purchaseNo || record.transactionNo || '未关联购买记录'
 
 const getReferenceOrderLineLabel = (record: ProductReferenceRecord) =>
-  [record.orderLineCode, record.orderLineName || record.orderItemName].filter(Boolean).join(' · ') || '未关联商品行'
+  [record.orderLineCode, record.orderLineName].filter(Boolean).join(' · ') || '未关联商品行'
 
 const renderReferencePurchaseLink = (record: ProductReferenceRecord) =>
   record.purchaseId ? <Link to={`/purchases/${record.purchaseId}`}>{getReferencePurchaseLabel(record)}</Link> : getReferencePurchaseLabel(record)
