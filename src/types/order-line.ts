@@ -122,15 +122,23 @@ export type OrderLine = {
   id: string
   lineNo?: number
   lineCode?: string
+  productionTaskNo?: string
   purchaseId?: string
   transactionId?: string
   customerId?: string
   name: string
   category?: ProductCategory
+  styleName?: string
+  versionNo?: string
+  skuCode?: string
   quantity: number
   status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority
+  isUrgent?: boolean
+  requiresDesign?: boolean
+  requiresModeling?: boolean
+  requiresWax?: boolean
   isReferencedProduct: boolean
   productId?: string
   sourceProduct?: ProductSnapshot

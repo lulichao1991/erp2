@@ -107,7 +107,7 @@ const buildProductionTimeline = (source: ProductionPlanSource): PurchaseTimeline
 
 const getLineFactoryFeedback = (orderLine: OrderLine) => orderLine.productionInfo
 
-const getLineSku = (orderLine: OrderLine) => orderLine.sourceProduct?.sourceProductCode || orderLine.itemSku || orderLine.lineCode
+const getLineSku = (orderLine: OrderLine) => orderLine.productionTaskNo || orderLine.skuCode || orderLine.itemSku || orderLine.sourceProduct?.sourceProductCode || orderLine.lineCode
 
 const legacyFactoryStatusMap: Record<string, OrderLineProductionStatus> = {
   待回传: 'pending_feedback',
@@ -141,7 +141,7 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
     orderLineCode,
     orderLineName,
     goodsNo: getLineSku(orderLine) || sourceProduct.code,
-    styleName: orderLineName,
+    styleName: orderLine.styleName || orderLineName,
     sourceProductId: sourceProduct.id,
     sourceProductCode: sourceProduct.code,
     sourceProductVersion: orderLine.sourceProduct?.sourceProductVersion || sourceProduct.version,
@@ -152,7 +152,7 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
     process: orderLine.selectedProcess || orderLine.actualRequirements?.process,
     engraveText: orderLine.actualRequirements?.engraveText,
     quantity: orderLine.quantity || 1,
-    isUrgent: task.priority === 'urgent',
+    isUrgent: Boolean(orderLine.isUrgent || orderLine.priority === 'urgent' || orderLine.priority === 'vip' || task.priority === 'urgent'),
     assignedAt: task.createdAt,
     plannedDueDate: task.dueAt || orderLine.promisedDate || purchase?.promisedDate,
     assigneeName: task.assigneeName,

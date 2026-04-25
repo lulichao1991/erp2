@@ -3,7 +3,7 @@
 ## 项目说明
 这是一个面向珠宝 / 定制饰品业务的定制电商协同 ERP 前端项目。
 
-当前阶段暂停新功能开发，进入项目清理收口阶段。项目仍以前端 UI、页面结构、组件复用和 mock 数据联调为主，暂不接真实后端业务流。
+legacy `/orders` 清理已经收口，当前进入以 `OrderLine` 为核心的业务工作流 v1 打底阶段。项目仍以前端 UI、页面结构、组件复用和 mock 数据联调为主，暂不接真实后端业务流。
 
 ---
 
@@ -19,6 +19,18 @@
 - `LogisticsRecord` / `AfterSalesCase` 默认关联 `orderLineId`
 
 系统真正的主操作对象是 **OrderLine（商品行）**。
+
+---
+
+## 当前开发阶段
+
+当前阶段进入 **OrderLine workflow foundation**：
+
+- 补齐商品行编号、生产任务编号、货号 / SKU、款式、版本等执行基础字段
+- `/purchases/new` 继续输出 `purchaseDraft + orderLineDrafts`
+- 每条商品行草稿可引用产品，也可覆盖本次购买的实际材质、尺寸、工艺、印记和特殊需求
+- `/order-lines` 与 `/purchases/:purchaseId` 继续复用同一套商品行详情能力
+- 暂不新增工厂中心、财务中心、管理看板，也不接真实后端
 
 ---
 
