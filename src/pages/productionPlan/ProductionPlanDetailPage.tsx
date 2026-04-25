@@ -25,10 +25,9 @@ export const ProductionPlanDetailPage = () => {
         tasks: appData.tasks,
         purchases: appData.purchases,
         orderLines: appData.orderLines,
-        orders: appData.orders,
         products: appData.products
       }),
-    [appData.orderLines, appData.orders, appData.products, appData.purchases, appData.tasks, taskId]
+    [appData.orderLines, appData.products, appData.purchases, appData.tasks, taskId]
   )
 
   if (!detail) {
