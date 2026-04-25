@@ -270,10 +270,13 @@ export const OrderDetailPage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '商品任务中心', to: '/orders' }, { label: '交易记录详情' }, { label: order.orderNo }]} />
+      <AppBreadcrumb items={[{ label: '旧订单兼容', to: '/orders' }, { label: '旧交易记录详情' }, { label: order.orderNo }]} />
       <OrderBusinessStageHeaderStrip order={order} />
       <div className="stack">
-        <div className="subtle-panel">上方展示交易记录公共信息，下方按商品任务卡分开展示执行、协同、物流与售后信息。</div>
+        <div className="subtle-panel">
+          这是 legacy /orders 兼容详情页，仅用于旧演示和历史流程维护。当前主流程请使用 /order-lines 商品行中心与 /purchases/{order.id} 购买记录详情。
+        </div>
+        <div className="subtle-panel">上方展示旧交易记录公共信息，下方按旧商品任务卡分开展示执行、协同、物流与售后信息。</div>
         <OrderSummaryCard
           order={order}
           role={currentRole}

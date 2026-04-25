@@ -8,6 +8,7 @@ Current rule:
 
 - `Purchase + OrderLine` is the current mainline.
 - `/orders`, `/orders/new`, and `/orders/:orderId` remain compatibility routes.
+- visible legacy `/orders` pages should identify themselves as compatibility entries.
 - Do not delete legacy `/orders` files until the migration checkpoints below are complete.
 
 ## 2. Phase 8: Legacy Route Smoke Tests
@@ -179,6 +180,8 @@ Legacy `/orders` can be hidden or redirected when:
 - all current workflows use `/order-lines`, `/purchases/new`, `/purchases/:purchaseId`, `/products`, or `/customers`
 - productionPlan, task, product reference, customer center, and dashboard smoke tests assert no `/orders` links
 - route docs describe `/orders` only as compatibility or removal candidate
+
+Before that hide/delete decision, legacy `/orders` pages should remain reachable but clearly labeled as compatibility entry points.
 
 ### Ready To Delete Route Files
 
