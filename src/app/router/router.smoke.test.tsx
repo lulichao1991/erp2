@@ -171,6 +171,9 @@ describe('router smoke', () => {
     expect(screen.getByLabelText('是否加急筛选')).toBeInTheDocument()
     expect(screen.getByLabelText('是否售后中')).toBeInTheDocument()
     expect(screen.getByLabelText('是否超期')).toBeInTheDocument()
+    expect(screen.getByLabelText('工厂筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('购买记录筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('客户筛选')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
@@ -210,6 +213,34 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '售后中' }))
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+  })
+
+  it('filters order-line center by factory, purchase and customer without legacy orders', async () => {
+    const user = userEvent.setup()
+    renderRoute('/order-lines')
+
+    await user.type(screen.getByLabelText('工厂筛选'), '苏州金工厂')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+    expect(screen.queryByText('定制项链')).not.toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('工厂筛选'))
+    await user.type(screen.getByLabelText('购买记录筛选'), 'PUR-202604-001')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('购买记录筛选'))
+    await user.type(screen.getByLabelText('客户筛选'), '张三')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('客户筛选'))
+    await user.type(screen.getByLabelText('客户筛选'), '不存在的客户')
+    expect(screen.getByText('暂无匹配商品行')).toBeInTheDocument()
+    expect(screen.getByText('当前筛选条件下没有商品行，请放宽筛选或切回全部商品行。')).toBeInTheDocument()
+    expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
   })
 
   it('opens order-line detail drawer from view button and switches records from row click', async () => {
