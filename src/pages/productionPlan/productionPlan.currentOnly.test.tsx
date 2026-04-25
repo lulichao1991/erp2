@@ -19,10 +19,8 @@ const createCurrentOnlyAppData = () => ({
   tasks: mockTasks,
   purchases: purchasesMock,
   orderLines: orderLinesMock,
-  orders: [],
   products: mockProducts,
   updateOrderLineProductionInfo: vi.fn(() => orderLinesMock[0]),
-  updateOrderItem: vi.fn(),
   updateTask: vi.fn()
 })
 
@@ -46,7 +44,7 @@ describe('productionPlan current-only flow', () => {
     expect(screen.queryByText('SO-202604-001')).not.toBeInTheDocument()
   })
 
-  it('updates production feedback through current order line state without calling legacy fallback', async () => {
+  it('updates production feedback through current order line state', async () => {
     const user = userEvent.setup()
     const appData = createCurrentOnlyAppData()
     mockUseAppData.mockReturnValue(appData)
@@ -67,6 +65,5 @@ describe('productionPlan current-only flow', () => {
         factoryStatus: 'pending_feedback'
       })
     )
-    expect(appData.updateOrderItem).not.toHaveBeenCalled()
   })
 })
