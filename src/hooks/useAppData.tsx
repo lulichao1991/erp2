@@ -146,13 +146,12 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           completedAt: updated.status === 'done' ? updated.completedAt || currentTime : undefined
         }
 
-        const purchaseId = nextTask.purchaseId || nextTask.transactionId || nextTask.orderId
-        const orderLineId = nextTask.orderLineId || nextTask.orderItemId
+        const purchaseId = nextTask.purchaseId || nextTask.transactionId
+        const orderLineId = nextTask.orderLineId
         const timelineRecord: PurchaseTimelineRecord = {
           id: `timeline-task-update-${nextTask.id}-${currentTime}`,
           purchaseId,
           transactionId: nextTask.transactionId,
-          orderId: nextTask.orderId,
           type: nextTask.status === 'done' ? 'task_completed' : 'task_updated',
           title: nextTask.status === 'done' ? `完成${nextTask.title}` : `更新${nextTask.title}`,
           description:

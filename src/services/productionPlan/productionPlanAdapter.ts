@@ -32,7 +32,7 @@ const toProductionPlanFiles = (files: ProductAssetFile[]): ProductionPlanFile[] 
 
 type ProductionPlanSource = {
   task: Task
-  purchase?: Purchase
+  purchase: Purchase
   orderLine: OrderLine
   sourceProduct: Product
 }
@@ -127,11 +127,11 @@ const normalizeFactoryStatus = (status?: string): OrderLineProductionStatus | un
 const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow => {
   const { task, purchase, orderLine, sourceProduct } = source
   const stage = getProductionPlanStage(task, orderLine)
-  const purchaseId = purchase?.id || task.purchaseId || task.transactionId || task.orderId
-  const purchaseNo = purchase?.purchaseNo || task.purchaseNo || task.transactionNo || task.orderNo
+  const purchaseId = purchase.id
+  const purchaseNo = purchase.purchaseNo
   const orderLineId = orderLine.id
   const orderLineCode = orderLine.lineCode || getLineSku(orderLine) || task.orderLineCode || orderLine.id
-  const orderLineName = orderLine.name || task.orderLineName || task.orderItemName || sourceProduct.name
+  const orderLineName = orderLine.name || task.orderLineName || sourceProduct.name
 
   return {
     taskId: task.id,
@@ -140,9 +140,6 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
     orderLineId,
     orderLineCode,
     orderLineName,
-    orderId: purchaseId,
-    orderNo: purchaseNo,
-    orderItemId: orderLineId,
     goodsNo: getLineSku(orderLine) || sourceProduct.code,
     styleName: orderLineName,
     sourceProductId: sourceProduct.id,
@@ -202,10 +199,10 @@ export const getProductionPlanCategoryLabel = (category: ProductCategory) => pro
 export const getProductionPlanTasks = (tasks: Task[]) => tasks.filter((task) => task.type === 'factory_production')
 
 const findPurchase = (task: Task, purchases: Purchase[]) =>
-  purchases.find((item) => item.id === (task.purchaseId || task.transactionId || task.orderId))
+  purchases.find((item) => item.id === (task.purchaseId || task.transactionId))
 
 const findOrderLine = (task: Task, purchase: Purchase | undefined, orderLines: OrderLine[]) => {
-  const lineId = task.orderLineId || task.orderItemId
+  const lineId = task.orderLineId
   if (!lineId) {
     return undefined
   }
@@ -228,7 +225,7 @@ const resolveProductionPlanSource = ({
   const orderLine = findOrderLine(task, purchase, orderLines)
   const sourceProduct = products.find((item) => item.id === orderLine?.sourceProduct?.sourceProductId)
 
-  if (!orderLine || !sourceProduct) {
+  if (!purchase || !orderLine || !sourceProduct) {
     return undefined
   }
 

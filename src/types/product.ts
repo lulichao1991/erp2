@@ -88,14 +88,8 @@ export type ProductReferenceRecord = {
   transactionId?: string
   /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseNo。 */
   transactionNo?: string
-  /** @deprecated 兼容历史引用数据，请优先使用 purchaseId。 */
-  orderId?: string
-  /** @deprecated 兼容历史引用数据，请优先使用 purchaseNo。 */
-  orderNo?: string
   customerId?: string
   customerName: string
-  /** @deprecated 兼容历史引用数据，请优先使用 orderLineName。 */
-  orderItemName?: string
   sourceVersion: string
   selectedSpecValue?: string
   referencedAt: string

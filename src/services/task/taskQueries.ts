@@ -24,17 +24,17 @@ const taskTypeRoleMap: Record<TaskType, TaskAssigneeRole> = {
 }
 
 export const createTaskDraft = ({
-  orderId,
-  orderNo,
+  purchaseId,
+  purchaseNo,
   type,
-  orderItemId,
-  orderItemName
+  orderLineId,
+  orderLineName
 }: {
-  orderId: string
-  orderNo: string
+  purchaseId: string
+  purchaseNo: string
   type: TaskType
-  orderItemId?: string
-  orderItemName?: string
+  orderLineId?: string
+  orderLineName?: string
 }): Task => {
   const timestamp = Date.now()
   const currentTime = new Date().toISOString().slice(0, 16).replace('T', ' ')
@@ -42,12 +42,12 @@ export const createTaskDraft = ({
   return {
     id: `task-${timestamp}`,
     type,
-    title: orderItemName ? `${taskTypeTitleMap[type]} · ${orderItemName}` : taskTypeTitleMap[type],
+    title: orderLineName ? `${taskTypeTitleMap[type]} · ${orderLineName}` : taskTypeTitleMap[type],
     status: 'todo',
-    orderId,
-    orderNo,
-    orderItemId,
-    orderItemName,
+    purchaseId,
+    purchaseNo,
+    orderLineId,
+    orderLineName,
     assigneeRole: taskTypeRoleMap[type],
     assigneeName: '',
     priority: 'normal',

@@ -22,9 +22,6 @@ describe('productionPlanAdapter', () => {
       orderLineId: 'oi-ring-001',
       orderLineCode: 'OL-202604-001-01',
       orderLineName: '山形戒指',
-      orderId: 'o-202604-001',
-      orderNo: 'PUR-202604-001',
-      orderItemId: 'oi-ring-001',
       goodsNo: 'PD-RING-001',
       styleName: '山形戒指',
       sourceProductVersion: 'v3',
@@ -110,9 +107,6 @@ describe('productionPlanAdapter', () => {
       orderLineId: 'oi-ring-001',
       orderLineCode: 'OL-202604-001-01',
       orderLineName: '山形戒指',
-      orderId: 'o-202604-001',
-      orderNo: 'PUR-202604-001',
-      orderItemId: 'oi-ring-001',
       goodsNo: 'PD-RING-001',
       styleName: '山形戒指',
       sourceProductVersion: 'v3',
@@ -122,11 +116,11 @@ describe('productionPlanAdapter', () => {
     })
   })
 
-  it('does not build rows from legacy task aliases when current order lines are absent', () => {
-    const legacyTasks = mockTasks.map(({ purchaseId, purchaseNo, orderLineId, orderLineCode, orderLineName, transactionId, transactionNo, ...task }) => task)
+  it('does not build rows when current order-line links are absent', () => {
+    const tasksWithoutOrderLineLinks = mockTasks.map(({ orderLineId, orderLineCode, orderLineName, ...task }) => task)
     const purchasesWithoutOrderLines = purchasesMock.map((purchase) => ({ ...purchase, orderLines: [] }))
     const rows = buildProductionPlanRows({
-      tasks: legacyTasks,
+      tasks: tasksWithoutOrderLineLinks,
       purchases: purchasesWithoutOrderLines,
       products: mockProducts
     })

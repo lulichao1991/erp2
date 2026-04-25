@@ -66,7 +66,6 @@ export type PurchaseTimelineRecord = {
   id: string
   purchaseId?: string
   transactionId?: string
-  orderId?: string
   type: PurchaseTimelineRecordType
   title: string
   description?: string

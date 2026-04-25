@@ -23,7 +23,11 @@ export const TaskListPage = () => {
       tasks.filter((task) => {
         const matchesKeyword =
           filters.keyword.trim().length === 0 ||
-          [task.title, task.orderNo, task.orderItemName, task.description].filter(Boolean).join(' ').toLowerCase().includes(filters.keyword.toLowerCase())
+          [task.title, task.purchaseNo, task.transactionNo, task.orderLineCode, task.orderLineName, task.description]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(filters.keyword.toLowerCase())
         const matchesType = filters.type === 'all' || task.type === filters.type
         const matchesStatus = filters.status === 'all' || task.status === filters.status
         const matchesAssignee =
