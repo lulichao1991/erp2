@@ -253,6 +253,7 @@
   └─ 所属购买记录 /purchases/:purchaseId
 
 购买记录 /purchases
+  ├─ 购买记录入口 /purchases → /purchases/new
   ├─ 新建购买记录 /purchases/new
   └─ 购买记录详情 /purchases/:purchaseId
        ├─ 商品行列表
@@ -303,6 +304,7 @@
 
 ```text
 /order-lines
+/purchases
 /purchases/new
 /purchases/:purchaseId
 /products
