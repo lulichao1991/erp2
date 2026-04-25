@@ -16,6 +16,8 @@ Customer -> Purchase -> OrderLine -> Product
 - `/purchases/new`
 - `/purchases/:purchaseId`
 - `/products`
+- `/customers`
+- `/customers/:customerId`
 
 旧 `/orders` 只作为兼容模块保留，不再作为当前主入口或当前主文档口径。
 
@@ -68,6 +70,13 @@ Customer -> Purchase -> OrderLine -> Product
 
 作用：
 - 说明当前主文档、过渡文档与历史归档文档的边界
+
+8. `docs/frontend/legacy-orders-removal-plan.md`
+
+作用：
+- 记录 legacy `/orders` 删除前的兼容迁移准备
+- 梳理 route smoke tests、productionPlan fallback、useAppData legacy orders APIs 的替代顺序
+- 明确旧 `/orders` 删除前置条件
 
 ---
 

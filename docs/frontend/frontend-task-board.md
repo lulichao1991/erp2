@@ -349,12 +349,18 @@ Customer -> Purchase -> OrderLine -> Product
 
 ### 6.2 旧 `/orders` 依赖迁移审计
 
-状态：待清理
+状态：进行中
 
 目标：
 - 梳理哪些页面、组件、mock、类型和测试仍依赖旧 `/orders`
 - 区分“必须保留的兼容层”和“可迁移到 Purchase + OrderLine 主线的引用”
 - 输出可执行的迁移清单
+
+当前记录：
+- 迁移准备文档：`docs/frontend/legacy-orders-removal-plan.md`
+- 已梳理 legacy route smoke tests 保留 / 迁移 / 删除门槛
+- 已梳理 productionPlan fallback 迁移顺序
+- 已梳理 `useAppData` legacy orders APIs 替代顺序
 
 检查范围：
 - `src/app/router/*`
