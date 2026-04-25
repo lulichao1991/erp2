@@ -13,6 +13,11 @@ export type OrderLineCenterFilters = {
   keyword: string
   status: 'all' | OrderLineStatus | string
   owner: string
+  category: 'all' | ProductCategory | string
+  urgent: 'all' | 'yes' | 'no'
+  afterSales: 'all' | 'yes' | 'no'
+  overdue: 'all' | 'yes' | 'no'
+  quickView: 'all' | 'my_todo' | 'due_soon' | 'after_sales' | 'risk'
 }
 
 export type OrderLineRow = {
@@ -131,6 +136,14 @@ export const orderLineStatusOptions: Array<{ value: OrderLineStatus | string; la
 ]
 
 const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineStatusOptions]
+
+const quickViewOptions: Array<{ value: OrderLineCenterFilters['quickView']; label: string }> = [
+  { value: 'all', label: '全部商品行' },
+  { value: 'my_todo', label: '我的待办' },
+  { value: 'due_soon', label: '即将超时' },
+  { value: 'after_sales', label: '售后中' },
+  { value: 'risk', label: '异常 / 风险' }
+]
 
 const categoryOptions: Array<{ value: ProductCategory; label: string }> = [
   { value: 'ring', label: '戒指' },
@@ -280,6 +293,8 @@ const getTimePressure = (promisedDate?: string) => {
   return { label: `剩余 ${diffDays} 天`, variant: 'normal' as const, overdue: false }
 }
 
+const isDueSoon = (promisedDate?: string) => getTimePressure(promisedDate).variant === 'dueSoon'
+
 const getParameterSummary = (line: OrderLine) =>
   [
     line.selectedSpecValue ? `规格 ${line.selectedSpecValue}` : null,
@@ -306,6 +321,16 @@ const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = 
     line.priority === 'vip' ? 'VIP' : null
   ].filter((item): item is string => Boolean(item))
 }
+
+const isActiveTodoLine = (line: OrderLine) => !['completed', 'cancelled'].includes(String(line.status))
+
+const getLineOwner = (line: OrderLine, purchase?: Purchase) => line.currentOwner || purchase?.ownerName || ''
+
+const getLineHasActiveAfterSales = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
+  line.status === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
+
+const getLineHasRisk = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
+  line.status === 'exception' || getLineRiskLabels(line, afterSalesCases).length > 0
 
 const isInteractiveTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('a, button, input, select, textarea, label'))
@@ -1657,10 +1682,15 @@ export const buildOrderLineRows = (): OrderLineRow[] =>
     }))
   )
 
-export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCenterFilters) =>
+export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCenterFilters, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
   rows.filter(({ line, purchase }) => {
     const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
     const keyword = filters.keyword.trim().toLowerCase()
+    const owner = getLineOwner(line, purchase)
+    const hasActiveAfterSales = getLineHasActiveAfterSales(line, afterSalesCases)
+    const overdue = getTimePressure(line.promisedDate).overdue
+    const dueSoon = isDueSoon(line.promisedDate)
+    const hasRisk = getLineHasRisk(line, afterSalesCases)
     const matchesKeyword =
       keyword.length === 0 ||
       [
@@ -1678,9 +1708,19 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
         .toLowerCase()
         .includes(keyword)
     const matchesStatus = filters.status === 'all' || line.status === filters.status
-    const matchesOwner = filters.owner.trim().length === 0 || (line.currentOwner || purchase?.ownerName || '').includes(filters.owner.trim())
+    const matchesOwner = filters.owner.trim().length === 0 || owner.includes(filters.owner.trim())
+    const matchesCategory = filters.category === 'all' || line.category === filters.category
+    const matchesUrgent = filters.urgent === 'all' || (filters.urgent === 'yes' ? line.priority === 'urgent' : line.priority !== 'urgent')
+    const matchesAfterSales = filters.afterSales === 'all' || (filters.afterSales === 'yes' ? hasActiveAfterSales : !hasActiveAfterSales)
+    const matchesOverdue = filters.overdue === 'all' || (filters.overdue === 'yes' ? overdue : !overdue)
+    const matchesQuickView =
+      filters.quickView === 'all' ||
+      (filters.quickView === 'my_todo' && isActiveTodoLine(line) && (filters.owner.trim().length > 0 ? owner.includes(filters.owner.trim()) : owner.length > 0)) ||
+      (filters.quickView === 'due_soon' && dueSoon) ||
+      (filters.quickView === 'after_sales' && hasActiveAfterSales) ||
+      (filters.quickView === 'risk' && hasRisk)
 
-    return matchesKeyword && matchesStatus && matchesOwner
+    return matchesKeyword && matchesStatus && matchesOwner && matchesCategory && matchesUrgent && matchesAfterSales && matchesOverdue && matchesQuickView
   })
 
 export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], lineId: string, nextStatus: OrderLineStatus | string): T[] =>
@@ -1718,11 +1758,24 @@ export const OrderLineFilterBar = ({
   onChange: (next: OrderLineCenterFilters) => void
 }) => (
   <SectionCard title="搜索与筛选" description="按商品行编号、商品名称、客户、购买记录和负责人快速定位。">
+    <div className="row wrap">
+      {quickViewOptions.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={`button small ${value.quickView === option.value ? 'primary' : 'ghost'}`}
+          onClick={() => onChange({ ...value, quickView: option.value })}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
     <div className="field-grid three">
       <div className="field-control">
-        <label className="field-label">搜索商品行编号 / 商品名称 / 客户 / 购买记录</label>
+        <label className="field-label">搜索商品行编号 / 商品名称 / 客户 / 购买记录 / 平台单号</label>
         <input
           className="input"
+          aria-label="搜索商品行编号 / 商品名称 / 客户 / 购买记录 / 平台单号"
           value={value.keyword}
           onChange={(event) => onChange({ ...value, keyword: event.target.value })}
           placeholder="例如：山形戒指 / 张三 / PUR-202604-001"
@@ -1730,8 +1783,19 @@ export const OrderLineFilterBar = ({
       </div>
       <div className="field-control">
         <label className="field-label">状态筛选</label>
-        <select className="select" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}>
+        <select className="select" aria-label="状态筛选" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}>
           {statusFilterOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field-control">
+        <label className="field-label">品类筛选</label>
+        <select className="select" aria-label="品类筛选" value={value.category} onChange={(event) => onChange({ ...value, category: event.target.value })}>
+          <option value="all">全部品类</option>
+          {categoryOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -1742,10 +1806,35 @@ export const OrderLineFilterBar = ({
         <label className="field-label">负责人筛选</label>
         <input
           className="input"
+          aria-label="负责人筛选"
           value={value.owner}
           onChange={(event) => onChange({ ...value, owner: event.target.value })}
           placeholder="例如：王客服 / 陈设计"
         />
+      </div>
+      <div className="field-control">
+        <label className="field-label">是否加急</label>
+        <select className="select" aria-label="是否加急筛选" value={value.urgent} onChange={(event) => onChange({ ...value, urgent: event.target.value as OrderLineCenterFilters['urgent'] })}>
+          <option value="all">全部</option>
+          <option value="yes">加急</option>
+          <option value="no">非加急</option>
+        </select>
+      </div>
+      <div className="field-control">
+        <label className="field-label">是否售后中</label>
+        <select className="select" aria-label="是否售后中" value={value.afterSales} onChange={(event) => onChange({ ...value, afterSales: event.target.value as OrderLineCenterFilters['afterSales'] })}>
+          <option value="all">全部</option>
+          <option value="yes">售后中</option>
+          <option value="no">无活跃售后</option>
+        </select>
+      </div>
+      <div className="field-control">
+        <label className="field-label">是否超期</label>
+        <select className="select" aria-label="是否超期" value={value.overdue} onChange={(event) => onChange({ ...value, overdue: event.target.value as OrderLineCenterFilters['overdue'] })}>
+          <option value="all">全部</option>
+          <option value="yes">已超期</option>
+          <option value="no">未超期</option>
+        </select>
       </div>
     </div>
   </SectionCard>
@@ -1842,8 +1931,10 @@ export const OrderLineTable = ({
                 <div className="text-caption">{purchase?.platformOrderNo || '无平台单号'}</div>
               </td>
               <td>
-                <div>{getParameterSummary(line)}</div>
-                <div className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</div>
+                <div className="stack" style={{ gap: 4 }}>
+                  <span>{getParameterSummary(line)}</span>
+                  <span className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</span>
+                </div>
               </td>
               <td>
                 <StatusTag value={getStatusLabel(String(line.status))} />
@@ -1860,8 +1951,10 @@ export const OrderLineTable = ({
                 <div className="text-caption">工厂 {getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))}</div>
               </td>
               <td>
-                <div>{logistics ? `物流 ${logistics.trackingNo || '已创建'}` : '未发货'}</div>
-                <div className="text-caption">{afterSales ? `售后 ${afterSales.status || 'open'}` : '无售后'}</div>
+                <div className="stack" style={{ gap: 4 }}>
+                  <StatusTag value={logistics ? `物流 ${logistics.trackingNo || '已创建'}` : '未发货'} />
+                  <span className="text-caption">{afterSales ? `售后 ${getAfterSalesStatusLabel(afterSales.status)}` : '无售后'}</span>
+                </div>
               </td>
               <td>
                 <button type="button" className="button ghost small" onClick={() => onOpenDetail?.(row)}>

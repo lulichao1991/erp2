@@ -163,10 +163,51 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('heading', { name: '商品行中心' })).toBeInTheDocument()
     expect(screen.getByText('一行代表一件商品，支持独立推进设计、生产、发货与售后。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '全部商品行' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '我的待办' })).toBeInTheDocument()
+    expect(screen.getByLabelText('品类筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('是否加急筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('是否售后中')).toBeInTheDocument()
+    expect(screen.getByLabelText('是否超期')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'PUR-202604-001' }).length).toBeGreaterThan(0)
+  })
+
+  it('filters order-line center by category, owner, after-sales, urgent flag and keyword', async () => {
+    const user = userEvent.setup()
+    renderRoute('/order-lines')
+
+    await user.selectOptions(screen.getByLabelText('品类筛选'), 'pendant')
+    expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('品类筛选'), 'all')
+    await user.selectOptions(screen.getByLabelText('是否售后中'), 'yes')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('是否售后中'), 'all')
+    await user.selectOptions(screen.getByLabelText('是否加急筛选'), 'yes')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('是否加急筛选'), 'all')
+    await user.clear(screen.getByLabelText('负责人筛选'))
+    await user.type(screen.getByLabelText('负责人筛选'), '陈设计')
+    expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('负责人筛选'))
+    await user.type(screen.getByLabelText('搜索商品行编号 / 商品名称 / 客户 / 购买记录 / 平台单号'), 'TB-9938201')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '售后中' }))
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
   })
 
   it('opens order-line detail drawer from view button and switches records from row click', async () => {
@@ -435,8 +476,8 @@ describe('router smoke', () => {
     expect(screen.getByText('返工抛光')).toBeInTheDocument()
     expect(screen.getByText('吊坠表面需要返工抛光')).toBeInTheDocument()
     expect(screen.getByText('为商品行 OL-202604-001-02 新增返工抛光售后：吊坠表面需要返工抛光')).toBeInTheDocument()
-    expect(within(pendantRow as HTMLElement).getByText('售后 processing')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('售后 处理中')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('无售后')).toBeInTheDocument()
 
     const afterSalesPanel = screen.getByText('售后记录').closest('.subtle-panel')
@@ -454,8 +495,8 @@ describe('router smoke', () => {
 
     await user.click(within(afterSalesPanel as HTMLElement).getByRole('button', { name: '关闭' }))
     expect(screen.getByText('关闭售后')).toBeInTheDocument()
-    expect(within(pendantRow as HTMLElement).getByText('售后 closed')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('售后 已关闭')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
 
     await user.click(screen.getAllByRole('button', { name: '关闭' })[0] as HTMLElement)
     await user.click(necklaceRow as HTMLElement)
@@ -488,6 +529,7 @@ describe('router smoke', () => {
     expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
     expect(screen.getByText('客户与收货信息')).toBeInTheDocument()
     expect(screen.getByText('付款总览')).toBeInTheDocument()
+    expect(screen.getByText('付款摘要')).toBeInTheDocument()
     expect(screen.getByText('商品行数量')).toBeInTheDocument()
     expect(screen.getByText('本次商品行列表')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
@@ -711,8 +753,8 @@ describe('router smoke', () => {
 
     expect(screen.getByText('项链扣头需要维修')).toBeInTheDocument()
     expect(screen.getByText('为商品行 OL-202604-001-03 新增维修售后：项链扣头需要维修')).toBeInTheDocument()
-    expect(within(necklaceRow as HTMLElement).getByText('售后 waiting_return')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('售后 待寄回')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('无售后')).toBeInTheDocument()
 
     const afterSalesPanel = screen.getByText('售后记录').closest('.subtle-panel')
@@ -727,8 +769,8 @@ describe('router smoke', () => {
 
     await user.click(within(afterSalesPanel as HTMLElement).getByRole('button', { name: '关闭' }))
     expect(screen.getByText('关闭售后')).toBeInTheDocument()
-    expect(within(necklaceRow as HTMLElement).getByText('售后 closed')).toBeInTheDocument()
-    expect(within(ringRow as HTMLElement).getByText('售后 open')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('售后 已关闭')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
   })
 
   it('creates a purchase draft with multiple order-line cards', async () => {
@@ -836,6 +878,80 @@ describe('router smoke', () => {
         expect.objectContaining({ tempLineNo: 'TEMP-03', productName: '定制项链', quoteResult: undefined })
       ])
     )
+  })
+
+  it('validates, duplicates and removes purchase draft order-line cards', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    renderRoute('/purchases/new')
+
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('请至少填写客户姓名或手机。')
+
+    await user.type(screen.getByLabelText('客户姓名'), '李四')
+    await user.type(screen.getByLabelText('已收金额'), '100')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('已收金额不能大于应收总额。')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('应收总额'), '1000')
+    await user.clear(screen.getByLabelText('已收金额'))
+    await user.type(screen.getByLabelText('已收金额'), '1200')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('已收金额不能大于应收总额。')
+
+    await user.clear(screen.getByLabelText('已收金额'))
+    await user.type(screen.getByLabelText('已收金额'), '500')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 需要填写商品名称或引用产品。')
+
+    const firstLineCard = screen.getByText('商品行 TEMP-01').closest('.subtle-panel')
+    expect(firstLineCard).not.toBeNull()
+    expect(within(firstLineCard as HTMLElement).getByRole('button', { name: '删除商品行' })).toBeDisabled()
+
+    await user.type(within(firstLineCard as HTMLElement).getByLabelText('商品名称'), '手动定制戒指')
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '复制商品行' }))
+
+    expect(screen.getByText('本次购买共 2 条商品行')).toBeInTheDocument()
+    const secondLineCard = screen.getByText('商品行 TEMP-02').closest('.subtle-panel')
+    expect(secondLineCard).not.toBeNull()
+    expect(within(secondLineCard as HTMLElement).getByLabelText('商品名称')).toHaveValue('手动定制戒指')
+
+    await user.click(within(secondLineCard as HTMLElement).getByRole('button', { name: '删除商品行' }))
+    expect(screen.getByText('本次购买共 1 条商品行')).toBeInTheDocument()
+    expect(screen.queryByText('商品行 TEMP-02')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条商品行')
+  })
+
+  it('renders lightweight customer center list from current mainline data', () => {
+    renderRoute('/customers')
+
+    expect(screen.getByRole('heading', { name: '客户中心' })).toBeInTheDocument()
+    expect(screen.getByText('客户中心第一版只读展示客户历史购买记录、商品行和售后摘要。')).toBeInTheDocument()
+    expect(screen.getByText('张三')).toBeInTheDocument()
+    expect(screen.getByText('13800001234')).toBeInTheDocument()
+    expect(screen.getByText('zhangsan_jewelry')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '查看客户' })).toHaveAttribute('href', '/customers/customer-zhang-001')
+  })
+
+  it('renders customer detail with purchase, order-line and after-sales history', () => {
+    renderRoute('/customers/customer-zhang-001')
+
+    expect(screen.getByRole('heading', { name: '客户详情' })).toBeInTheDocument()
+    expect(screen.getByText('客户详情只做历史归集；购买执行仍进入购买记录和商品行中心。')).toBeInTheDocument()
+    expect(screen.getByText('客户基础信息')).toBeInTheDocument()
+    expect(screen.getByText('历史购买记录')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'PUR-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getByText('历史商品行')).toBeInTheDocument()
+    expect(screen.getByText('OL-202604-001-01')).toBeInTheDocument()
+    expect(screen.getByText('OL-202604-001-02')).toBeInTheDocument()
+    expect(screen.getByText('OL-202604-001-03')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '查看商品行' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getByText('历史售后摘要')).toBeInTheDocument()
+    expect(screen.getByText('客户反馈戒围可能偏紧')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '返回客户中心' })).toHaveAttribute('href', '/customers')
   })
 
   it('expands order item when clicking summary area', async () => {

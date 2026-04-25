@@ -3,6 +3,7 @@ import type { NavItem } from '@/types/common'
 export const sidebarItems: NavItem[] = [
   { label: '工作台', path: '/', icon: '◌' },
   { label: '商品行中心', path: '/order-lines', icon: '▤' },
+  { label: '客户中心', path: '/customers', icon: '◉' },
   { label: '任务中心', path: '/tasks', icon: '◎' },
   { label: '产品管理', path: '/products', icon: '◇' },
   { label: '生产计划', path: '/production-plan', icon: '◍', visibleRoles: ['factory'] }
@@ -15,6 +16,10 @@ export const getModuleLabel = (pathname: string) => {
 
   if (pathname.startsWith('/purchases')) {
     return '购买记录'
+  }
+
+  if (pathname.startsWith('/customers')) {
+    return '客户中心'
   }
 
   if (pathname.startsWith('/orders')) {

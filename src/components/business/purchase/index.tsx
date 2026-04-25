@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag } from '@/components/common'
+import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag, TimePressureBadge } from '@/components/common'
 import { afterSalesMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import type { Customer } from '@/types/customer'
@@ -112,8 +112,10 @@ const defaultPurchaseDraft: PurchaseDraftFormValue = {
 
 let draftLineSeed = 1
 
+const createOrderLineDraftId = () => `order-line-draft-${draftLineSeed++}`
+
 const createOrderLineDraft = (): OrderLineDraft => ({
-  id: `order-line-draft-${draftLineSeed++}`,
+  id: createOrderLineDraftId(),
   selectedSpecialOptions: [],
   productName: '',
   category: '',
@@ -125,6 +127,11 @@ const createOrderLineDraft = (): OrderLineDraft => ({
   urgent: false,
   ownerName: '客服A',
   promisedDate: ''
+})
+
+const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => ({
+  ...line,
+  id: createOrderLineDraftId()
 })
 
 const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
@@ -271,6 +278,27 @@ const buildDraftPayload = (
   }))
 })
 
+const validatePurchaseDraft = (
+  draft: PurchaseDraftFormValue,
+  paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary>,
+  orderLines: OrderLineDraft[]
+) => {
+  if (!draft.customerName.trim() && !draft.customerPhone.trim()) {
+    return '请至少填写客户姓名或手机。'
+  }
+
+  if (paymentSummary.receivedAmount > paymentSummary.receivableAmount) {
+    return '已收金额不能大于应收总额。'
+  }
+
+  const invalidLineIndex = orderLines.findIndex((line) => !line.sourceProductId && !line.productName.trim())
+  if (invalidLineIndex >= 0) {
+    return `商品行 ${getTempLineNo(invalidLineIndex)} 需要填写商品名称或引用产品。`
+  }
+
+  return ''
+}
+
 const purchaseAggregateStatusLabelMap: Record<string, string> = {
   draft: '草稿',
   in_progress: '进行中',
@@ -306,6 +334,15 @@ const factoryStatusLabelMap: Record<string, string> = {
   issue: '异常'
 }
 
+const afterSalesStatusLabelMap: Record<string, string> = {
+  open: '待处理',
+  processing: '处理中',
+  in_progress: '处理中',
+  waiting_return: '待寄回',
+  resolved: '已解决',
+  closed: '已关闭'
+}
+
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '待确认')
@@ -314,7 +351,32 @@ const getOrderLineStatusLabel = (status?: string) => (status ? orderLineStatusLa
 
 const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || status : '待确认')
 
+const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
+
+const getTimePressure = (promisedDate?: string) => {
+  if (!promisedDate) {
+    return { label: '待确认交期', variant: 'normal' as const }
+  }
+
+  const promised = new Date(`${promisedDate}T23:59:59`)
+  const now = new Date()
+  const diffDays = Math.ceil((promised.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return { label: `已超时 ${Math.abs(diffDays)} 天`, variant: 'overdue' as const }
+  }
+
+  if (diffDays <= 3) {
+    return { label: `剩余 ${diffDays} 天`, variant: 'dueSoon' as const }
+  }
+
+  return { label: `剩余 ${diffDays} 天`, variant: 'normal' as const }
+}
+
 const isActiveLogisticsRecord = (record?: LogisticsRecord) => record?.recordStatus !== 'voided'
+
+const isInteractiveTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement && Boolean(target.closest('a, button, input, select, textarea, label'))
 
 const activeAfterSalesStatuses = new Set(['open', 'processing', 'in_progress', 'waiting_return'])
 
@@ -365,20 +427,25 @@ const getPaymentSummary = (purchase: Purchase) => {
   }
 }
 
-export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => (
-  <SectionCard title="购买记录摘要" description="购买记录只汇总一次购买的公共信息；商品推进以商品行为准。">
-    <InfoGrid columns={3}>
-      <InfoField label="购买记录编号" value={purchase.purchaseNo} />
-      <InfoField label="平台订单号" value={purchase.platformOrderNo || '—'} />
-      <InfoField label="渠道" value={purchase.sourceChannel} />
-      <InfoField label="客户姓名" value={customer?.name || '—'} />
-      <InfoField label="付款时间" value={purchase.paymentAt || '—'} />
-      <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
-      <InfoField label="商品行数量" value={purchase.orderLines.length} />
-      <InfoField label="聚合状态" value={<StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />} />
-    </InfoGrid>
-  </SectionCard>
-)
+export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => {
+  const paymentSummary = getPaymentSummary(purchase)
+
+  return (
+    <SectionCard title="购买记录摘要" description="Purchase 是一次购买的归组对象；OrderLine 才是设计、生产、物流和售后的执行对象。">
+      <InfoGrid columns={3}>
+        <InfoField label="购买记录编号" value={purchase.purchaseNo} />
+        <InfoField label="客户" value={customer?.name || '—'} />
+        <InfoField label="渠道" value={purchase.sourceChannel} />
+        <InfoField label="平台订单号" value={purchase.platformOrderNo || '—'} />
+        <InfoField label="商品行数量" value={`${purchase.orderLines.length} 条`} />
+        <InfoField label="聚合状态" value={<StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />} />
+        <InfoField label="付款摘要" value={`${formatPrice(paymentSummary.receivedAmount)} / ${formatPrice(paymentSummary.receivableAmount)}`} />
+        <InfoField label="付款状态" value={<StatusTag value={paymentSummary.paymentStatus} />} />
+        <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
+      </InfoGrid>
+    </SectionCard>
+  )
+}
 
 export const PurchaseCustomerSection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => (
   <SectionCard title="客户与收货信息">
@@ -452,9 +519,26 @@ export const PurchaseOrderLineTable = ({
             {rows.map(({ line, purchase }) => {
               const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id && isActiveLogisticsRecord(item))
               const afterSalesCase = findCurrentAfterSalesCase(afterSalesCases, line.id)
+              const pressure = getTimePressure(line.promisedDate || purchase.promisedDate)
+              const row = { line, purchase }
+              const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
+                if (isInteractiveTarget(event.target)) {
+                  return
+                }
+                onOpenOrderLine(row)
+              }
+              const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
+                if (isInteractiveTarget(event.target)) {
+                  return
+                }
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onOpenOrderLine(row)
+                }
+              }
 
               return (
-                <tr key={line.id}>
+                <tr key={line.id} role="button" tabIndex={0} onClick={handleRowClick} onKeyDown={handleRowKeyDown}>
                   <td>{line.lineCode || line.id}</td>
                   <td>
                     <div>{line.name}</div>
@@ -465,12 +549,24 @@ export const PurchaseOrderLineTable = ({
                     <div className="text-caption">工厂 {getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))}</div>
                   </td>
                   <td>{line.currentOwner || purchase.ownerName || '待分配'}</td>
-                  <td>{line.promisedDate || purchase.promisedDate || '—'}</td>
-                  <td>{getParameterSummary(line)}</td>
-                  <td>{logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'}</td>
-                  <td>{afterSalesCase ? `售后 ${afterSalesCase.status || 'open'}` : '无售后'}</td>
                   <td>
-                    <button type="button" className="button ghost small" onClick={() => onOpenOrderLine({ line, purchase })}>
+                    <div>{line.promisedDate || purchase.promisedDate || '—'}</div>
+                    <div className="spacer-top">
+                      <TimePressureBadge label={pressure.label} variant={pressure.variant} />
+                    </div>
+                  </td>
+                  <td>
+                    <div>{getParameterSummary(line)}</div>
+                    <div className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</div>
+                  </td>
+                  <td>
+                    <StatusTag value={logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'} />
+                  </td>
+                  <td>
+                    <StatusTag value={afterSalesCase ? `售后 ${getAfterSalesStatusLabel(afterSalesCase.status)}` : '无售后'} />
+                  </td>
+                  <td>
+                    <button type="button" className="button ghost small" onClick={() => onOpenOrderLine(row)}>
                       查看商品行
                     </button>
                   </td>
@@ -526,7 +622,19 @@ export const usePurchaseDraftForm = () => {
   }
 
   const removeOrderLine = (lineId: string) => {
-    setOrderLineDrafts((current) => (current.length > 1 ? current.filter((line) => line.id !== lineId) : current))
+    if (orderLineDrafts.length <= 1) {
+      setErrorMessage('至少需要保留 1 条商品行。')
+      setSuccessMessage('')
+      return
+    }
+
+    setOrderLineDrafts((current) => current.filter((line) => line.id !== lineId))
+    setSuccessMessage('')
+    setErrorMessage('')
+  }
+
+  const duplicateOrderLine = (lineId: string) => {
+    setOrderLineDrafts((current) => current.flatMap((line) => (line.id === lineId ? [line, duplicateOrderLineDraft(line)] : [line])))
     setSuccessMessage('')
     setErrorMessage('')
   }
@@ -564,6 +672,13 @@ export const usePurchaseDraftForm = () => {
       return
     }
 
+    const validationError = validatePurchaseDraft(purchaseDraft, paymentSummary, orderLineDrafts)
+    if (validationError) {
+      setErrorMessage(validationError)
+      setSuccessMessage('')
+      return
+    }
+
     const payload = buildDraftPayload(purchaseDraft, paymentSummary, orderLineDrafts)
     console.log('purchaseDraft', payload.purchaseDraft)
     console.log('orderLineDrafts', payload.orderLineDrafts)
@@ -580,6 +695,7 @@ export const usePurchaseDraftForm = () => {
     updatePurchaseDraft,
     addOrderLine,
     removeOrderLine,
+    duplicateOrderLine,
     updateOrderLine,
     applyProductToOrderLine,
     selectOrderLineSpec,
@@ -731,6 +847,7 @@ export const OrderLineDraftCard = ({
   canRemove,
   onChange,
   onRemove,
+  onDuplicate,
   onApplyProduct,
   onSelectSpec,
   onToggleSpecialOption,
@@ -741,6 +858,7 @@ export const OrderLineDraftCard = ({
   canRemove: boolean
   onChange: (patch: Partial<OrderLineDraft>) => void
   onRemove: () => void
+  onDuplicate: () => void
   onApplyProduct: (productId: string) => void
   onSelectSpec: (specId: string) => void
   onToggleSpecialOption: (option: string, checked: boolean) => void
@@ -755,9 +873,14 @@ export const OrderLineDraftCard = ({
     <div className="subtle-panel">
       <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <strong>商品行 {tempLineNo}</strong>
-        <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
-          删除商品行
-        </button>
+        <div className="row wrap">
+          <button type="button" className="button ghost small" onClick={onDuplicate}>
+            复制商品行
+          </button>
+          <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
+            删除商品行
+          </button>
+        </div>
       </div>
       <div className="field-grid three">
         <label className="field-control">
@@ -889,6 +1012,7 @@ export const PurchaseDraftOrderLinesSection = ({
   orderLines,
   onAdd,
   onRemove,
+  onDuplicate,
   onChange,
   onApplyProduct,
   onSelectSpec,
@@ -897,6 +1021,7 @@ export const PurchaseDraftOrderLinesSection = ({
   orderLines: OrderLineDraft[]
   onAdd: () => void
   onRemove: (lineId: string) => void
+  onDuplicate: (lineId: string) => void
   onChange: (lineId: string, patch: Partial<OrderLineDraft>) => void
   onApplyProduct: (lineId: string, productId: string) => void
   onSelectSpec: (lineId: string, specId: string) => void
@@ -932,6 +1057,7 @@ export const PurchaseDraftOrderLinesSection = ({
               canRemove={orderLines.length > 1}
               onChange={(patch) => onChange(line.id, patch)}
               onRemove={() => onRemove(line.id)}
+              onDuplicate={() => onDuplicate(line.id)}
               onApplyProduct={(productId) => onApplyProduct(line.id, productId)}
               onSelectSpec={(specId) => onSelectSpec(line.id, specId)}
               onToggleSpecialOption={(option, checked) => onToggleSpecialOption(line.id, option, checked)}
