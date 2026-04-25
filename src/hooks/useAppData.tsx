@@ -17,7 +17,7 @@ import type { Order, OrderItem, OrderStatus, TimelineRecord } from '@/types/orde
 import type { OrderLine, OrderLineProductionInfo } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
-import type { Purchase } from '@/types/purchase'
+import type { Purchase, PurchaseTimelineRecord } from '@/types/purchase'
 import type { Task, TaskAssigneeRole, TaskType } from '@/types/task'
 
 const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
@@ -75,7 +75,7 @@ const AppDataContext = createContext<AppDataContextValue | null>(null)
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   // Current mainline mock state.
   const [products, setProducts] = useState<Product[]>(() => getProductList())
-  const [purchases] = useState<Purchase[]>(() => structuredClone(purchasesMock))
+  const [purchases, setPurchases] = useState<Purchase[]>(() => structuredClone(purchasesMock))
   const [orderLines, setOrderLines] = useState<OrderLine[]>(() => structuredClone(orderLinesMock))
 
   // Legacy /orders compatibility state. Do not expand usage from new modules.
@@ -385,8 +385,12 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           completedAt: updated.status === 'done' ? updated.completedAt || currentTime : undefined
         }
 
-        const timelineRecord: TimelineRecord = {
+        const purchaseId = nextTask.purchaseId || nextTask.transactionId || nextTask.orderId
+        const orderLineId = nextTask.orderLineId || nextTask.orderItemId
+        const timelineRecord: PurchaseTimelineRecord = {
           id: `timeline-task-update-${nextTask.id}-${currentTime}`,
+          purchaseId,
+          transactionId: nextTask.transactionId,
           orderId: nextTask.orderId,
           type: nextTask.status === 'done' ? 'task_completed' : 'task_updated',
           title: nextTask.status === 'done' ? `完成${nextTask.title}` : `更新${nextTask.title}`,
@@ -397,15 +401,13 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           actorName: nextTask.updatedBy,
           createdAt: currentTime,
           relatedTaskId: nextTask.id,
-          relatedOrderItemId: nextTask.orderItemId
+          relatedOrderLineId: orderLineId
         }
 
         setTasks((current) => current.map((item) => (item.id === taskId ? nextTask : item)))
-        // Legacy /orders compatibility mirror. Current task data is updated above;
-        // this keeps the old order timeline visible until task timeline is migrated.
-        setOrders((current) =>
+        setPurchases((current) =>
           current.map((item) =>
-            item.id === nextTask.orderId
+            item.id === purchaseId
               ? {
                   ...item,
                   latestActivityAt: currentTime,

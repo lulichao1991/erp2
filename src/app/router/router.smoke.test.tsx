@@ -1121,6 +1121,17 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('writes task status updates to the current purchase timeline', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/tasks/task-order-001')
+
+    await user.click(screen.getByRole('button', { name: '标记完成' }))
+
+    expect(await screen.findByText('完成确认戒指最终圈号')).toBeInTheDocument()
+    expect(screen.getByText('任务已完成，当前责任人：张晨')).toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
   it('renders production plan list route without requiring factory role', () => {
     const { container } = renderRoute('/production-plan')
 
