@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppRouter } from '@/app/router'
+import { CustomerBasicSection, CustomerListTable, buildCustomerOverview } from '@/components/business/customer'
 import { AppDataProvider } from '@/hooks/useAppData'
+import { customerMock } from '@/mocks'
 
 const renderRoute = (entry: string) =>
   render(
@@ -952,6 +954,42 @@ describe('router smoke', () => {
     expect(screen.getByText('历史售后摘要')).toBeInTheDocument()
     expect(screen.getByText('客户反馈戒围可能偏紧')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回客户中心' })).toHaveAttribute('href', '/customers')
+  })
+
+  it('shows current customer aggregation counts without stale total fallback', () => {
+    const overview = buildCustomerOverview({
+      customer: {
+        ...customerMock,
+        totalTransactionCount: 9,
+        totalOrderLineCount: 8,
+        totalAfterSalesCount: 7
+      },
+      purchases: [],
+      orderLines: [],
+      afterSalesCases: []
+    })
+
+    render(
+      <MemoryRouter>
+        <CustomerListTable overviews={[overview]} />
+      </MemoryRouter>
+    )
+
+    const row = screen.getByText('张三').closest('tr')
+    expect(row).not.toBeNull()
+    expect(within(row as HTMLElement).getAllByText('0')).toHaveLength(3)
+    expect(within(row as HTMLElement).queryByText('9')).not.toBeInTheDocument()
+    expect(within(row as HTMLElement).queryByText('8')).not.toBeInTheDocument()
+    expect(within(row as HTMLElement).queryByText('7')).not.toBeInTheDocument()
+
+    cleanup()
+
+    render(<CustomerBasicSection overview={overview} />)
+
+    expect(screen.getAllByText('0')).toHaveLength(3)
+    expect(screen.queryByText('9')).not.toBeInTheDocument()
+    expect(screen.queryByText('8')).not.toBeInTheDocument()
+    expect(screen.queryByText('7')).not.toBeInTheDocument()
   })
 
   it('expands order item when clicking summary area', async () => {

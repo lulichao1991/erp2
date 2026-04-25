@@ -104,9 +104,9 @@ export const CustomerListTable = ({ overviews }: { overviews: CustomerOverview[]
               <td>{customer.phone || '—'}</td>
               <td>{customer.wechat || '—'}</td>
               <td>{formatChannels(customer.sourceChannels)}</td>
-              <td>{purchases.length || customer.totalTransactionCount}</td>
-              <td>{orderLines.length || customer.totalOrderLineCount}</td>
-              <td>{afterSalesCases.length || customer.totalAfterSalesCount}</td>
+              <td>{purchases.length}</td>
+              <td>{orderLines.length}</td>
+              <td>{afterSalesCases.length}</td>
               <td>{latestPurchaseAt}</td>
               <td>
                 <Link to={`/customers/${customer.id}`} className="button ghost small">
@@ -131,9 +131,9 @@ export const CustomerBasicSection = ({ overview }: { overview: CustomerOverview 
         <InfoField label="手机" value={customer.phone || '—'} />
         <InfoField label="微信" value={customer.wechat || '—'} />
         <InfoField label="来源渠道" value={formatChannels(customer.sourceChannels)} />
-        <InfoField label="历史购买次数" value={overview.purchases.length || customer.totalTransactionCount} />
-        <InfoField label="历史商品行数量" value={overview.orderLines.length || customer.totalOrderLineCount} />
-        <InfoField label="售后次数" value={overview.afterSalesCases.length || customer.totalAfterSalesCount} />
+        <InfoField label="历史购买次数" value={overview.purchases.length} />
+        <InfoField label="历史商品行数量" value={overview.orderLines.length} />
+        <InfoField label="售后次数" value={overview.afterSalesCases.length} />
         <InfoField label="最近购买时间" value={overview.latestPurchaseAt} />
         <InfoField label="客户备注" value={customer.remark || '—'} />
       </InfoGrid>
