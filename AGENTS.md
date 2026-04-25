@@ -135,7 +135,6 @@ legacy `/orders` 模块已经删除，不再作为可访问路由、主导航入
 历史兼容含义：
 - `TransactionRecord` 只能作为 `Purchase` 的历史兼容别名
 - `SourceProductSnapshot` 只能作为 `ProductSnapshot` 的历史兼容命名
-- `orderId / orderNo / orderItemId / orderItemName` 等字段仅可作为历史数据读取 fallback，不得作为新代码主模型
 
 新代码不得重新引入 `/orders`、`Order`、`OrderItem`、`orders.timeline` 或旧 orders store。
 
@@ -293,7 +292,7 @@ legacy `/orders` 模块已经删除，不再作为可访问路由、主导航入
 ### 7. 保留必要历史字段，不重建旧兼容模块
 当前项目已经删除 legacy `/orders` runtime 模块。
 
-如遇历史字段，仅在 current model 内做只读 fallback 或迁移说明，不要重新创建旧 `/orders` 页面、store、mock、service 或类型。
+如遇历史字段，优先迁移到 current model；无法立即迁移时只做只读说明，不要重新创建旧 `/orders` 页面、store、mock、service 或类型。
 
 ### 8. 页面改造先改语义，再改路径
 当前主入口已经是 `/order-lines` 与 `/purchases/*`。

@@ -546,7 +546,7 @@ describe('router smoke', () => {
     expect(screen.getByText('暂无操作日志')).toBeInTheDocument()
   })
 
-  it('renders purchase routes without replacing legacy orders routes', () => {
+  it('renders purchase detail as the current grouping route', () => {
     renderRoute('/purchases/o-202604-001')
 
     expect(screen.getByRole('heading', { name: '购买记录详情' })).toBeInTheDocument()

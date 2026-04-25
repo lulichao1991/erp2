@@ -460,7 +460,6 @@ src/mocks/
 允许保留的兼容关系：
 - `TransactionRecord` = `Purchase` 的历史兼容别名
 - `SourceProductSnapshot` = `ProductSnapshot` 的历史兼容命名
-- `orderId / orderNo / orderItemId / orderItemName` = 历史数据字段，不得作为新主线继续扩大
 
 ---
 
