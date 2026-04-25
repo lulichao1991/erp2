@@ -23,6 +23,7 @@ export const AppRouter = () => (
     <Route element={<AppLayout />}>
       <Route path="/" element={<DashboardPage />} />
       <Route path="/order-lines" element={<OrderLineListPage />} />
+      <Route path="/purchases" element={<Navigate to="/purchases/new" replace />} />
       <Route path="/purchases/new" element={<PurchaseCreatePage />} />
       <Route path="/purchases/:purchaseId" element={<PurchaseDetailPage />} />
       <Route path="/customers" element={<CustomerListPage />} />

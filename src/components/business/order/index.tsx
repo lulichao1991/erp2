@@ -203,12 +203,20 @@ export const recalculateOrderItem = (item: OrderItem, product?: Product): OrderI
 
 export const OrderListHeader = () => (
   <PageHeader
-    title="商品任务中心"
+    title="旧订单兼容"
     className="compact-page-header"
     actions={
-      <Link to="/orders/new" className="button primary">
-        新建交易记录
-      </Link>
+      <>
+        <Link to="/order-lines" className="button secondary">
+          商品行中心
+        </Link>
+        <Link to="/purchases/new" className="button secondary">
+          新建购买记录
+        </Link>
+        <Link to="/orders/new" className="button primary">
+          新建旧交易记录
+        </Link>
+      </>
     }
   />
 )

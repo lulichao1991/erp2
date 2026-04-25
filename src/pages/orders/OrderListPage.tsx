@@ -55,6 +55,9 @@ export const OrderListPage = () => {
     <PageContainer>
       <OrderListHeader />
       <div className="stack">
+        <div className="subtle-panel">
+          旧订单兼容入口仅用于查看和维护历史演示流程。当前主流程请使用 /order-lines 商品行中心与 /purchases/new 新建购买记录。
+        </div>
         <OrderQuickStats rows={orderLineRows} />
         <OrderFilterBar value={filters} onChange={setFilters} />
         <OrderTable rows={filteredOrderLineRows} />

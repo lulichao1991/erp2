@@ -313,6 +313,8 @@ Customer -> Purchase -> OrderLine -> Product
 - 旧 `/orders` 可继续作为兼容路由访问
 - 不在侧边栏展示
 - 不作为当前任务板主线
+- 旧 `/orders` 页面自身需要明确标记为兼容入口
+- 当前新建和执行主流程入口是 `/purchases/new` 与 `/order-lines`
 - 本阶段先做依赖审计，不直接删除旧页面、旧组件和旧 mock
 
 恢复条件：
@@ -379,6 +381,7 @@ Customer -> Purchase -> OrderLine -> Product
 验收标准：
 - 当前导航不展示旧 `/orders`
 - `/orders` 仅作为兼容路由存在
+- `/orders` 页面自身明确标记为旧订单兼容入口
 - 每个旧依赖都有“保留 / 迁移 / 可删除”的判断
 
 ### 6.3 低风险删除旧页面 / 旧组件

@@ -577,6 +577,29 @@ describe('router smoke', () => {
     expect(screen.getByText('备注与日志')).toBeInTheDocument()
   })
 
+  it('renders current workflow entry routes without using legacy orders as the main entry', () => {
+    const entries = [
+      { path: '/purchases', heading: '新建购买记录' },
+      { path: '/purchases/new', heading: '新建购买记录' },
+      { path: '/purchases/o-202604-001', heading: '购买记录详情' },
+      { path: '/order-lines', heading: '商品行中心' },
+      { path: '/customers', heading: '客户中心' },
+      { path: '/customers/customer-zhang-001', heading: '客户详情' },
+      { path: '/tasks', heading: '任务中心' },
+      { path: '/production-plan', heading: '工厂生产计划' },
+      { path: '/production-plan/task-factory-001', heading: '生产任务详情' }
+    ]
+
+    entries.forEach(({ path, heading }) => {
+      const { container, unmount } = renderRoute(path)
+
+      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
+      expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+
+      unmount()
+    })
+  })
+
   it('opens order-line drawer from purchase detail line table', async () => {
     const user = userEvent.setup()
     renderRoute('/purchases/o-202604-001')

@@ -193,13 +193,13 @@ export const OrderCreatePage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '商品任务中心', to: '/orders' }, { label: '新建交易记录' }]} />
+      <AppBreadcrumb items={[{ label: '旧订单兼容', to: '/orders' }, { label: '新建旧交易记录' }]} />
       <PageHeader
-        title="新建交易记录"
+        title="新建旧交易记录"
         actions={
           <>
             <button className="button secondary" onClick={() => navigate('/orders')}>
-              返回商品任务中心
+              返回旧订单兼容
             </button>
             <button className="button primary" onClick={handleSave}>
               创建交易记录
@@ -209,6 +209,9 @@ export const OrderCreatePage = () => {
       />
 
       <div className="stack">
+        <div className="subtle-panel">
+          这是 legacy /orders 兼容创建页，仅保留旧演示流程。当前客服新建主流程请使用 /purchases/new，并按购买记录 + 商品行草稿创建。
+        </div>
         <SectionCard title="交易公共信息区" description="这里维护一次购买的公共信息；下方每张商品卡代表一条独立商品任务。">
           <div className="field-grid three">
             <div className="field-control">
