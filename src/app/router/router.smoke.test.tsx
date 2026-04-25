@@ -889,7 +889,13 @@ describe('router smoke', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('请至少填写客户姓名或手机。')
 
     await user.type(screen.getByLabelText('客户姓名'), '李四')
+    await user.type(screen.getByLabelText('已收金额'), '100')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('已收金额不能大于应收总额。')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+
     await user.type(screen.getByLabelText('应收总额'), '1000')
+    await user.clear(screen.getByLabelText('已收金额'))
     await user.type(screen.getByLabelText('已收金额'), '1200')
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
     expect(screen.getByRole('alert')).toHaveTextContent('已收金额不能大于应收总额。')

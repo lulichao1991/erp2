@@ -287,7 +287,7 @@ const validatePurchaseDraft = (
     return '请至少填写客户姓名或手机。'
   }
 
-  if (paymentSummary.receivableAmount > 0 && paymentSummary.receivedAmount > paymentSummary.receivableAmount) {
+  if (paymentSummary.receivedAmount > paymentSummary.receivableAmount) {
     return '已收金额不能大于应收总额。'
   }
 
