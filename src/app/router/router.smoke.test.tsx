@@ -600,6 +600,19 @@ describe('router smoke', () => {
     })
   })
 
+  it('keeps legacy orders compatibility routes reachable outside the primary workflow', () => {
+    const legacyList = renderRoute('/orders')
+
+    expect(screen.getByRole('heading', { name: '旧订单兼容' })).toBeInTheDocument()
+    expect(screen.getByText('旧订单兼容入口仅用于查看和维护历史演示流程。当前主流程请使用 /order-lines 商品行中心与 /purchases/new 新建购买记录。')).toBeInTheDocument()
+
+    legacyList.unmount()
+
+    renderRoute('/orders/o-202604-001')
+
+    expect(screen.getByText(/这是 legacy \/orders 兼容详情页，仅用于旧演示和历史流程维护。/)).toBeInTheDocument()
+  })
+
   it('opens order-line drawer from purchase detail line table', async () => {
     const user = userEvent.setup()
     renderRoute('/purchases/o-202604-001')
