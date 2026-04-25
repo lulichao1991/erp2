@@ -370,7 +370,7 @@ describe('router smoke', () => {
     expect(screen.getByText('编辑跟单 / 下厂信息')).toBeInTheDocument()
     expect(screen.getByText('修改了商品行跟单 / 下厂信息')).toBeInTheDocument()
     expect(screen.getAllByText('深圳精工厂').length).toBeGreaterThan(0)
-    expect(screen.getByText('SKU-RING-OUT-01')).toBeInTheDocument()
+    expect(screen.getAllByText('SKU-RING-OUT-01').length).toBeGreaterThan(0)
     expect(screen.getByText('戒指送深圳工厂加急排产')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('周跟单')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('深圳精工厂')).toBeInTheDocument()
@@ -695,7 +695,7 @@ describe('router smoke', () => {
     expect(screen.getByRole('status')).toHaveTextContent('已保存跟单 / 下厂信息')
     expect(screen.getByText('修改了商品行跟单 / 下厂信息')).toBeInTheDocument()
     expect(screen.getByText('广州链厂')).toBeInTheDocument()
-    expect(screen.getByText('SKU-NECK-OUT-01')).toBeInTheDocument()
+    expect(screen.getAllByText('SKU-NECK-OUT-01').length).toBeGreaterThan(0)
     expect(within(necklaceRow as HTMLElement).getByText('吴跟单')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('山形戒指')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).queryByText('吴跟单')).not.toBeInTheDocument()
@@ -875,6 +875,10 @@ describe('router smoke', () => {
     await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '查看来源产品' }))
     expect(screen.getByText('来源产品详情')).toBeInTheDocument()
     expect(screen.getByText('PD-RING-001')).toBeInTheDocument()
+    expect(within(firstLineCard as HTMLElement).getByLabelText('货号 / SKU')).toHaveValue('PD-RING-001')
+    expect(within(firstLineCard as HTMLElement).getByLabelText('生产任务编号')).toHaveValue('PD-RING-001')
+    expect(within(firstLineCard as HTMLElement).getByLabelText('款式名称')).toHaveValue('山形戒指')
+    expect(within(firstLineCard as HTMLElement).getByLabelText('版本号')).toHaveValue('v3')
     expect(screen.getByText('商品行参数对比')).toBeInTheDocument()
     expect(screen.getAllByText('16号').length).toBeGreaterThan(0)
     expect(screen.getAllByText('已调整').length).toBeGreaterThan(0)
@@ -917,6 +921,12 @@ describe('router smoke', () => {
           sourceProductId: 'p-ring-001',
           selectedSpecId: 'spec-ring-16',
           productName: '山形戒指',
+          productionTaskNo: 'PD-RING-001',
+          skuCode: 'PD-RING-001',
+          styleName: '山形戒指',
+          versionNo: 'v3',
+          needsDesign: true,
+          needsModeling: false,
           quoteResult: expect.objectContaining({ systemQuote: 2000 })
         }),
         expect.objectContaining({
@@ -1095,7 +1105,7 @@ describe('router smoke', () => {
     const { container } = renderRoute('/production-plan')
 
     expect(screen.getByRole('heading', { name: '工厂生产计划' })).toBeInTheDocument()
-    expect(screen.getByText('PD-RING-001')).toBeInTheDocument()
+    expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
     expect(screen.getByText('购买记录 PUR-202604-001')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: '山形戒指' })[0]).toHaveAttribute('href', '/order-lines')
     expect(screen.getByRole('link', { name: '查看商品行' })).toHaveAttribute('href', '/order-lines')

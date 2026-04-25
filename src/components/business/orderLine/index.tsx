@@ -31,7 +31,12 @@ export type OrderLineRow = {
 export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineStatus | string) => void
 
 export type OrderLineDetailsDraft = {
+  lineCode: string
+  productionTaskNo: string
+  skuCode: string
   name: string
+  styleName: string
+  versionNo: string
   category: ProductCategory | string
   selectedSpecValue: string
   specNote: string
@@ -44,6 +49,8 @@ export type OrderLineDetailsDraft = {
   productionRemark: string
   priority: OrderLinePriority
   requiresDesign: boolean
+  requiresModeling: boolean
+  requiresWax: boolean
   currentOwner: string
   promisedDate: string
 }
@@ -320,7 +327,7 @@ const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = 
   return [
     hasOpenAfterSales ? '售后跟进' : null,
     pressure.overdue ? '已超时' : null,
-    line.priority === 'urgent' ? '加急' : null,
+    line.isUrgent || line.priority === 'urgent' ? '加急' : null,
     line.priority === 'vip' ? 'VIP' : null
   ].filter((item): item is string => Boolean(item))
 }
@@ -389,7 +396,12 @@ export const buildOrderLineStatusLog = ({
 }
 
 export const buildOrderLineDetailsDraft = (line: OrderLine): OrderLineDetailsDraft => ({
+  lineCode: line.lineCode || '',
+  productionTaskNo: line.productionTaskNo || line.itemSku || '',
+  skuCode: line.skuCode || line.itemSku || '',
   name: line.name,
+  styleName: line.styleName || '',
+  versionNo: line.versionNo || '',
   category: line.category || 'other',
   selectedSpecValue: line.selectedSpecValue || '',
   specNote: line.actualRequirements?.specNote || line.selectedSpecSnapshot?.note || '',
@@ -401,7 +413,9 @@ export const buildOrderLineDetailsDraft = (line: OrderLine): OrderLineDetailsDra
   customerRemark: line.actualRequirements?.remark || '',
   productionRemark: line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '',
   priority: line.priority || 'normal',
-  requiresDesign: Boolean(line.designInfo?.requiresRemodeling),
+  requiresDesign: Boolean(line.requiresDesign ?? line.designInfo?.requiresRemodeling),
+  requiresModeling: Boolean(line.requiresModeling ?? line.designInfo?.requiresRemodeling),
+  requiresWax: Boolean(line.requiresWax ?? line.designInfo?.waxFileUrl),
   currentOwner: line.currentOwner || '',
   promisedDate: line.promisedDate || ''
 })
@@ -414,11 +428,20 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
 
   return {
     ...line,
+    lineCode: draft.lineCode.trim() || undefined,
+    productionTaskNo: draft.productionTaskNo.trim() || undefined,
+    skuCode: draft.skuCode.trim() || undefined,
     name: draft.name.trim() || line.name,
+    styleName: draft.styleName.trim() || undefined,
+    versionNo: draft.versionNo.trim() || undefined,
     category: draft.category as ProductCategory,
     currentOwner: draft.currentOwner.trim() || undefined,
     promisedDate: draft.promisedDate || undefined,
     priority: draft.priority,
+    isUrgent: draft.priority === 'urgent' || draft.priority === 'vip',
+    requiresDesign: draft.requiresDesign,
+    requiresModeling: draft.requiresModeling,
+    requiresWax: draft.requiresWax,
     selectedSpecValue: selectedSpecValue || undefined,
     selectedMaterial: selectedMaterial || undefined,
     selectedProcess: selectedProcess || undefined,
@@ -435,7 +458,7 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
     },
     designInfo: {
       ...line.designInfo,
-      requiresRemodeling: draft.requiresDesign,
+      requiresRemodeling: draft.requiresModeling,
       designStatus: draft.requiresDesign ? (line.designInfo?.designStatus === 'not_required' ? 'pending' : line.designInfo?.designStatus || 'pending') : 'not_required'
     },
     productionInfo: {
@@ -471,7 +494,7 @@ export const buildOrderLineOutsourceDraft = (line: OrderLine): OrderLineOutsourc
   followUpOwner: line.currentOwner || '',
   supplierName: line.outsourceInfo?.supplierName || '',
   outsourcedAt: line.outsourceInfo?.outsourcedAt || '',
-  itemSku: line.itemSku || line.lineCode || '',
+  itemSku: line.productionTaskNo || line.skuCode || line.itemSku || line.lineCode || '',
   plannedDeliveryDate: line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '',
   outsourceNote: line.outsourceInfo?.outsourceNote || '',
   outsourceStatus: line.outsourceInfo?.outsourceStatus || 'pending'
@@ -480,6 +503,8 @@ export const buildOrderLineOutsourceDraft = (line: OrderLine): OrderLineOutsourc
 export const applyOrderLineOutsourceDraft = (line: OrderLine, draft: OrderLineOutsourceDraft): OrderLine => ({
   ...line,
   currentOwner: draft.followUpOwner.trim() || undefined,
+  productionTaskNo: draft.itemSku.trim() || undefined,
+  skuCode: draft.itemSku.trim() || line.skuCode,
   itemSku: draft.itemSku.trim() || undefined,
   outsourceInfo: {
     ...line.outsourceInfo,
@@ -968,8 +993,28 @@ const OrderLineDetailsSection = ({
         <div className="stack">
           <div className="field-grid three">
             <label className="field-control">
+              <span className="field-label">商品行编号</span>
+              <input className="input" value={draft.lineCode} onChange={(event) => updateDraft('lineCode', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">生产任务编号</span>
+              <input className="input" value={draft.productionTaskNo} onChange={(event) => updateDraft('productionTaskNo', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">货号 / SKU</span>
+              <input className="input" value={draft.skuCode} onChange={(event) => updateDraft('skuCode', event.target.value)} />
+            </label>
+            <label className="field-control">
               <span className="field-label">商品名称</span>
               <input className="input" value={draft.name} onChange={(event) => updateDraft('name', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">款式名称</span>
+              <input className="input" value={draft.styleName} onChange={(event) => updateDraft('styleName', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">版本号</span>
+              <input className="input" value={draft.versionNo} onChange={(event) => updateDraft('versionNo', event.target.value)} />
             </label>
             <label className="field-control">
               <span className="field-label">品类</span>
@@ -1035,6 +1080,20 @@ const OrderLineDetailsSection = ({
               </select>
             </label>
             <label className="field-control">
+              <span className="field-label">是否需要建模</span>
+              <select className="select" value={draft.requiresModeling ? 'true' : 'false'} onChange={(event) => updateDraft('requiresModeling', event.target.value === 'true')}>
+                <option value="true">是</option>
+                <option value="false">否</option>
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">是否需要出蜡</span>
+              <select className="select" value={draft.requiresWax ? 'true' : 'false'} onChange={(event) => updateDraft('requiresWax', event.target.value === 'true')}>
+                <option value="true">是</option>
+                <option value="false">否</option>
+              </select>
+            </label>
+            <label className="field-control">
               <span className="field-label">客服备注</span>
               <textarea className="textarea" value={draft.customerRemark} onChange={(event) => updateDraft('customerRemark', event.target.value)} />
             </label>
@@ -1054,7 +1113,12 @@ const OrderLineDetailsSection = ({
         </div>
       ) : (
         <InfoGrid columns={3}>
+          <InfoField label="商品行编号" value={line.lineCode || line.id} />
+          <InfoField label="生产任务编号" value={line.productionTaskNo || line.itemSku || '—'} />
+          <InfoField label="货号 / SKU" value={line.skuCode || line.itemSku || '—'} />
           <InfoField label="商品名称" value={line.name} />
+          <InfoField label="款式名称" value={line.styleName || '—'} />
+          <InfoField label="版本号" value={line.versionNo || line.sourceProduct?.sourceProductVersion || '—'} />
           <InfoField label="品类" value={categoryLabelMap[line.category || 'other'] || line.category || '其他'} />
           <InfoField label="规格" value={line.selectedSpecValue || '—'} />
           <InfoField label="规格备注" value={line.actualRequirements?.specNote || line.selectedSpecSnapshot?.note || '—'} />
@@ -1065,8 +1129,10 @@ const OrderLineDetailsSection = ({
           <InfoField label="刻字 / 印记" value={line.actualRequirements?.engraveText || '—'} />
           <InfoField label="客服备注" value={line.actualRequirements?.remark || '—'} />
           <InfoField label="生产备注" value={line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '—'} />
-          <InfoField label="是否加急" value={line.priority === 'urgent' ? '加急' : line.priority === 'vip' ? 'VIP' : line.priority === 'high' ? '高优先' : '否'} />
-          <InfoField label="是否需要设计" value={line.designInfo?.requiresRemodeling ? '是' : '否'} />
+          <InfoField label="是否加急" value={line.isUrgent || line.priority === 'urgent' ? '加急' : line.priority === 'vip' ? 'VIP' : line.priority === 'high' ? '高优先' : '否'} />
+          <InfoField label="是否需要设计" value={(line.requiresDesign ?? line.designInfo?.requiresRemodeling) ? '是' : '否'} />
+          <InfoField label="是否需要建模" value={(line.requiresModeling ?? line.designInfo?.requiresRemodeling) ? '是' : '否'} />
+          <InfoField label="是否需要出蜡" value={line.requiresWax ? '是' : '否'} />
           <InfoField label="当前负责人" value={line.currentOwner || '待分配'} />
           <InfoField label="承诺交期" value={line.promisedDate || '—'} />
         </InfoGrid>
@@ -1719,7 +1785,8 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     const matchesStatus = filters.status === 'all' || line.status === filters.status
     const matchesOwner = filters.owner.trim().length === 0 || owner.includes(filters.owner.trim())
     const matchesCategory = filters.category === 'all' || line.category === filters.category
-    const matchesUrgent = filters.urgent === 'all' || (filters.urgent === 'yes' ? line.priority === 'urgent' : line.priority !== 'urgent')
+    const lineIsUrgent = Boolean(line.isUrgent || line.priority === 'urgent' || line.priority === 'vip')
+    const matchesUrgent = filters.urgent === 'all' || (filters.urgent === 'yes' ? lineIsUrgent : !lineIsUrgent)
     const matchesAfterSales = filters.afterSales === 'all' || (filters.afterSales === 'yes' ? hasActiveAfterSales : !hasActiveAfterSales)
     const matchesOverdue = filters.overdue === 'all' || (filters.overdue === 'yes' ? overdue : !overdue)
     const matchesFactory = factoryKeyword.length === 0 || factoryText.includes(factoryKeyword)
@@ -1970,12 +2037,12 @@ export const OrderLineTable = ({
               <td>
                 <div className="stack" style={{ gap: 6 }}>
                   <strong>{line.lineCode || line.id}</strong>
-                  <span className="text-caption">{line.sourceProduct?.sourceProductCode || '未引用模板'}</span>
+                  <span className="text-caption">生产任务 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</span>
                 </div>
               </td>
               <td>
                 <div>{line.name}</div>
-                <div className="text-caption">{line.sourceProduct?.sourceProductName || '非模板定制'}</div>
+                <div className="text-caption">{line.styleName || line.sourceProduct?.sourceProductName || '非模板定制'}</div>
               </td>
               <td>
                 <div>{customer?.name || '—'}</div>
@@ -2097,6 +2164,7 @@ export const OrderLineDetailDrawer = ({
           <DetailSection title="顶部摘要">
             <InfoGrid columns={3}>
               <InfoField label="商品行编号" value={line.lineCode || line.id} />
+              <InfoField label="生产任务编号" value={line.productionTaskNo || line.itemSku || '—'} />
               <InfoField label="商品名称" value={line.name} />
               <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(String(line.status))} />} />
               <InfoField label="当前负责人" value={line.currentOwner || purchase?.ownerName || '待分配'} />

@@ -37,6 +37,9 @@ export type PurchaseDraftFormValue = {
 
 export type OrderLineDraft = {
   id: string
+  lineCode: string
+  productionTaskNo: string
+  skuCode: string
   sourceProductId?: string
   sourceProductCode?: string
   sourceProductName?: string
@@ -45,11 +48,17 @@ export type OrderLineDraft = {
   selectedSpecialOptions: string[]
   productName: string
   category: string
+  styleName: string
+  versionNo: string
   spec: string
   material: string
   process: string
+  sizeNote: string
+  engraveText: string
   specialRequirement: string
   needsDesign: boolean
+  needsModeling: boolean
+  needsWax: boolean
   urgent: boolean
   ownerName: string
   promisedDate: string
@@ -87,9 +96,16 @@ type ProductReferencePatch = Pick<
   | 'selectedSpecialOptions'
   | 'productName'
   | 'category'
+  | 'styleName'
+  | 'versionNo'
+  | 'skuCode'
+  | 'productionTaskNo'
   | 'spec'
   | 'material'
   | 'process'
+  | 'needsDesign'
+  | 'needsModeling'
+  | 'needsWax'
 >
 
 const defaultPurchaseDraft: PurchaseDraftFormValue = {
@@ -116,14 +132,23 @@ const createOrderLineDraftId = () => `order-line-draft-${draftLineSeed++}`
 
 const createOrderLineDraft = (): OrderLineDraft => ({
   id: createOrderLineDraftId(),
+  lineCode: '',
+  productionTaskNo: '',
+  skuCode: '',
   selectedSpecialOptions: [],
   productName: '',
   category: '',
+  styleName: '',
+  versionNo: '',
   spec: '',
   material: '',
   process: '',
+  sizeNote: '',
+  engraveText: '',
   specialRequirement: '',
   needsDesign: true,
+  needsModeling: false,
+  needsWax: false,
   urgent: false,
   ownerName: '客服A',
   promisedDate: ''
@@ -131,7 +156,9 @@ const createOrderLineDraft = (): OrderLineDraft => ({
 
 const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => ({
   ...line,
-  id: createOrderLineDraftId()
+  id: createOrderLineDraftId(),
+  lineCode: '',
+  productionTaskNo: ''
 })
 
 const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
@@ -174,9 +201,16 @@ const buildProductReferencePatch = (productId: string): ProductReferencePatch =>
       selectedSpecialOptions: [],
       productName: '',
       category: '',
+      styleName: '',
+      versionNo: '',
+      skuCode: '',
+      productionTaskNo: '',
       spec: '',
       material: '',
-      process: ''
+      process: '',
+      needsDesign: true,
+      needsModeling: false,
+      needsWax: false
     }
   }
 
@@ -189,9 +223,16 @@ const buildProductReferencePatch = (productId: string): ProductReferencePatch =>
     selectedSpecialOptions: [],
     productName: product.shortName || product.name,
     category: getProductCategoryLabel(product.category),
+    styleName: product.shortName || product.name,
+    versionNo: product.version,
+    skuCode: product.code,
+    productionTaskNo: product.code,
     spec: '',
     material: product.defaultMaterial || product.supportedMaterials[0] || '',
-    process: product.defaultProcess || product.supportedProcesses[0] || ''
+    process: product.defaultProcess || product.supportedProcesses[0] || '',
+    needsDesign: true,
+    needsModeling: Boolean(product.customRules.requiresRemodeling),
+    needsWax: Boolean(product.assets.modelFiles.length > 0)
   }
 }
 
@@ -229,7 +270,7 @@ const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
 }
 
 const buildDraftSourceProductCompareValue = (line: OrderLineDraft, tempLineNo: string): SourceProductCompareValue => ({
-  sourceLabel: `${tempLineNo} ${line.productName || line.sourceProductName || '未命名商品行'}`,
+  sourceLabel: `${line.lineCode || tempLineNo} ${line.styleName || line.productName || line.sourceProductName || '未命名商品行'}`,
   specValue: line.spec,
   material: line.material,
   process: line.process,
@@ -270,12 +311,20 @@ const buildDraftPayload = (
       canShip: paymentSummary.canShip
     }
   },
-  orderLineDrafts: orderLines.map((line, index) => ({
-    ...line,
-    tempLineNo: getTempLineNo(index),
-    specParameterSummary: getSpecParameterSummary(getSelectedSpec(line, getDraftProduct(line))),
-    quoteResult: buildOrderLineDraftQuote(line)
-  }))
+  orderLineDrafts: orderLines.map((line, index) => {
+    const tempLineNo = line.lineCode.trim() || getTempLineNo(index)
+    const skuCode = line.skuCode.trim()
+
+    return {
+      ...line,
+      lineCode: tempLineNo,
+      productionTaskNo: line.productionTaskNo.trim() || skuCode || tempLineNo,
+      skuCode: skuCode || line.productionTaskNo.trim() || tempLineNo,
+      tempLineNo,
+      specParameterSummary: getSpecParameterSummary(getSelectedSpec(line, getDraftProduct(line))),
+      quoteResult: buildOrderLineDraftQuote(line)
+    }
+  })
 })
 
 const validatePurchaseDraft = (
@@ -549,10 +598,13 @@ export const PurchaseOrderLineTable = ({
 
               return (
                 <tr key={line.id} role="button" tabIndex={0} onClick={handleRowClick} onKeyDown={handleRowKeyDown}>
-                  <td>{line.lineCode || line.id}</td>
+                  <td>
+                    <div>{line.lineCode || line.id}</div>
+                    <div className="text-caption">生产任务 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</div>
+                  </td>
                   <td>
                     <div>{line.name}</div>
-                    <div className="text-caption">{line.sourceProduct?.sourceProductName || '非模板定制'}</div>
+                    <div className="text-caption">{line.styleName || line.sourceProduct?.sourceProductName || '非模板定制'} · {line.versionNo || line.sourceProduct?.sourceProductVersion || '无版本'}</div>
                   </td>
                   <td>
                     <StatusTag value={getOrderLineStatusLabel(String(line.status))} />
@@ -886,7 +938,7 @@ export const OrderLineDraftCard = ({
   return (
     <div className="subtle-panel">
       <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <strong>商品行 {tempLineNo}</strong>
+        <strong>商品行 {line.lineCode || tempLineNo}</strong>
         <div className="row wrap">
           <button type="button" className="button ghost small" onClick={onDuplicate}>
             复制商品行
@@ -909,12 +961,32 @@ export const OrderLineDraftCard = ({
           </select>
         </label>
         <label className="field-control">
+          <span className="field-label">商品行编号</span>
+          <input className="input" value={line.lineCode} onChange={(event) => onChange({ lineCode: event.target.value })} placeholder={tempLineNo} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">生产任务编号</span>
+          <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder="默认同商品行编号 / 货号" />
+        </label>
+        <label className="field-control">
           <span className="field-label">商品名称（必填）</span>
           <input aria-label="商品名称" className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
         </label>
         <label className="field-control">
           <span className="field-label">品类</span>
           <input className="input" value={line.category} onChange={(event) => onChange({ category: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">款式名称</span>
+          <input className="input" value={line.styleName} onChange={(event) => onChange({ styleName: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">版本号</span>
+          <input className="input" value={line.versionNo} onChange={(event) => onChange({ versionNo: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">货号 / SKU</span>
+          <input className="input" value={line.skuCode} onChange={(event) => onChange({ skuCode: event.target.value })} />
         </label>
       </div>
 
@@ -980,6 +1052,14 @@ export const OrderLineDraftCard = ({
           <input className="input" value={line.specialRequirement} onChange={(event) => onChange({ specialRequirement: event.target.value })} />
         </label>
         <label className="field-control">
+          <span className="field-label">尺寸备注</span>
+          <input className="input" value={line.sizeNote} onChange={(event) => onChange({ sizeNote: event.target.value })} />
+        </label>
+        <label className="field-control">
+          <span className="field-label">印记内容</span>
+          <input className="input" value={line.engraveText} onChange={(event) => onChange({ engraveText: event.target.value })} />
+        </label>
+        <label className="field-control">
           <span className="field-label">负责人</span>
           <input className="input" value={line.ownerName} onChange={(event) => onChange({ ownerName: event.target.value })} />
         </label>
@@ -1007,6 +1087,14 @@ export const OrderLineDraftCard = ({
           <label className="row" style={{ gap: 8 }}>
             <input type="checkbox" checked={line.needsDesign} onChange={(event) => onChange({ needsDesign: event.target.checked })} />
             <span>是否需要设计</span>
+          </label>
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" checked={line.needsModeling} onChange={(event) => onChange({ needsModeling: event.target.checked })} />
+            <span>是否需要建模</span>
+          </label>
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" checked={line.needsWax} onChange={(event) => onChange({ needsWax: event.target.checked })} />
+            <span>是否需要出蜡</span>
           </label>
           <label className="row" style={{ gap: 8 }}>
             <input type="checkbox" checked={line.urgent} onChange={(event) => onChange({ urgent: event.target.checked })} />
