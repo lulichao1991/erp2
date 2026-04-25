@@ -35,22 +35,13 @@
 - 售后记录
 - 商品行编辑
 
-### 2.4 旧 `/orders` 只保留兼容
-旧 `/orders` 不再是当前主入口。
-
-允许保留访问：
-- `/orders`
-- `/orders/new`
-- `/orders/:orderId`
-
-这些路由只作为旧模块兼容入口，后续应迁移、隐藏或删除。新文档和新代码不得再把 `/orders` 写成当前主模块。
+### 2.4 legacy `/orders` 已删除
+旧 `/orders` 不再是当前主入口，也不再作为可访问兼容路由保留。
 
 当前新主流程入口是 `/order-lines` 与 `/purchases/new`：
 - 商品行执行、筛选、物流、售后和生产推进走 `/order-lines`
 - 新建一次购买和多条商品行草稿走 `/purchases/new`
 - 查看一次购买的归组信息走 `/purchases/:purchaseId`
-
-`/orders` 页面顶部应显示兼容提示，避免用户把旧订单模块当作当前业务主流程。
 
 删除准备记录见：`docs/frontend/legacy-orders-removal-plan.md`。
 
@@ -70,7 +61,7 @@
 说明：
 - 导航中只展示“商品行中心”
 - 不再同时展示“商品任务中心”或“订单中心”
-- `/orders` 旧模块不作为侧边栏入口展示
+- `/orders` 旧模块已删除，不作为侧边栏入口展示
 - `/production-plan` 仍可作为工厂角色入口展示，但其视图数据只来自当前 `tasks + purchases + orderLines + products`
 
 ### `/customers`
@@ -267,8 +258,8 @@
   ├─ 产品详情 /products/:productId
   └─ 产品编辑 /products/:productId/edit
 
-旧兼容模块 /orders
-  └─ 旧订单兼容入口，仅保留访问，不作为当前主入口
+legacy /orders
+  └─ 已删除；旧实现仅可通过 git 历史回看
 ```
 
 ---
@@ -290,15 +281,6 @@
 - 产品管理 / 产品详情 / {产品名称}
 - 产品管理 / 产品详情 / {产品名称} / 编辑产品
 
-### 旧 `/orders`
-- 旧订单兼容 / ...
-
-说明：
-- 旧 `/orders` breadcrumb 不应再写成当前主模块
-- 旧 `/orders` 页面标题和提示应明确标记为兼容入口
-
----
-
 ## 8. 路由最小集
 
 当前主线必须保持可访问：
@@ -314,13 +296,7 @@
 /products/:productId/edit
 ```
 
-兼容路由可继续保留：
-
-```text
-/orders
-/orders/new
-/orders/:orderId
-```
+legacy `/orders` 路由已删除；不再列入可访问路由最小集。
 
 ---
 
@@ -328,7 +304,6 @@
 
 当前清理收口阶段暂不新增：
 
-- 客户中心独立页面
 - 物流独立列表页
 - 售后独立列表页
 - 财务中心
@@ -347,6 +322,6 @@
 - `/purchases/:purchaseId` 可作为购买记录详情入口访问
 - `/products` 可作为产品管理入口访问
 - `/production-plan` 可作为 current-only 生产计划入口访问
-- `/orders` 可以保留可访问，但不在导航中展示
+- `/orders` 不再可访问，当前主流程不依赖旧订单模块
 - 文档中不再把 `TransactionRecord` 作为当前主模型
 - 文档中不再把 `/orders` 写成当前主模块

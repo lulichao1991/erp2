@@ -56,15 +56,17 @@
 - `/products/:productId`
 - `/products/:productId/edit`
 
-### 旧模块兼容
+### Legacy `/orders` removal
 
-旧 `/orders` 路由仍可保留访问，但只作为旧模块兼容路由，不再作为当前主入口：
+legacy `/orders` 模块已经删除，不再作为可访问路由或兼容入口保留。
 
-- `/orders`
-- `/orders/new`
-- `/orders/:orderId`
+当前购买与商品执行主流程统一使用：
 
-旧模块后续应迁移、隐藏或删除；当前阶段不删除旧页面、旧 services、旧 mocks、旧 types。
+- `/purchases/new`
+- `/purchases/:purchaseId`
+- `/order-lines`
+
+如需回看旧实现或回滚兼容入口，请使用删除前的 git 历史 / PR 记录。
 
 ---
 
@@ -106,9 +108,8 @@
 - 售后记录优先关联 `orderLineId`
 - 同一次购买中的多件商品可以分别发货、分别售后
 
-### 4. 旧命名只作为兼容层
+### 4. 旧命名只作为历史兼容口径
 - `TransactionRecord` 只能作为 `Purchase` 的历史兼容别名
-- `OrderItem` 只能作为 `OrderLine` 的历史兼容命名
 - `SourceProductSnapshot` 只能作为 `ProductSnapshot` 的历史兼容命名
 
 ---

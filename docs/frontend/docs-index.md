@@ -19,7 +19,7 @@ Customer -> Purchase -> OrderLine -> Product
 - `/customers`
 - `/customers/:customerId`
 
-旧 `/orders` 只作为兼容模块保留，不再作为当前主入口或当前主文档口径。
+legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口或当前主文档口径。
 
 ---
 
@@ -32,7 +32,7 @@ Customer -> Purchase -> OrderLine -> Product
 作用：
 - 定义项目业务口径与 AI coding 行为规则
 - 定义当前主线对象与禁止事项
-- 明确旧 `/orders` 的兼容定位
+- 明确 legacy `/orders` 已删除
 
 2. `README.md`
 
@@ -45,7 +45,7 @@ Customer -> Purchase -> OrderLine -> Product
 作用：
 - 定义当前主路由与页面职责
 - 明确 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products` 的主入口地位
-- 明确旧 `/orders` 仅为兼容模块
+- 明确 legacy `/orders` 已删除，当前页面只围绕 `Purchase + OrderLine`
 
 4. `docs/frontend/ui-structure.md`
 
@@ -58,7 +58,7 @@ Customer -> Purchase -> OrderLine -> Product
 作用：
 - 定义 `Customer / Purchase / OrderLine / ProductSnapshot` 等当前主对象
 - 明确 `TransactionRecord` 只能作为 `Purchase` 的兼容别名
-- 明确旧 `orders.ts` 只服务旧 `/orders` 兼容模块
+- 明确当前 mock 主线为 `purchases.ts + order-lines.ts`
 
 6. `docs/frontend/handoff.md`
 
@@ -74,9 +74,9 @@ Customer -> Purchase -> OrderLine -> Product
 8. `docs/frontend/legacy-orders-removal-plan.md`
 
 作用：
-- 记录 legacy `/orders` 删除前的兼容迁移准备
-- 梳理 route smoke tests、productionPlan fallback、useAppData legacy orders APIs 的替代顺序
-- 明确旧 `/orders` 删除前置条件
+- 记录 legacy `/orders` 删除完成状态
+- 梳理 current workflow route smoke 与删除后的回滚口径
+- 明确不要重新引入旧 `/orders`
 
 ---
 
@@ -189,16 +189,16 @@ Customer -> Purchase -> OrderLine -> Product
 
 ## 7. 当前最容易搞错的地方
 
-### 7.1 把旧 `/orders` 当成当前主入口
+### 7.1 把旧 `/orders` 当成当前入口
 
 错误理解：
-- `/orders` 仍是当前订单中心或商品任务中心主入口
+- `/orders` 仍是当前订单中心、商品任务中心主入口或兼容入口
 
 正确理解：
 - 当前主入口是 `/order-lines`
 - 新建购买记录是 `/purchases/new`
 - 购买记录详情是 `/purchases/:purchaseId`
-- 旧 `/orders` 只作为兼容模块保留
+- legacy `/orders` runtime 模块已删除
 
 ### 7.2 把 TransactionRecord 当成当前主模型
 
@@ -212,7 +212,7 @@ Customer -> Purchase -> OrderLine -> Product
 ### 7.3 把 OrderLine 写回旧商品任务中心口径
 
 错误理解：
-- `OrderLine` 等同旧 `/orders` 页面里的 `OrderItem`
+- `OrderLine` 应回退为旧订单商品结构
 
 正确理解：
 - `OrderLine` 是当前系统主操作对象

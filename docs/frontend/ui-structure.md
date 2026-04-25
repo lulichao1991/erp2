@@ -37,8 +37,8 @@
 - 商品行引用产品后，保留 `ProductSnapshot`
 - 点击商品行中的来源产品入口，打开来源产品详情
 
-### 2.4 旧 `/orders` 是兼容模块
-旧 `/orders` 页面可以继续访问，但不再作为当前主 UI 入口，也不在侧边栏中展示。
+### 2.4 legacy `/orders` 已删除
+旧 `/orders` 页面不再访问，不作为当前主 UI 入口，也不在侧边栏中展示。
 
 ---
 
@@ -283,19 +283,13 @@
 
 ---
 
-## 8. 旧 `/orders` 兼容页面
+## 8. legacy `/orders` 删除状态
 
-旧 `/orders` 相关页面和组件暂时保留，用于避免一次性破坏已有演示和测试。
-
-兼容页面包括：
-- `/orders`
-- `/orders/new`
-- `/orders/:orderId`
+旧 `/orders` 相关页面、组件、service、mock 和类型已经删除。
 
 说明：
-- 不再作为当前主入口
-- 不在侧边栏展示
-- 后续应迁移到 `Purchase + OrderLine` 主线后再隐藏或删除
+- 当前主流程入口是 `/order-lines`、`/purchases/*`、`/customers/*`、`/tasks` 和 `/production-plan`
+- 旧实现如需回看，使用 git 历史 / 删除前 PR
 
 ---
 
@@ -306,4 +300,4 @@
 - 购买记录详情页清楚表达“购买记录归组，商品行执行”
 - 产品详情页清楚表达“产品是模板”
 - 物流、售后默认关联 `orderLineId`
-- 旧 `/orders` 不再被写成当前主模块
+- 旧 `/orders` 不再被写成当前主模块或兼容入口
