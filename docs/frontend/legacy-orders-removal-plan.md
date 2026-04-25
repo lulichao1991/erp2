@@ -97,3 +97,46 @@ Legacy productionPlan fallback can be removed only when all are true:
 - status actions update `OrderLine.productionInfo` only
 - current route smoke still asserts no links to `/orders`
 - legacy fallback tests are either migrated to current-mainline tests or intentionally deleted with `/orders`
+
+## 4. Phase 10: useAppData Legacy Orders API Replacement Plan
+
+Current `useAppData` state:
+
+- current state: `products`, `purchases`, `orderLines`, `tasks`
+- legacy compatibility state: `orders`
+- current helper APIs: `getPurchase`, `getOrderLine`, `updateOrderLineProductionInfo`, `updateTask`
+- legacy APIs: `getOrder`, `getTasksByOrder`, `saveOrder`, `updateOrder`, `transitionOrderStatus`, `updateOrderItem`, `removeOrderItem`, `createTaskFromOrder`
+
+### Current Call Sites
+
+Legacy API usage is currently limited to:
+
+- `src/pages/orders/*`
+  - full legacy compatibility page flow
+  - can be removed only with `/orders`
+- `src/pages/productionPlan/*`
+  - passes `appData.orders` as adapter fallback
+  - uses `updateOrderItem` only after `updateOrderLineProductionInfo` fails
+- `useAppData.updateTask`
+  - updates current `tasks`
+  - mirrors a timeline record into legacy `orders` for old route visibility
+
+### Replacement Direction
+
+Replace legacy APIs in this order:
+
+1. Keep current-mainline reads on `purchases`, `orderLines`, and `tasks`.
+2. Move any remaining productionPlan fallback reads behind adapter tests, then stop passing `appData.orders` from productionPlan pages.
+3. Add current task timeline or order-line log support before removing the `updateTask` legacy order timeline mirror.
+4. Remove `/orders` page call sites last, together with the legacy route deletion.
+5. Only then remove `orders` state and legacy API fields from `AppDataContextValue`.
+
+### API Removal Gate
+
+Legacy `useAppData` orders APIs can be removed only when all are true:
+
+- no page outside `src/pages/orders/*` reads `appData.orders`
+- no current page calls `getOrder`, `saveOrder`, `updateOrder`, `transitionOrderStatus`, `updateOrderItem`, or `removeOrderItem`
+- productionPlan no longer needs `orders` input or `updateOrderItem` fallback
+- task updates have a current-mainline timeline/log destination
+- `/orders` route tests have been removed or replaced by current-mainline tests
