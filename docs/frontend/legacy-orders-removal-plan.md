@@ -60,3 +60,40 @@ The `/orders` route tests can be removed only when all are true:
 - current smoke tests cover equivalent Purchase + OrderLine behavior where the behavior is still needed.
 - docs no longer list `/orders` as a reachable compatibility route.
 - `npm test -- --reporter=default` passes after removing the legacy route tests.
+
+## 3. Phase 9: productionPlan Fallback Migration Plan
+
+Current productionPlan state:
+
+- list and detail pages pass `tasks + purchases + orderLines + orders + products` into the adapter
+- adapter resolves current `Purchase + OrderLine` first
+- legacy `orders / order.items` remains fallback
+- detail writes production feedback through `updateOrderLineProductionInfo` first, then falls back to `updateOrderItem`
+- tests intentionally cover both current-first behavior and legacy fallback behavior
+
+### Keep For Now
+
+Keep these compatibility points until legacy `/orders` removal is explicitly approved:
+
+- `orders?: Order[]` adapter inputs
+- `Order / OrderItem` compatible detail fields used by productionPlan components
+- legacy fallback tests that prove old `orders / order.items` still work
+- `updateOrderItem` fallback in production plan detail
+
+### Migration Steps
+
+1. Add current-only productionPlan tests that pass no `orders` input and cover list, detail, file groups, timeline, and status actions.
+2. Make productionPlan pages stop passing `appData.orders` once current-only coverage is strong enough.
+3. Keep adapter fallback internally for one transition PR, but mark direct page-level `orders` input as deprecated.
+4. Remove `updateOrderItem` fallback only after detail page tests prove `updateOrderLineProductionInfo` covers every reachable current task.
+5. Remove adapter `Order / OrderItem` output compatibility only after productionPlan components stop accepting compatible legacy fields.
+
+### Deletion Gate For productionPlan Fallback
+
+Legacy productionPlan fallback can be removed only when all are true:
+
+- every `factory_production` task in current mocks has `purchaseId` and `orderLineId`
+- productionPlan list and detail work without `orders`
+- status actions update `OrderLine.productionInfo` only
+- current route smoke still asserts no links to `/orders`
+- legacy fallback tests are either migrated to current-mainline tests or intentionally deleted with `/orders`
