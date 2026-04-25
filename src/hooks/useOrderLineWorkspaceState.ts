@@ -34,6 +34,7 @@ import {
   type OrderLineStatusUpdateHandler
 } from '@/components/business/orderLine'
 import { afterSalesMock, logisticsMock, orderLineLogsMock } from '@/mocks'
+import { getOrderLineLineStatus } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLineLog } from '@/types/order-line'
 import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
 
@@ -84,7 +85,7 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
 
   const handleStatusChange: OrderLineStatusUpdateHandler = (lineId, nextStatus) => {
     const currentRow = rows.find(({ line }) => line.id === lineId)
-    if (!currentRow || currentRow.line.status === nextStatus) {
+    if (!currentRow || getOrderLineLineStatus(currentRow.line) === nextStatus) {
       return
     }
 

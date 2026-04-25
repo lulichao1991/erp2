@@ -4,14 +4,39 @@ import { SourceProductDrawer, type SourceProductCompareValue } from '@/component
 import { EmptyState, InfoField, InfoGrid, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
-import type { OrderLine, OrderLineLog, OrderLineOutsourceStatus, OrderLinePriority, OrderLineProductionStatus, OrderLineStatus } from '@/types/order-line'
+import {
+  buildOrderLineStatusPatch,
+  factoryWorkflowStatusLabelMap,
+  getOrderLineFactoryStatus,
+  getOrderLineFinanceStatus,
+  getOrderLineDesignStatus,
+  getOrderLineLineStatus,
+  getOrderLineModelingStatus,
+  getOrderLineLineStatusLabel,
+  getOrderLineProductionStatus,
+  getLegacyStatusForLineStatus,
+  orderLineLineStatusLabelMap,
+  orderLineLineStatusOptions,
+  productionWorkflowStatusLabelMap,
+  designWorkflowStatusLabelMap,
+  modelingWorkflowStatusLabelMap,
+  financeWorkflowStatusLabelMap
+} from '@/services/orderLine/orderLineWorkflow'
+import type {
+  OrderLine,
+  OrderLineLineStatus,
+  OrderLineLog,
+  OrderLineOutsourceStatus,
+  OrderLinePriority,
+  OrderLineProductionStatus
+} from '@/types/order-line'
 import type { ProductCategory } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { AfterSalesCase, AfterSalesCaseStatus, AfterSalesCaseType, LogisticsDirection, LogisticsRecord, LogisticsType } from '@/types/supporting-records'
 
 export type OrderLineCenterFilters = {
   keyword: string
-  status: 'all' | OrderLineStatus | string
+  status: 'all' | OrderLineLineStatus | string
   owner: string
   category: 'all' | ProductCategory | string
   urgent: 'all' | 'yes' | 'no'
@@ -20,7 +45,7 @@ export type OrderLineCenterFilters = {
   factory: string
   purchase: string
   customer: string
-  quickView: 'all' | 'my_todo' | 'due_soon' | 'after_sales' | 'risk'
+  quickView: 'all' | OrderLineLineStatus | string
 }
 
 export type OrderLineRow = {
@@ -28,7 +53,7 @@ export type OrderLineRow = {
   purchase?: Purchase
 }
 
-export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineStatus | string) => void
+export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
 
 export type OrderLineDetailsDraft = {
   lineCode: string
@@ -112,47 +137,13 @@ export type OrderLineAfterSalesCreateHandler = (record: AfterSalesCase) => void
 export type OrderLineAfterSalesUpdateHandler = (recordId: string, draft: OrderLineAfterSalesDraft) => void
 export type OrderLineAfterSalesCloseHandler = (recordId: string) => void
 
-const statusLabelMap: Record<string, string> = {
-  draft: '草稿',
-  pending_confirm: '待确认',
-  pending_measurement: '待测量',
-  pending_design: '待设计',
-  designing: '设计中',
-  pending_outsource: '待下厂',
-  in_production: '生产中',
-  pending_factory_feedback: '待工厂回传',
-  pending_shipment: '待发货',
-  shipped: '已发货',
-  after_sales: '售后中',
-  completed: '已完成',
-  cancelled: '已取消',
-  exception: '异常'
-}
+export const orderLineStatusOptions = orderLineLineStatusOptions
 
-export const orderLineStatusOptions: Array<{ value: OrderLineStatus | string; label: string }> = [
-  { value: 'pending_confirm', label: '待确认' },
-  { value: 'pending_measurement', label: '待测量' },
-  { value: 'pending_design', label: '待设计' },
-  { value: 'designing', label: '设计中' },
-  { value: 'pending_outsource', label: '待下厂' },
-  { value: 'in_production', label: '生产中' },
-  { value: 'pending_factory_feedback', label: '待工厂回传' },
-  { value: 'pending_shipment', label: '待发货' },
-  { value: 'shipped', label: '已发货' },
-  { value: 'after_sales', label: '售后中' },
-  { value: 'completed', label: '已完成' },
-  { value: 'cancelled', label: '已取消' },
-  { value: 'exception', label: '异常' }
-]
-
-const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineStatusOptions]
+const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineLineStatusOptions]
 
 const quickViewOptions: Array<{ value: OrderLineCenterFilters['quickView']; label: string }> = [
   { value: 'all', label: '全部商品行' },
-  { value: 'my_todo', label: '我的待办' },
-  { value: 'due_soon', label: '即将超时' },
-  { value: 'after_sales', label: '售后中' },
-  { value: 'risk', label: '异常 / 风险' }
+  ...orderLineLineStatusOptions
 ]
 
 const categoryOptions: Array<{ value: ProductCategory; label: string }> = [
@@ -199,7 +190,7 @@ const formatDateTime = (date: Date) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-const getStatusLabel = (status?: string) => (status ? statusLabelMap[status] || status : '待确认')
+const getStatusLabel = getOrderLineLineStatusLabel
 
 const logisticsTypeLabelMap: Record<LogisticsType, string> = {
   measurement_tool: '量尺工具',
@@ -269,17 +260,7 @@ const findCurrentAfterSalesCase = (records: AfterSalesCase[], orderLineId: strin
 const getAfterSalesReason = (record: AfterSalesCase) => record.reason || record.remark || record.note || '—'
 const getAfterSalesRemark = (record: AfterSalesCase) => record.remark || record.note || '—'
 
-const designStatusLabelMap: Record<string, string> = {
-  not_required: '不需要设计',
-  pending: '待设计',
-  in_progress: '设计中',
-  completed: '已完成',
-  delivered: '已交付',
-  rework: '返工中'
-}
-
-const getDesignStatusLabel = (status?: string) => (status ? designStatusLabelMap[status] || status : '待确认')
-const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || status : '待确认')
+const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || factoryWorkflowStatusLabelMap[status as keyof typeof factoryWorkflowStatusLabelMap] || status : '待确认')
 const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
 const getAfterSalesTypeLabel = (type?: string) => (type ? afterSalesTypeLabelMap[type] || type : '未分类')
 
@@ -302,8 +283,6 @@ const getTimePressure = (promisedDate?: string) => {
 
   return { label: `剩余 ${diffDays} 天`, variant: 'normal' as const, overdue: false }
 }
-
-const isDueSoon = (promisedDate?: string) => getTimePressure(promisedDate).variant === 'dueSoon'
 
 const getParameterSummary = (line: OrderLine) =>
   [
@@ -332,15 +311,10 @@ const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = 
   ].filter((item): item is string => Boolean(item))
 }
 
-const isActiveTodoLine = (line: OrderLine) => !['completed', 'cancelled'].includes(String(line.status))
-
 const getLineOwner = (line: OrderLine, purchase?: Purchase) => line.currentOwner || purchase?.ownerName || ''
 
 const getLineHasActiveAfterSales = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
-  line.status === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
-
-const getLineHasRisk = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
-  line.status === 'exception' || getLineRiskLabels(line, afterSalesCases).length > 0
+  getOrderLineLineStatus(line) === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
 
 const isInteractiveTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('a, button, input, select, textarea, label'))
@@ -375,10 +349,10 @@ export const buildOrderLineStatusLog = ({
 }: {
   line: OrderLine
   purchase?: Purchase
-  nextStatus: OrderLineStatus | string
+  nextStatus: OrderLineLineStatus | string
   operatorName?: string
 }): OrderLineLog => {
-  const fromStatus = String(line.status)
+  const fromStatus = getOrderLineLineStatus(line)
   const toStatus = String(nextStatus)
 
   return {
@@ -426,8 +400,16 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
   const selectedProcess = draft.selectedProcess.trim()
   const selectedSpecValue = draft.selectedSpecValue.trim()
 
+  const nextLineStatus = draft.requiresDesign
+    ? getOrderLineLineStatus(line)
+    : getOrderLineLineStatus(line) === 'pending_design'
+      ? 'pending_merchandiser_review'
+      : getOrderLineLineStatus(line)
+
   return {
     ...line,
+    lineStatus: nextLineStatus,
+    status: getLegacyStatusForLineStatus(nextLineStatus),
     lineCode: draft.lineCode.trim() || undefined,
     productionTaskNo: draft.productionTaskNo.trim() || undefined,
     skuCode: draft.skuCode.trim() || undefined,
@@ -506,6 +488,11 @@ export const applyOrderLineOutsourceDraft = (line: OrderLine, draft: OrderLineOu
   productionTaskNo: draft.itemSku.trim() || undefined,
   skuCode: draft.itemSku.trim() || line.skuCode,
   itemSku: draft.itemSku.trim() || undefined,
+  merchandiserId: draft.followUpOwner.trim() || line.merchandiserId,
+  factoryId: draft.supplierName.trim() || line.factoryId,
+  factoryPlannedDueDate: draft.plannedDeliveryDate || line.factoryPlannedDueDate,
+  productionSentAt: draft.outsourcedAt || line.productionSentAt,
+  productionStatus: draft.outsourceStatus === 'in_progress' ? 'in_production' : draft.outsourceStatus === 'pending' ? 'pending_dispatch' : line.productionStatus,
   outsourceInfo: {
     ...line.outsourceInfo,
     outsourceStatus: draft.outsourceStatus,
@@ -555,9 +542,18 @@ export const buildOrderLineProductionDraft = (line: OrderLine): OrderLineProduct
 
 export const applyOrderLineProductionDraft = (line: OrderLine, draft: OrderLineProductionDraft): OrderLine => {
   const totalWeight = draft.totalWeight.trim()
+  const nextFactoryStatus = draft.factoryStatus === 'completed' ? 'returned' : draft.factoryStatus === 'issue' ? 'abnormal' : draft.factoryStatus === 'in_progress' || draft.factoryStatus === 'pending_feedback' ? 'in_production' : line.factoryStatus
+  const nextLineStatus = draft.factoryStatus === 'completed' ? 'pending_finance_confirmation' : draft.factoryStatus === 'issue' ? getOrderLineLineStatus(line) : getOrderLineLineStatus(line)
+  const nextProductionStatus = draft.factoryStatus === 'completed' ? 'completed' : draft.factoryStatus === 'issue' ? 'blocked' : draft.factoryStatus === 'in_progress' || draft.factoryStatus === 'pending_feedback' ? 'in_production' : line.productionStatus
 
   return {
     ...line,
+    lineStatus: nextLineStatus,
+    status: getLegacyStatusForLineStatus(nextLineStatus),
+    factoryStatus: nextFactoryStatus,
+    productionStatus: nextProductionStatus,
+    financeStatus: draft.factoryStatus === 'completed' ? 'pending' : line.financeStatus,
+    productionCompletedAt: draft.factoryStatus === 'completed' ? draft.factoryShippedAt || line.productionCompletedAt : line.productionCompletedAt,
     productionInfo: {
       ...line.productionInfo,
       factoryStatus: draft.factoryStatus,
@@ -852,12 +848,13 @@ const OrderLineStatusUpdatePanel = ({
   line: OrderLine
   onStatusChange?: OrderLineStatusUpdateHandler
 }) => {
-  const [nextStatus, setNextStatus] = useState(String(line.status))
+  const currentLineStatus = getOrderLineLineStatus(line)
+  const [nextStatus, setNextStatus] = useState(String(currentLineStatus))
   const [statusMessage, setStatusMessage] = useState('')
 
   useEffect(() => {
-    setNextStatus(String(line.status))
-  }, [line.id, line.status])
+    setNextStatus(String(getOrderLineLineStatus(line)))
+  }, [line])
 
   useEffect(() => {
     setStatusMessage('')
@@ -869,12 +866,12 @@ const OrderLineStatusUpdatePanel = ({
       return
     }
 
-    if (nextStatus === line.status) {
+    if (nextStatus === getOrderLineLineStatus(line)) {
       setStatusMessage('状态未变化。')
       return
     }
 
-    const previousLabel = getStatusLabel(String(line.status))
+    const previousLabel = getStatusLabel(getOrderLineLineStatus(line))
     const nextLabel = getStatusLabel(nextStatus)
     onStatusChange(line.id, nextStatus)
     setStatusMessage(`已将状态从 ${previousLabel} 更新为 ${nextLabel}`)
@@ -883,7 +880,7 @@ const OrderLineStatusUpdatePanel = ({
   return (
     <DetailSection title="更新状态">
       <div className="field-grid three">
-        <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(String(line.status))} />} />
+        <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
         <label className="field-control">
           <span className="field-label">目标状态</span>
           <select className="select" aria-label="目标状态" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}>
@@ -1764,8 +1761,7 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     const customerText = [customer?.name, customer?.phone, customer?.wechat, customer?.id].filter(Boolean).join(' ').toLowerCase()
     const hasActiveAfterSales = getLineHasActiveAfterSales(line, afterSalesCases)
     const overdue = getTimePressure(line.promisedDate).overdue
-    const dueSoon = isDueSoon(line.promisedDate)
-    const hasRisk = getLineHasRisk(line, afterSalesCases)
+    const lineStatus = getOrderLineLineStatus(line)
     const matchesKeyword =
       keyword.length === 0 ||
       [
@@ -1782,7 +1778,7 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
         .join(' ')
         .toLowerCase()
         .includes(keyword)
-    const matchesStatus = filters.status === 'all' || line.status === filters.status
+    const matchesStatus = filters.status === 'all' || lineStatus === filters.status
     const matchesOwner = filters.owner.trim().length === 0 || owner.includes(filters.owner.trim())
     const matchesCategory = filters.category === 'all' || line.category === filters.category
     const lineIsUrgent = Boolean(line.isUrgent || line.priority === 'urgent' || line.priority === 'vip')
@@ -1794,10 +1790,8 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     const matchesCustomer = customerKeyword.length === 0 || customerText.includes(customerKeyword)
     const matchesQuickView =
       filters.quickView === 'all' ||
-      (filters.quickView === 'my_todo' && isActiveTodoLine(line) && (filters.owner.trim().length > 0 ? owner.includes(filters.owner.trim()) : owner.length > 0)) ||
-      (filters.quickView === 'due_soon' && dueSoon) ||
       (filters.quickView === 'after_sales' && hasActiveAfterSales) ||
-      (filters.quickView === 'risk' && hasRisk)
+      (filters.quickView in orderLineLineStatusLabelMap && lineStatus === filters.quickView)
 
     return (
       matchesKeyword &&
@@ -1814,18 +1808,19 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     )
   })
 
-export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], lineId: string, nextStatus: OrderLineStatus | string): T[] =>
-  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: { ...row.line, status: nextStatus } } as T) : row))
+export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], lineId: string, nextStatus: OrderLineLineStatus | string): T[] =>
+  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: { ...row.line, ...buildOrderLineStatusPatch(nextStatus) } } as T) : row))
 
 export const OrderLineQuickStats = ({ rows, afterSalesCases = afterSalesMock }: { rows: OrderLineRow[]; afterSalesCases?: AfterSalesCase[] }) => {
   const stats = [
     { label: '全部商品行', value: rows.length },
-    { label: '待确认', value: rows.filter(({ line }) => line.status === 'pending_confirm').length },
-    { label: '待设计', value: rows.filter(({ line }) => line.status === 'pending_design' || line.status === 'designing').length },
-    { label: '待下厂', value: rows.filter(({ line }) => line.status === 'pending_outsource').length },
-    { label: '生产中', value: rows.filter(({ line }) => line.status === 'in_production').length },
-    { label: '待发货', value: rows.filter(({ line }) => line.status === 'pending_shipment').length },
-    { label: '售后中', value: rows.filter(({ line }) => line.status === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))).length },
+    { label: '待客服确认', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_customer_confirmation').length },
+    { label: '待设计', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_design').length },
+    { label: '待建模', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_modeling').length },
+    { label: '待跟单审核', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_merchandiser_review').length },
+    { label: '生产中', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'in_production').length },
+    { label: '待财务确认', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_finance_confirmation').length },
+    { label: '售后中', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))).length },
     { label: '已超时', value: rows.filter(({ line }) => getTimePressure(line.promisedDate).overdue).length }
   ]
 
@@ -2065,7 +2060,8 @@ export const OrderLineTable = ({
                 </div>
               </td>
               <td>
-                <StatusTag value={getStatusLabel(String(line.status))} />
+                <StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />
+                <div className="text-caption">生产 {productionWorkflowStatusLabelMap[getOrderLineProductionStatus(line)]}</div>
               </td>
               <td>{line.currentOwner || purchase?.ownerName || '待分配'}</td>
               <td>
@@ -2076,7 +2072,7 @@ export const OrderLineTable = ({
               </td>
               <td>
                 <div>{getFactorySummary(line)}</div>
-                <div className="text-caption">工厂 {getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))}</div>
+                <div className="text-caption">工厂 {getFactoryStatusLabel(getOrderLineFactoryStatus(line))}</div>
               </td>
               <td>
                 <div className="stack" style={{ gap: 4 }}>
@@ -2166,11 +2162,13 @@ export const OrderLineDetailDrawer = ({
               <InfoField label="商品行编号" value={line.lineCode || line.id} />
               <InfoField label="生产任务编号" value={line.productionTaskNo || line.itemSku || '—'} />
               <InfoField label="商品名称" value={line.name} />
-              <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(String(line.status))} />} />
+              <InfoField label="商品行状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
               <InfoField label="当前负责人" value={line.currentOwner || purchase?.ownerName || '待分配'} />
               <InfoField label="客户姓名" value={customer?.name || '—'} />
               <InfoField label="所属购买记录编号" value={purchase?.purchaseNo || '—'} />
               <InfoField label="承诺交期" value={line.promisedDate || purchase?.promisedDate || '—'} />
+              <InfoField label="生产状态" value={productionWorkflowStatusLabelMap[getOrderLineProductionStatus(line)]} />
+              <InfoField label="财务状态" value={financeWorkflowStatusLabelMap[getOrderLineFinanceStatus(line)]} />
               <InfoField
                 label="风险标签"
                 value={
@@ -2223,9 +2221,14 @@ export const OrderLineDetailDrawer = ({
 
           <DetailSection title="设计建模摘要">
             <InfoGrid columns={3}>
-              <InfoField label="是否需要设计" value={line.designInfo?.requiresRemodeling ? '是' : line.designInfo?.designStatus === 'not_required' ? '否' : '待确认'} />
-              <InfoField label="设计状态" value={getDesignStatusLabel(String(line.designInfo?.designStatus || ''))} />
+              <InfoField label="是否需要设计" value={line.requiresDesign ? '是' : '否'} />
+              <InfoField label="是否需要建模" value={line.requiresModeling ? '是' : '否'} />
+              <InfoField label="是否需要出蜡" value={line.requiresWax ? '是' : '否'} />
+              <InfoField label="设计状态" value={designWorkflowStatusLabelMap[getOrderLineDesignStatus(line)]} />
+              <InfoField label="建模状态" value={modelingWorkflowStatusLabelMap[getOrderLineModelingStatus(line)]} />
               <InfoField label="设计负责人" value={line.designInfo?.assignedDesigner || '—'} />
+              <InfoField label="设计人 ID" value={line.assignedDesignerId || '—'} />
+              <InfoField label="建模人 ID" value={line.assignedModelerId || '—'} />
               <InfoField label="建模文件" value={line.designInfo?.modelingFileUrl || '暂无文件'} />
               <InfoField label="出蜡文件" value={line.designInfo?.waxFileUrl || '暂无文件'} />
               <InfoField label="设计备注" value={line.designInfo?.designNote || '—'} />

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { PageContainer, PageHeader, StatusTag, SummaryCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { getOrderLineLineStatus } from '@/services/orderLine/orderLineWorkflow'
 import { getTaskStatusLabel, getTaskTypeLabel } from '@/services/workflow/workflowMeta'
 import type { Task } from '@/types/task'
 
@@ -24,8 +25,8 @@ export const DashboardPage = () => {
 
   const openTasks = useMemo(() => tasks.filter((item) => !['done', 'closed'].includes(item.status)), [tasks])
   const recentTasks = useMemo(() => [...tasks].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, 3), [tasks])
-  const pendingConfirmLineCount = useMemo(() => orderLines.filter((item) => item.status === 'pending_confirm').length, [orderLines])
-  const pendingDesignLineCount = useMemo(() => orderLines.filter((item) => item.status === 'pending_design' || item.status === 'designing').length, [orderLines])
+  const pendingConfirmLineCount = useMemo(() => orderLines.filter((item) => getOrderLineLineStatus(item) === 'pending_customer_confirmation').length, [orderLines])
+  const pendingDesignLineCount = useMemo(() => orderLines.filter((item) => getOrderLineLineStatus(item) === 'pending_design').length, [orderLines])
 
   return (
     <PageContainer>
