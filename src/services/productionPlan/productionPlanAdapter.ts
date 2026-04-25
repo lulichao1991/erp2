@@ -1,8 +1,8 @@
-import type { Order, OrderItem, TimelineRecord } from '@/types/order'
+import type { OrderItem } from '@/types/order'
 import type { OrderLine, OrderLineProductionStatus } from '@/types/order-line'
 import type { Product, ProductCategory, ProductAssetFile } from '@/types/product'
 import type { ProductionPlanDetail, ProductionPlanFile, ProductionPlanFileGroup, ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
-import type { Purchase } from '@/types/purchase'
+import type { Purchase, PurchaseTimelineRecord } from '@/types/purchase'
 import type { Task } from '@/types/task'
 
 const productCategoryLabelMap: Record<ProductCategory, string> = {
@@ -31,24 +31,15 @@ const toProductionPlanFiles = (files: ProductAssetFile[]): ProductionPlanFile[] 
     version: file.version
   }))
 
-type ProductionPlanLineSource = OrderLine | OrderItem
-
-type ProductionPlanTimelineRecord = TimelineRecord & {
-  relatedOrderLineId?: string
-}
-
 type ProductionPlanSource = {
   task: Task
   purchase?: Purchase
-  orderLine: ProductionPlanLineSource
-  order?: Order
-  orderItem?: OrderItem
-  usesOrderLineInput: boolean
+  orderLine: OrderLine
   sourceProduct: Product
 }
 
-const buildProductionPlanFileGroups = (orderLine: ProductionPlanLineSource, sourceProduct: Product): ProductionPlanFileGroup[] => {
-  const actualRequirements = orderLine.actualRequirements as ProductionPlanLineSource['actualRequirements'] & {
+const buildProductionPlanFileGroups = (orderLine: OrderLine, sourceProduct: Product): ProductionPlanFileGroup[] => {
+  const actualRequirements = orderLine.actualRequirements as OrderLine['actualRequirements'] & {
     engraveImageFiles?: ProductAssetFile[]
     engravePltFiles?: ProductAssetFile[]
   }
@@ -109,21 +100,15 @@ const buildProductionPlanFileGroups = (orderLine: ProductionPlanLineSource, sour
   return fileGroups
 }
 
-const buildProductionTimeline = (source: ProductionPlanSource): TimelineRecord[] =>
-  [...(source.purchase?.timeline ?? []), ...(source.order?.timeline ?? [])]
-    .filter((record: ProductionPlanTimelineRecord) => record.relatedTaskId === source.task.id || record.relatedOrderLineId === source.orderLine.id || record.relatedOrderItemId === source.orderLine.id)
+const buildProductionTimeline = (source: ProductionPlanSource): PurchaseTimelineRecord[] =>
+  (source.purchase?.timeline ?? [])
+    .filter((record) => record.relatedTaskId === source.task.id || record.relatedOrderLineId === source.orderLine.id)
     .filter((record, index, records) => records.findIndex((item) => item.id === record.id) === index)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 
-const getLineFactoryFeedback = (orderLine: ProductionPlanLineSource) => {
-  const line = orderLine as OrderItem & OrderLine
-  return line.productionInfo || line.factoryFeedback
-}
+const getLineFactoryFeedback = (orderLine: OrderLine) => orderLine.productionInfo
 
-const getLineSku = (orderLine: ProductionPlanLineSource) => orderLine.itemSku || orderLine.lineCode
-
-const getCurrentFirstProductionLine = (source: ProductionPlanSource) =>
-  source.usesOrderLineInput ? source.orderLine : source.orderItem || source.orderLine
+const getLineSku = (orderLine: OrderLine) => orderLine.sourceProduct?.sourceProductCode || orderLine.itemSku || orderLine.lineCode
 
 const legacyFactoryStatusMap: Record<string, OrderLineProductionStatus> = {
   待回传: 'pending_feedback',
@@ -141,11 +126,10 @@ const normalizeFactoryStatus = (status?: string): OrderLineProductionStatus | un
 }
 
 const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow => {
-  const { task, purchase, orderLine, order, sourceProduct } = source
-  const productionLine = getCurrentFirstProductionLine(source)
-  const stage = getProductionPlanStage(task, productionLine)
-  const purchaseId = purchase?.id || order?.id || task.purchaseId || task.orderId
-  const purchaseNo = purchase?.purchaseNo || order?.orderNo || task.purchaseNo || task.orderNo
+  const { task, purchase, orderLine, sourceProduct } = source
+  const stage = getProductionPlanStage(task, orderLine)
+  const purchaseId = purchase?.id || task.purchaseId || task.transactionId || task.orderId
+  const purchaseNo = purchase?.purchaseNo || task.purchaseNo || task.transactionNo || task.orderNo
   const orderLineId = orderLine.id
   const orderLineCode = orderLine.lineCode || getLineSku(orderLine) || task.orderLineCode || orderLine.id
   const orderLineName = orderLine.name || task.orderLineName || task.orderItemName || sourceProduct.name
@@ -174,7 +158,7 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
     quantity: orderLine.quantity || 1,
     isUrgent: task.priority === 'urgent',
     assignedAt: task.createdAt,
-    plannedDueDate: task.dueAt || orderLine.promisedDate || purchase?.promisedDate || order?.plannedDate || order?.promisedDate,
+    plannedDueDate: task.dueAt || orderLine.promisedDate || purchase?.promisedDate,
     assigneeName: task.assigneeName,
     taskStatus: task.status,
     stage,
@@ -182,7 +166,7 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
   }
 }
 
-export const getProductionPlanStage = (task: Task, orderLine: ProductionPlanLineSource): ProductionPlanStage => {
+export const getProductionPlanStage = (task: Task, orderLine: OrderLine): ProductionPlanStage => {
   const factoryStatus = normalizeFactoryStatus(getLineFactoryFeedback(orderLine)?.factoryStatus)
 
   if (factoryStatus === 'issue') {
@@ -219,10 +203,10 @@ export const getProductionPlanCategoryLabel = (category: ProductCategory) => pro
 export const getProductionPlanTasks = (tasks: Task[]) => tasks.filter((task) => task.type === 'factory_production')
 
 const findPurchase = (task: Task, purchases: Purchase[]) =>
-  purchases.find((item) => item.id === task.purchaseId)
+  purchases.find((item) => item.id === (task.purchaseId || task.transactionId || task.orderId))
 
 const findOrderLine = (task: Task, purchase: Purchase | undefined, orderLines: OrderLine[]) => {
-  const lineId = task.orderLineId
+  const lineId = task.orderLineId || task.orderItemId
   if (!lineId) {
     return undefined
   }
@@ -230,86 +214,35 @@ const findOrderLine = (task: Task, purchase: Purchase | undefined, orderLines: O
   return orderLines.find((item) => item.id === lineId && (!purchase || item.purchaseId === purchase.id)) || purchase?.orderLines.find((item) => item.id === lineId)
 }
 
-const findLegacyOrder = (task: Task, orders: Order[]) =>
-  orders.find((item) => item.id === task.orderId)
-
-const findLegacyOrderItem = (task: Task, order: Order | undefined) =>
-  order?.items.find((item) => item.id === task.orderItemId)
-
-const buildCompatibleOrderItem = (orderLine: ProductionPlanLineSource): OrderItem => ({
+const buildCompatibleOrderItem = (orderLine: OrderLine): OrderItem => ({
   ...orderLine,
   itemSku: getLineSku(orderLine) || orderLine.id,
   factoryFeedback: getLineFactoryFeedback(orderLine)
 })
 
-const buildCompatibleOrder = (purchase: Purchase | undefined, order: Order | undefined, orderLine: ProductionPlanLineSource): Order => {
-  if (order) {
-    return order
-  }
-
-  const purchaseId = purchase?.id || orderLine.purchaseId || ''
-  return {
-    id: purchaseId,
-    orderNo: purchase?.purchaseNo || '',
-    orderType: String(purchase?.purchaseType || ''),
-    ownerName: purchase?.ownerName || '',
-    sourceChannel: String(purchase?.sourceChannel || ''),
-    customerId: purchase?.customerId,
-    status: 'pending_confirm',
-    aggregateStatus: purchase?.aggregateStatus,
-    priority: 'normal',
-    riskTags: purchase?.riskTags || [],
-    promisedDate: purchase?.promisedDate,
-    expectedDate: purchase?.expectedDate,
-    paymentDate: purchase?.paymentAt,
-    paymentAt: purchase?.paymentAt,
-    recipientName: purchase?.recipientName,
-    recipientAddress: purchase?.recipientAddress,
-    finance: purchase?.finance,
-    items: [buildCompatibleOrderItem(orderLine)],
-    orderLineCount: purchase?.orderLineCount,
-    orderLines: purchase?.orderLines,
-    remark: purchase?.remark,
-    latestActivityAt: purchase?.latestActivityAt,
-    timeline: (purchase?.timeline ?? []).map((record) => ({
-      ...record,
-      orderId: record.orderId || record.purchaseId,
-      relatedOrderItemId: record.relatedOrderLineId
-    }))
-  }
-}
-
 const resolveProductionPlanSource = ({
   task,
   purchases = [],
   orderLines = [],
-  orders = [],
   products
 }: {
   task: Task
   purchases?: Purchase[]
   orderLines?: OrderLine[]
-  orders?: Order[]
   products: Product[]
 }): ProductionPlanSource | undefined => {
   const purchase = findPurchase(task, purchases)
   const orderLine = findOrderLine(task, purchase, orderLines)
-  const order = findLegacyOrder(task, orders)
-  const orderItem = findLegacyOrderItem(task, order)
-  const line = orderLine || orderItem
-  const sourceProduct = products.find((item) => item.id === line?.sourceProduct?.sourceProductId)
+  const sourceProduct = products.find((item) => item.id === orderLine?.sourceProduct?.sourceProductId)
 
-  if (!line || !sourceProduct) {
+  if (!orderLine || !sourceProduct) {
     return undefined
   }
 
   return {
     task,
     purchase,
-    orderLine: line,
-    order,
-    orderItem,
-    usesOrderLineInput: Boolean(orderLine),
+    orderLine,
     sourceProduct
   }
 }
@@ -318,18 +251,16 @@ export const buildProductionPlanRows = ({
   tasks,
   purchases,
   orderLines,
-  orders,
   products
 }: {
   tasks: Task[]
   purchases?: Purchase[]
   orderLines?: OrderLine[]
-  orders?: Order[]
   products: Product[]
 }) =>
   getProductionPlanTasks(tasks)
     .flatMap((task) => {
-      const source = resolveProductionPlanSource({ task, purchases, orderLines, orders, products })
+      const source = resolveProductionPlanSource({ task, purchases, orderLines, products })
 
       if (!source) {
         return []
@@ -350,14 +281,12 @@ export const buildProductionPlanDetail = ({
   tasks,
   purchases,
   orderLines,
-  orders,
   products
 }: {
   taskId?: string
   tasks: Task[]
   purchases?: Purchase[]
   orderLines?: OrderLine[]
-  orders?: Order[]
   products: Product[]
 }): ProductionPlanDetail | undefined => {
   const task = tasks.find((item) => item.id === taskId && item.type === 'factory_production')
@@ -365,16 +294,14 @@ export const buildProductionPlanDetail = ({
     return undefined
   }
 
-  const source = resolveProductionPlanSource({ task, purchases, orderLines, orders, products })
+  const source = resolveProductionPlanSource({ task, purchases, orderLines, products })
 
   if (!source) {
     return undefined
   }
 
   const row = buildProductionPlanRow(source)
-  const productionLine = getCurrentFirstProductionLine(source)
-  const order = buildCompatibleOrder(source.purchase, source.order, productionLine)
-  const orderItem = buildCompatibleOrderItem(productionLine)
+  const orderItem = buildCompatibleOrderItem(source.orderLine)
 
   return {
     purchaseId: row.purchaseId,
@@ -384,11 +311,10 @@ export const buildProductionPlanDetail = ({
     orderLineName: row.orderLineName,
     row,
     task,
-    order,
     orderItem,
     sourceProduct: source.sourceProduct,
     timeline: buildProductionTimeline(source),
-    fileGroups: buildProductionPlanFileGroups(productionLine, source.sourceProduct),
+    fileGroups: buildProductionPlanFileGroups(source.orderLine, source.sourceProduct),
     referenceImages: source.sourceProduct.assets.detailImages
   }
 }
