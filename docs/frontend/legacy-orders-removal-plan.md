@@ -65,11 +65,12 @@ The `/orders` route tests can be removed only when all are true:
 
 Current productionPlan state:
 
-- list and detail pages pass `tasks + purchases + orderLines + orders + products` into the adapter
+- list and detail pages now pass only `tasks + purchases + orderLines + products` into the adapter
 - adapter resolves current `Purchase + OrderLine` first
-- legacy `orders / order.items` remains fallback
-- detail writes production feedback through `updateOrderLineProductionInfo` first, then falls back to `updateOrderItem`
+- legacy `orders / order.items` remains an adapter read fallback for compatibility tests and later deletion work
+- detail writes production feedback through `updateOrderLineProductionInfo` only
 - tests intentionally cover both current-first behavior and legacy fallback behavior
+- current-only tests cover list rendering and status actions without legacy `orders` input
 
 ### Keep For Now
 
@@ -78,15 +79,19 @@ Keep these compatibility points until legacy `/orders` removal is explicitly app
 - `orders?: Order[]` adapter inputs
 - `Order / OrderItem` compatible detail fields used by productionPlan components
 - legacy fallback tests that prove old `orders / order.items` still work
-- `updateOrderItem` fallback in production plan detail
 
 ### Migration Steps
 
-1. Add current-only productionPlan tests that pass no `orders` input and cover list, detail, file groups, timeline, and status actions.
-2. Make productionPlan pages stop passing `appData.orders` once current-only coverage is strong enough.
-3. Keep adapter fallback internally for one transition PR, but mark direct page-level `orders` input as deprecated.
-4. Remove `updateOrderItem` fallback only after detail page tests prove `updateOrderLineProductionInfo` covers every reachable current task.
-5. Remove adapter `Order / OrderItem` output compatibility only after productionPlan components stop accepting compatible legacy fields.
+Completed:
+
+1. Added current-only productionPlan tests that pass no `orders` input.
+2. Made productionPlan pages stop passing `appData.orders`.
+3. Removed the productionPlan detail `updateOrderItem` write fallback.
+
+Remaining:
+
+1. Keep adapter fallback internally for one transition period.
+2. Remove adapter `Order / OrderItem` output compatibility only after productionPlan components stop accepting compatible legacy fields.
 
 ### Deletion Gate For productionPlan Fallback
 
@@ -137,7 +142,7 @@ Legacy `useAppData` orders APIs can be removed only when all are true:
 
 - no page outside `src/pages/orders/*` reads `appData.orders`
 - no current page calls `getOrder`, `saveOrder`, `updateOrder`, `transitionOrderStatus`, `updateOrderItem`, or `removeOrderItem`
-- productionPlan no longer needs `orders` input or `updateOrderItem` fallback
+- productionPlan pages no longer pass `orders` input and no longer use `updateOrderItem` fallback
 - task updates have a current-mainline timeline/log destination
 - `/orders` route tests have been removed or replaced by current-mainline tests
 
@@ -180,12 +185,11 @@ Reason:
 
 - compatibility routes are still intentionally reachable
 - route smoke tests still protect old demo behavior
-- productionPlan still has a deliberate fallback path
+- productionPlan adapter still has a deliberate legacy read fallback path
 - `useAppData` still mirrors some task timeline updates into legacy orders
 
 Next safe implementation step:
 
-1. add current-only productionPlan coverage with no `orders` input
-2. stop productionPlan pages from passing `appData.orders`
-3. add a current-mainline task/order-line timeline destination
-4. remove legacy route tests only after the route itself is hidden or redirected
+1. add a current-mainline task/order-line timeline destination
+2. stop mirroring current task updates into legacy `orders.timeline`
+3. keep legacy route tests until the route itself is hidden or redirected

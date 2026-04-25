@@ -360,6 +360,9 @@ Customer -> Purchase -> OrderLine -> Product
 - 迁移准备文档：`docs/frontend/legacy-orders-removal-plan.md`
 - 已梳理 legacy route smoke tests 保留 / 迁移 / 删除门槛
 - 已梳理 productionPlan fallback 迁移顺序
+- productionPlan 页面正常路径已 current-only，不再传 `appData.orders`
+- productionPlan legacy write fallback 已迁移，生产反馈只写 `OrderLine.productionInfo`
+- productionPlan adapter legacy read fallback 暂时保留
 - 已梳理 `useAppData` legacy orders APIs 替代顺序
 
 检查范围：
