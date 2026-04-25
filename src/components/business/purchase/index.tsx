@@ -283,17 +283,25 @@ const validatePurchaseDraft = (
   paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary>,
   orderLines: OrderLineDraft[]
 ) => {
-  if (!draft.customerName.trim() && !draft.customerPhone.trim()) {
-    return '请至少填写客户姓名或手机。'
+  if (!draft.customerName.trim()) {
+    return '请填写客户姓名。'
   }
 
   if (paymentSummary.receivedAmount > paymentSummary.receivableAmount) {
     return '已收金额不能大于应收总额。'
   }
 
-  const invalidLineIndex = orderLines.findIndex((line) => !line.sourceProductId && !line.productName.trim())
-  if (invalidLineIndex >= 0) {
-    return `商品行 ${getTempLineNo(invalidLineIndex)} 需要填写商品名称或引用产品。`
+  const missingNameIndex = orderLines.findIndex((line) => !line.productName.trim())
+  if (missingNameIndex >= 0) {
+    return `商品行 ${getTempLineNo(missingNameIndex)} 需要填写商品名称。`
+  }
+
+  const missingSpecIndex = orderLines.findIndex((line) => {
+    const product = getDraftProduct(line)
+    return Boolean(line.sourceProductId && product?.isSpecRequired && !line.selectedSpecId)
+  })
+  if (missingSpecIndex >= 0) {
+    return `商品行 ${getTempLineNo(missingSpecIndex)} 引用产品时需要选择规格。`
   }
 
   return ''
@@ -442,6 +450,7 @@ export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purch
         <InfoField label="付款摘要" value={`${formatPrice(paymentSummary.receivedAmount)} / ${formatPrice(paymentSummary.receivableAmount)}`} />
         <InfoField label="付款状态" value={<StatusTag value={paymentSummary.paymentStatus} />} />
         <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
+        <InfoField label="当前整体提示" value="本页只做购买记录归组；每条商品行独立推进执行。" />
       </InfoGrid>
     </SectionCard>
   )
@@ -510,6 +519,7 @@ export const PurchaseOrderLineTable = ({
               <th>当前负责人</th>
               <th>承诺交期</th>
               <th>参数摘要</th>
+              <th>报价摘要</th>
               <th>物流状态</th>
               <th>售后状态</th>
               <th>操作</th>
@@ -557,7 +567,11 @@ export const PurchaseOrderLineTable = ({
                   </td>
                   <td>
                     <div>{getParameterSummary(line)}</div>
-                    <div className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</div>
+                    <div className="text-caption">{line.sourceProduct?.sourceProductName || '手动填写'}</div>
+                  </td>
+                  <td>
+                    <div>{formatPrice(line.finalDisplayQuote || line.quote?.systemQuote)}</div>
+                    <div className="text-caption">系统参考 {formatPrice(line.quote?.systemQuote)}</div>
                   </td>
                   <td>
                     <StatusTag value={logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'} />
@@ -745,8 +759,8 @@ export const PurchaseDraftCustomerSection = ({ draft, onChange }: PurchaseDraftS
   <SectionCard title="客户与收货信息">
     <div className="field-grid three">
       <label className="field-control">
-        <span className="field-label">客户姓名</span>
-        <input className="input" value={draft.customerName} onChange={(event) => onChange('customerName', event.target.value)} />
+        <span className="field-label">客户姓名（必填）</span>
+        <input aria-label="客户姓名" className="input" value={draft.customerName} onChange={(event) => onChange('customerName', event.target.value)} />
       </label>
       <label className="field-control">
         <span className="field-label">手机</span>
@@ -895,8 +909,8 @@ export const OrderLineDraftCard = ({
           </select>
         </label>
         <label className="field-control">
-          <span className="field-label">商品名称</span>
-          <input className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
+          <span className="field-label">商品名称（必填）</span>
+          <input aria-label="商品名称" className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
         </label>
         <label className="field-control">
           <span className="field-label">品类</span>
@@ -917,9 +931,9 @@ export const OrderLineDraftCard = ({
 
       <div className="field-grid three spacer-top">
         <label className="field-control">
-          <span className="field-label">规格</span>
+          <span className="field-label">规格{product?.isSpecRequired ? '（必选）' : ''}</span>
           {product?.specMode === 'single_axis' ? (
-            <select className="select" value={line.selectedSpecId || ''} onChange={(event) => onSelectSpec(event.target.value)}>
+            <select aria-label="规格" className="select" value={line.selectedSpecId || ''} onChange={(event) => onSelectSpec(event.target.value)}>
               <option value="">请选择{product.specName || '规格'}</option>
               {product.specs
                 .filter((spec) => spec.status === 'enabled')
@@ -930,7 +944,7 @@ export const OrderLineDraftCard = ({
                 ))}
             </select>
           ) : (
-            <input className="input" value={line.spec} onChange={(event) => onChange({ spec: event.target.value })} />
+            <input aria-label="规格" className="input" value={line.spec} onChange={(event) => onChange({ spec: event.target.value })} />
           )}
         </label>
         <label className="field-control">

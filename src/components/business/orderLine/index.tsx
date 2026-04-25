@@ -17,6 +17,9 @@ export type OrderLineCenterFilters = {
   urgent: 'all' | 'yes' | 'no'
   afterSales: 'all' | 'yes' | 'no'
   overdue: 'all' | 'yes' | 'no'
+  factory: string
+  purchase: string
+  customer: string
   quickView: 'all' | 'my_todo' | 'due_soon' | 'after_sales' | 'risk'
 }
 
@@ -1687,6 +1690,12 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
     const keyword = filters.keyword.trim().toLowerCase()
     const owner = getLineOwner(line, purchase)
+    const factoryKeyword = filters.factory.trim().toLowerCase()
+    const purchaseKeyword = filters.purchase.trim().toLowerCase()
+    const customerKeyword = filters.customer.trim().toLowerCase()
+    const factoryText = [line.outsourceInfo?.supplierName, line.productionInfo?.factoryNote].filter(Boolean).join(' ').toLowerCase()
+    const purchaseText = [purchase?.purchaseNo, purchase?.platformOrderNo, purchase?.id].filter(Boolean).join(' ').toLowerCase()
+    const customerText = [customer?.name, customer?.phone, customer?.wechat, customer?.id].filter(Boolean).join(' ').toLowerCase()
     const hasActiveAfterSales = getLineHasActiveAfterSales(line, afterSalesCases)
     const overdue = getTimePressure(line.promisedDate).overdue
     const dueSoon = isDueSoon(line.promisedDate)
@@ -1713,6 +1722,9 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     const matchesUrgent = filters.urgent === 'all' || (filters.urgent === 'yes' ? line.priority === 'urgent' : line.priority !== 'urgent')
     const matchesAfterSales = filters.afterSales === 'all' || (filters.afterSales === 'yes' ? hasActiveAfterSales : !hasActiveAfterSales)
     const matchesOverdue = filters.overdue === 'all' || (filters.overdue === 'yes' ? overdue : !overdue)
+    const matchesFactory = factoryKeyword.length === 0 || factoryText.includes(factoryKeyword)
+    const matchesPurchase = purchaseKeyword.length === 0 || purchaseText.includes(purchaseKeyword)
+    const matchesCustomer = customerKeyword.length === 0 || customerText.includes(customerKeyword)
     const matchesQuickView =
       filters.quickView === 'all' ||
       (filters.quickView === 'my_todo' && isActiveTodoLine(line) && (filters.owner.trim().length > 0 ? owner.includes(filters.owner.trim()) : owner.length > 0)) ||
@@ -1720,7 +1732,19 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
       (filters.quickView === 'after_sales' && hasActiveAfterSales) ||
       (filters.quickView === 'risk' && hasRisk)
 
-    return matchesKeyword && matchesStatus && matchesOwner && matchesCategory && matchesUrgent && matchesAfterSales && matchesOverdue && matchesQuickView
+    return (
+      matchesKeyword &&
+      matchesStatus &&
+      matchesOwner &&
+      matchesCategory &&
+      matchesUrgent &&
+      matchesAfterSales &&
+      matchesOverdue &&
+      matchesFactory &&
+      matchesPurchase &&
+      matchesCustomer &&
+      matchesQuickView
+    )
   })
 
 export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], lineId: string, nextStatus: OrderLineStatus | string): T[] =>
@@ -1836,6 +1860,36 @@ export const OrderLineFilterBar = ({
           <option value="no">未超期</option>
         </select>
       </div>
+      <div className="field-control">
+        <label className="field-label">工厂筛选</label>
+        <input
+          className="input"
+          aria-label="工厂筛选"
+          value={value.factory}
+          onChange={(event) => onChange({ ...value, factory: event.target.value })}
+          placeholder="例如：苏州金工厂"
+        />
+      </div>
+      <div className="field-control">
+        <label className="field-label">购买记录筛选</label>
+        <input
+          className="input"
+          aria-label="购买记录筛选"
+          value={value.purchase}
+          onChange={(event) => onChange({ ...value, purchase: event.target.value })}
+          placeholder="例如：PUR-202604-001"
+        />
+      </div>
+      <div className="field-control">
+        <label className="field-label">客户筛选</label>
+        <input
+          className="input"
+          aria-label="客户筛选"
+          value={value.customer}
+          onChange={(event) => onChange({ ...value, customer: event.target.value })}
+          placeholder="例如：张三 / 手机号"
+        />
+      </div>
     </div>
   </SectionCard>
 )
@@ -1870,6 +1924,13 @@ export const OrderLineTable = ({
         </tr>
       </thead>
       <tbody>
+        {rows.length === 0 ? (
+          <tr>
+            <td colSpan={12}>
+              <EmptyState title="暂无匹配商品行" description="当前筛选条件下没有商品行，请放宽筛选或切回全部商品行。" />
+            </td>
+          </tr>
+        ) : null}
         {rows.map(({ line, purchase }) => {
           const row = { line, purchase }
           const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)

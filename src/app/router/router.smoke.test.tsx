@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppRouter } from '@/app/router'
+import { CustomerBasicSection, CustomerListTable, buildCustomerOverview } from '@/components/business/customer'
 import { AppDataProvider } from '@/hooks/useAppData'
+import { customerMock } from '@/mocks'
 
 const renderRoute = (entry: string) =>
   render(
@@ -169,6 +171,9 @@ describe('router smoke', () => {
     expect(screen.getByLabelText('是否加急筛选')).toBeInTheDocument()
     expect(screen.getByLabelText('是否售后中')).toBeInTheDocument()
     expect(screen.getByLabelText('是否超期')).toBeInTheDocument()
+    expect(screen.getByLabelText('工厂筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('购买记录筛选')).toBeInTheDocument()
+    expect(screen.getByLabelText('客户筛选')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
@@ -208,6 +213,34 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '售后中' }))
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+  })
+
+  it('filters order-line center by factory, purchase and customer without legacy orders', async () => {
+    const user = userEvent.setup()
+    renderRoute('/order-lines')
+
+    await user.type(screen.getByLabelText('工厂筛选'), '苏州金工厂')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+    expect(screen.queryByText('定制项链')).not.toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('工厂筛选'))
+    await user.type(screen.getByLabelText('购买记录筛选'), 'PUR-202604-001')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('购买记录筛选'))
+    await user.type(screen.getByLabelText('客户筛选'), '张三')
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('客户筛选'))
+    await user.type(screen.getByLabelText('客户筛选'), '不存在的客户')
+    expect(screen.getByText('暂无匹配商品行')).toBeInTheDocument()
+    expect(screen.getByText('当前筛选条件下没有商品行，请放宽筛选或切回全部商品行。')).toBeInTheDocument()
+    expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
   })
 
   it('opens order-line detail drawer from view button and switches records from row click', async () => {
@@ -530,8 +563,11 @@ describe('router smoke', () => {
     expect(screen.getByText('客户与收货信息')).toBeInTheDocument()
     expect(screen.getByText('付款总览')).toBeInTheDocument()
     expect(screen.getByText('付款摘要')).toBeInTheDocument()
+    expect(screen.getByText('当前整体提示')).toBeInTheDocument()
+    expect(screen.getByText('本页只做购买记录归组；每条商品行独立推进执行。')).toBeInTheDocument()
     expect(screen.getByText('商品行数量')).toBeInTheDocument()
     expect(screen.getByText('本次商品行列表')).toBeInTheDocument()
+    expect(screen.getByText('报价摘要')).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
@@ -886,7 +922,7 @@ describe('router smoke', () => {
     renderRoute('/purchases/new')
 
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('请至少填写客户姓名或手机。')
+    expect(screen.getByRole('alert')).toHaveTextContent('请填写客户姓名。')
 
     await user.type(screen.getByLabelText('客户姓名'), '李四')
     await user.type(screen.getByLabelText('已收金额'), '100')
@@ -903,12 +939,17 @@ describe('router smoke', () => {
     await user.clear(screen.getByLabelText('已收金额'))
     await user.type(screen.getByLabelText('已收金额'), '500')
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 需要填写商品名称或引用产品。')
+    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 需要填写商品名称。')
 
     const firstLineCard = screen.getByText('商品行 TEMP-01').closest('.subtle-panel')
     expect(firstLineCard).not.toBeNull()
     expect(within(firstLineCard as HTMLElement).getByRole('button', { name: '删除商品行' })).toBeDisabled()
 
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用产品'), 'p-ring-001')
+    await user.click(screen.getByRole('button', { name: '保存草稿' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('商品行 TEMP-01 引用产品时需要选择规格。')
+
+    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用产品'), '')
     await user.type(within(firstLineCard as HTMLElement).getByLabelText('商品名称'), '手动定制戒指')
     await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '复制商品行' }))
 
@@ -930,6 +971,9 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('heading', { name: '客户中心' })).toBeInTheDocument()
     expect(screen.getByText('客户中心第一版只读展示客户历史购买记录、商品行和售后摘要。')).toBeInTheDocument()
+    expect(screen.getByText('当前购买记录')).toBeInTheDocument()
+    expect(screen.getByText('当前商品行')).toBeInTheDocument()
+    expect(screen.getByText('当前售后')).toBeInTheDocument()
     expect(screen.getByText('张三')).toBeInTheDocument()
     expect(screen.getByText('13800001234')).toBeInTheDocument()
     expect(screen.getByText('zhangsan_jewelry')).toBeInTheDocument()
@@ -942,6 +986,9 @@ describe('router smoke', () => {
     expect(screen.getByRole('heading', { name: '客户详情' })).toBeInTheDocument()
     expect(screen.getByText('客户详情只做历史归集；购买执行仍进入购买记录和商品行中心。')).toBeInTheDocument()
     expect(screen.getByText('客户基础信息')).toBeInTheDocument()
+    expect(screen.getByText('当前购买记录数')).toBeInTheDocument()
+    expect(screen.getByText('外部导入统计参考')).toBeInTheDocument()
+    expect(screen.getByText('以下为客户 mock 保留的历史兼容字段，不作为当前系统内购买记录、商品行或售后列表的数量来源。')).toBeInTheDocument()
     expect(screen.getByText('历史购买记录')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'PUR-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.getByText('历史商品行')).toBeInTheDocument()
@@ -952,6 +999,42 @@ describe('router smoke', () => {
     expect(screen.getByText('历史售后摘要')).toBeInTheDocument()
     expect(screen.getByText('客户反馈戒围可能偏紧')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回客户中心' })).toHaveAttribute('href', '/customers')
+  })
+
+  it('shows current customer aggregation counts without stale total fallback', () => {
+    const overview = buildCustomerOverview({
+      customer: {
+        ...customerMock,
+        totalTransactionCount: 9,
+        totalOrderLineCount: 8,
+        totalAfterSalesCount: 7
+      },
+      purchases: [],
+      orderLines: [],
+      afterSalesCases: []
+    })
+
+    render(
+      <MemoryRouter>
+        <CustomerListTable overviews={[overview]} />
+      </MemoryRouter>
+    )
+
+    const row = screen.getByText('张三').closest('tr')
+    expect(row).not.toBeNull()
+    expect(within(row as HTMLElement).getAllByText('0')).toHaveLength(3)
+    expect(within(row as HTMLElement).queryByText('9')).not.toBeInTheDocument()
+    expect(within(row as HTMLElement).queryByText('8')).not.toBeInTheDocument()
+    expect(within(row as HTMLElement).queryByText('7')).not.toBeInTheDocument()
+
+    cleanup()
+
+    render(<CustomerBasicSection overview={overview} />)
+
+    expect(screen.getAllByText('0')).toHaveLength(3)
+    expect(screen.queryByText('9')).not.toBeInTheDocument()
+    expect(screen.queryByText('8')).not.toBeInTheDocument()
+    expect(screen.queryByText('7')).not.toBeInTheDocument()
   })
 
   it('expands order item when clicking summary area', async () => {

@@ -20,6 +20,9 @@ export const OrderLineListPage = () => {
     urgent: 'all',
     afterSales: 'all',
     overdue: 'all',
+    factory: '',
+    purchase: '',
+    customer: '',
     quickView: 'all'
   })
   const workspace = useOrderLineWorkspaceState()
