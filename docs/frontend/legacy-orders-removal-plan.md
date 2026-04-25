@@ -120,11 +120,12 @@ Legacy API usage is currently limited to:
   - full legacy compatibility page flow
   - can be removed only with `/orders`
 - `src/pages/productionPlan/*`
-  - passes `appData.orders` as adapter fallback
-  - uses `updateOrderItem` only after `updateOrderLineProductionInfo` fails
+  - no longer passes `appData.orders`
+  - writes production feedback only through `updateOrderLineProductionInfo`
 - `useAppData.updateTask`
   - updates current `tasks`
-  - mirrors a timeline record into legacy `orders` for old route visibility
+  - appends task timeline records to current `Purchase.timeline`
+  - no longer mirrors current task updates into legacy `orders.timeline`
 
 ### Replacement Direction
 
@@ -156,17 +157,15 @@ Current task page state:
 - task detail filters current `Purchase.timeline` by `relatedTaskId` and `relatedOrderLineId`.
 - task detail links to `/order-lines` and `/purchases/:purchaseId`, not `/orders`.
 
-Remaining legacy dependency:
+Resolved migration:
 
-- `useAppData.updateTask` updates current `tasks`, but still mirrors a task timeline record into legacy `orders.timeline`.
-- that mirror is only for old `/orders` visibility and should not remain part of the current task timeline path.
+- `useAppData.updateTask` now updates current `tasks` and appends records to current `Purchase.timeline`.
+- current task updates no longer write to legacy `orders.timeline`.
 
-Next implementation direction:
+Remaining compatibility:
 
-1. Make current task updates append a `Purchase.timeline` record with `purchaseId` and `relatedOrderLineId`.
-2. Stop mirroring current task updates into legacy `orders.timeline`.
-3. Keep `createTaskFromOrder` for legacy `/orders` compatibility until the old route is retired.
-4. Keep `useAppData.orders` and `updateOrderItem` APIs until `/orders` compatibility is removed in a later approved PR.
+1. Keep `createTaskFromOrder` for legacy `/orders` compatibility until the old route is retired.
+2. Keep `useAppData.orders` and `updateOrderItem` APIs until `/orders` compatibility is removed in a later approved PR.
 
 ## 5. Phase 12: Deletion Decision Checklist
 
@@ -208,10 +207,10 @@ Reason:
 - compatibility routes are still intentionally reachable
 - route smoke tests still protect old demo behavior
 - productionPlan adapter still has a deliberate legacy read fallback path
-- `useAppData` still mirrors some task timeline updates into legacy orders
+- `useAppData.orders` and legacy order APIs still support old `/orders` compatibility pages
 
 Next safe implementation step:
 
-1. add a current-mainline task/order-line timeline destination
-2. stop mirroring current task updates into legacy `orders.timeline`
-3. keep legacy route tests until the route itself is hidden or redirected
+1. keep legacy route tests until the route itself is hidden or redirected
+2. plan productionPlan adapter legacy read fallback removal separately
+3. remove `useAppData.orders` only after old `/orders` route deletion is approved

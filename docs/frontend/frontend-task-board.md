@@ -364,6 +364,8 @@ Customer -> Purchase -> OrderLine -> Product
 - productionPlan legacy write fallback 已迁移，生产反馈只写 `OrderLine.productionInfo`
 - productionPlan adapter legacy read fallback 暂时保留
 - 已梳理 `useAppData` legacy orders APIs 替代顺序
+- task timeline 已迁移到 current `Purchase.timeline`
+- current task 更新不再 mirror 到 legacy `orders.timeline`
 
 检查范围：
 - `src/app/router/*`
