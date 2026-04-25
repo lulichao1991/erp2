@@ -38,19 +38,19 @@ export const ProductionPlanDetailPage = () => {
     )
   }
 
-  const { row, task, orderItem, sourceProduct, timeline, fileGroups, referenceImages } = detail
-  const productionFeedback = orderItem.factoryFeedback || {}
+  const { row, task, orderLine, sourceProduct, timeline, fileGroups, referenceImages } = detail
+  const productionFeedback = orderLine.productionInfo || {}
   const productionLineInfo = {
-    id: detail.orderLineId || orderItem.id,
+    id: detail.orderLineId || orderLine.id,
     goodsNo: row.goodsNo,
     sourceProductCode: row.sourceProductCode,
-    selectedSpecValue: orderItem.selectedSpecValue,
-    quantity: orderItem.quantity,
-    selectedMaterial: orderItem.selectedMaterial,
-    selectedProcess: orderItem.selectedProcess,
-    selectedSpecialOptions: orderItem.selectedSpecialOptions,
-    selectedSpecSnapshot: orderItem.selectedSpecSnapshot,
-    actualRequirements: orderItem.actualRequirements
+    selectedSpecValue: orderLine.selectedSpecValue,
+    quantity: orderLine.quantity,
+    selectedMaterial: orderLine.selectedMaterial,
+    selectedProcess: orderLine.selectedProcess,
+    selectedSpecialOptions: orderLine.selectedSpecialOptions,
+    selectedSpecSnapshot: orderLine.selectedSpecSnapshot,
+    actualRequirements: orderLine.actualRequirements
   }
 
   const updateProductionFeedback = (nextFeedback: ProductionFeedbackValue) => {
@@ -159,7 +159,7 @@ export const ProductionPlanDetailPage = () => {
                   <InfoField label="回传重量" value={productionFeedback.returnedWeight || '—'} />
                   <InfoField label="质检结论" value={productionFeedback.qualityResult || '—'} />
                 </InfoGrid>
-                <ProductionFeedbackBlock orderLineId={detail.orderLineId || orderItem.id} feedback={productionFeedback} onChange={updateProductionFeedback} />
+                <ProductionFeedbackBlock orderLineId={detail.orderLineId || orderLine.id} feedback={productionFeedback} onChange={updateProductionFeedback} />
               </div>
             </SectionCard>
             <SectionCard title="状态操作" className="production-plan-section production-plan-action-card">

@@ -1,5 +1,5 @@
 import type { Product } from '@/types/product'
-import type { OrderItem } from '@/types/order'
+import type { OrderLine } from '@/types/order-line'
 import type { PurchaseTimelineRecord } from '@/types/purchase'
 import type { Task } from '@/types/task'
 
@@ -71,10 +71,7 @@ export type ProductionPlanDetail = {
   orderLineName: string
   row: ProductionPlanRow
   task: Task
-  /**
-   * @deprecated Compatibility shape for productionPlan UI. Built from current OrderLine data.
-   */
-  orderItem: OrderItem
+  orderLine: OrderLine
   sourceProduct: Product
   timeline: PurchaseTimelineRecord[]
   fileGroups: ProductionPlanFileGroup[]

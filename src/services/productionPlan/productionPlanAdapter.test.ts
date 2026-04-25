@@ -90,8 +90,8 @@ describe('productionPlanAdapter', () => {
       stage: 'reported',
       stageLabel: '已回传'
     })
-    expect(detail?.orderItem.factoryFeedback?.factoryStatus).toBe('completed')
-    expect(detail?.orderItem.factoryFeedback?.factoryNote).toBe('current order line feedback')
+    expect(detail?.orderLine.productionInfo?.factoryStatus).toBe('completed')
+    expect(detail?.orderLine.productionInfo?.factoryNote).toBe('current order line feedback')
   })
 
   it('builds one production plan row from the current factory production task', () => {

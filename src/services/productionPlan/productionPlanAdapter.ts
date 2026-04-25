@@ -1,4 +1,3 @@
-import type { OrderItem } from '@/types/order'
 import type { OrderLine, OrderLineProductionStatus } from '@/types/order-line'
 import type { Product, ProductCategory, ProductAssetFile } from '@/types/product'
 import type { ProductionPlanDetail, ProductionPlanFile, ProductionPlanFileGroup, ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
@@ -214,12 +213,6 @@ const findOrderLine = (task: Task, purchase: Purchase | undefined, orderLines: O
   return orderLines.find((item) => item.id === lineId && (!purchase || item.purchaseId === purchase.id)) || purchase?.orderLines.find((item) => item.id === lineId)
 }
 
-const buildCompatibleOrderItem = (orderLine: OrderLine): OrderItem => ({
-  ...orderLine,
-  itemSku: getLineSku(orderLine) || orderLine.id,
-  factoryFeedback: getLineFactoryFeedback(orderLine)
-})
-
 const resolveProductionPlanSource = ({
   task,
   purchases = [],
@@ -301,7 +294,6 @@ export const buildProductionPlanDetail = ({
   }
 
   const row = buildProductionPlanRow(source)
-  const orderItem = buildCompatibleOrderItem(source.orderLine)
 
   return {
     purchaseId: row.purchaseId,
@@ -311,7 +303,7 @@ export const buildProductionPlanDetail = ({
     orderLineName: row.orderLineName,
     row,
     task,
-    orderItem,
+    orderLine: source.orderLine,
     sourceProduct: source.sourceProduct,
     timeline: buildProductionTimeline(source),
     fileGroups: buildProductionPlanFileGroups(source.orderLine, source.sourceProduct),
