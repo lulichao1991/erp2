@@ -140,3 +140,52 @@ Legacy `useAppData` orders APIs can be removed only when all are true:
 - productionPlan no longer needs `orders` input or `updateOrderItem` fallback
 - task updates have a current-mainline timeline/log destination
 - `/orders` route tests have been removed or replaced by current-mainline tests
+
+## 5. Phase 12: Deletion Decision Checklist
+
+Do not delete legacy `/orders` until this checklist is complete.
+
+### Ready To Hide From Users
+
+Legacy `/orders` can be hidden or redirected when:
+
+- no current navigation links to `/orders`
+- all current workflows use `/order-lines`, `/purchases/new`, `/purchases/:purchaseId`, `/products`, or `/customers`
+- productionPlan, task, product reference, customer center, and dashboard smoke tests assert no `/orders` links
+- route docs describe `/orders` only as compatibility or removal candidate
+
+### Ready To Delete Route Files
+
+`src/pages/orders/*` can be deleted only when:
+
+- `/orders`, `/orders/new`, and `/orders/:orderId` are removed from the router or replaced by explicit redirects
+- all `/orders` route smoke tests are removed or migrated to current-mainline tests
+- there is no product picker, source product drawer, engraving upload, role view, finance view, or status action behavior that still exists only on legacy pages
+
+### Ready To Delete Legacy Types, Mocks, And Services
+
+`src/types/order.ts`, `src/mocks/orders.ts`, and `src/services/order/*` can be deleted only when:
+
+- no production code imports `Order`, `OrderItem`, or `SourceProductSnapshot`
+- no current tests import `mockOrders`
+- productionPlan no longer imports `Order / OrderItem`
+- `useAppData` no longer exposes `orders` or legacy orders APIs
+- `src/mocks/index.ts` no longer exports `mockOrders`
+
+### Current Decision
+
+Current decision: **do not delete legacy `/orders` yet**.
+
+Reason:
+
+- compatibility routes are still intentionally reachable
+- route smoke tests still protect old demo behavior
+- productionPlan still has a deliberate fallback path
+- `useAppData` still mirrors some task timeline updates into legacy orders
+
+Next safe implementation step:
+
+1. add current-only productionPlan coverage with no `orders` input
+2. stop productionPlan pages from passing `appData.orders`
+3. add a current-mainline task/order-line timeline destination
+4. remove legacy route tests only after the route itself is hidden or redirected
