@@ -1,5 +1,6 @@
-import type { Order, OrderItem, TimelineRecord } from '@/types/order'
 import type { Product } from '@/types/product'
+import type { OrderLine } from '@/types/order-line'
+import type { PurchaseTimelineRecord } from '@/types/purchase'
 import type { Task } from '@/types/task'
 
 export type ProductionPlanStage =
@@ -30,15 +31,15 @@ export type ProductionPlanRow = {
   orderLineCode: string
   orderLineName: string
   /**
-   * @deprecated Compatibility alias for purchaseId while productionPlan still reads old Order data.
+   * @deprecated Compatibility alias for purchaseId.
    */
   orderId: string
   /**
-   * @deprecated Compatibility alias for purchaseNo while productionPlan still reads old Order data.
+   * @deprecated Compatibility alias for purchaseNo.
    */
   orderNo: string
   /**
-   * @deprecated Compatibility alias for orderLineId while productionPlan still reads old OrderItem data.
+   * @deprecated Compatibility alias for orderLineId.
    */
   orderItemId: string
   goodsNo: string
@@ -70,16 +71,9 @@ export type ProductionPlanDetail = {
   orderLineName: string
   row: ProductionPlanRow
   task: Task
-  /**
-   * @deprecated Compatibility source while productionPlan still reads old Order data.
-   */
-  order: Order
-  /**
-   * @deprecated Compatibility source while productionPlan still reads old OrderItem data.
-   */
-  orderItem: OrderItem
+  orderLine: OrderLine
   sourceProduct: Product
-  timeline: TimelineRecord[]
+  timeline: PurchaseTimelineRecord[]
   fileGroups: ProductionPlanFileGroup[]
   referenceImages: string[]
 }

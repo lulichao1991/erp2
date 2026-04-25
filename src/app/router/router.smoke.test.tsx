@@ -600,6 +600,19 @@ describe('router smoke', () => {
     })
   })
 
+  it('keeps legacy orders compatibility routes reachable outside the primary workflow', () => {
+    const legacyList = renderRoute('/orders')
+
+    expect(screen.getByRole('heading', { name: '旧订单兼容' })).toBeInTheDocument()
+    expect(screen.getByText('旧订单兼容入口仅用于查看和维护历史演示流程。当前主流程请使用 /order-lines 商品行中心与 /purchases/new 新建购买记录。')).toBeInTheDocument()
+
+    legacyList.unmount()
+
+    renderRoute('/orders/o-202604-001')
+
+    expect(screen.getByText(/这是 legacy \/orders 兼容详情页，仅用于旧演示和历史流程维护。/)).toBeInTheDocument()
+  })
+
   it('opens order-line drawer from purchase detail line table', async () => {
     const user = userEvent.setup()
     renderRoute('/purchases/o-202604-001')
@@ -1159,7 +1172,7 @@ describe('router smoke', () => {
     const { container } = renderRoute('/production-plan')
 
     expect(screen.getByRole('heading', { name: '工厂生产计划' })).toBeInTheDocument()
-    expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
+    expect(screen.getByText('PD-RING-001')).toBeInTheDocument()
     expect(screen.getByText('购买记录 PUR-202604-001')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: '山形戒指' })[0]).toHaveAttribute('href', '/order-lines')
     expect(screen.getByRole('link', { name: '查看商品行' })).toHaveAttribute('href', '/order-lines')
@@ -1175,7 +1188,7 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('heading', { name: '生产任务详情' })).toBeInTheDocument()
     expect(screen.getByText('来源追溯')).toBeInTheDocument()
-    expect(screen.getAllByText('RING-SH-016').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('PD-RING-001').length).toBeGreaterThan(0)
     expect(screen.getByText('购买记录')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'PUR-202604-001' })).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.getAllByText('商品行').length).toBeGreaterThan(0)

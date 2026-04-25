@@ -71,6 +71,7 @@
 - 导航中只展示“商品行中心”
 - 不再同时展示“商品任务中心”或“订单中心”
 - `/orders` 旧模块不作为侧边栏入口展示
+- `/production-plan` 仍可作为工厂角色入口展示，但其视图数据只来自当前 `tasks + purchases + orderLines + products`
 
 ### `/customers`
 客户中心。
@@ -345,6 +346,7 @@
 - `/purchases/new` 可作为新建购买记录入口访问
 - `/purchases/:purchaseId` 可作为购买记录详情入口访问
 - `/products` 可作为产品管理入口访问
+- `/production-plan` 可作为 current-only 生产计划入口访问
 - `/orders` 可以保留可访问，但不在导航中展示
 - 文档中不再把 `TransactionRecord` 作为当前主模型
 - 文档中不再把 `/orders` 写成当前主模块
