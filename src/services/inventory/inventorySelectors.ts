@@ -4,6 +4,8 @@ import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 
+export type InventoryQuickView = 'all' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'unavailable'
+
 export const inventorySourceTypeLabelMap: Record<InventoryItemSourceType, string> = {
   design_sample: '设计留样',
   customer_return: '客户退货',
@@ -38,6 +40,7 @@ export const inventoryMovementTypeLabelMap: Record<InventoryMovementType, string
 
 export type InventoryFilters = {
   keyword: string
+  quickView: InventoryQuickView
   sourceType: InventoryItemSourceType | 'all'
   status: InventoryItemStatus | 'all'
   condition: InventoryItemCondition | 'all'
@@ -64,6 +67,8 @@ export type InventorySummary = {
   designSampleCount: number
   customerReturnCount: number
   needsReviewCount: number
+  reservedCount: number
+  unavailableCount: number
 }
 
 export type InventoryMovementInput = {
@@ -134,6 +139,26 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
   const location = filters.location.trim().toLowerCase()
 
   return rows.filter((row) => {
+    if (filters.quickView === 'design_samples' && row.item.sourceType !== 'design_sample') {
+      return false
+    }
+
+    if (filters.quickView === 'customer_returns' && row.item.sourceType !== 'customer_return') {
+      return false
+    }
+
+    if (filters.quickView === 'needs_review' && !['repair_needed', 'defective'].includes(row.item.condition)) {
+      return false
+    }
+
+    if (filters.quickView === 'reserved' && row.item.status !== 'reserved') {
+      return false
+    }
+
+    if (filters.quickView === 'unavailable' && row.item.availableQuantity > 0 && !['outbound', 'scrapped'].includes(row.item.status)) {
+      return false
+    }
+
     if (filters.sourceType !== 'all' && row.item.sourceType !== filters.sourceType) {
       return false
     }
@@ -177,7 +202,9 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   availableQuantity: rows.reduce((sum, row) => sum + row.item.availableQuantity, 0),
   designSampleCount: rows.filter((row) => row.item.sourceType === 'design_sample').length,
   customerReturnCount: rows.filter((row) => row.item.sourceType === 'customer_return').length,
-  needsReviewCount: rows.filter((row) => row.item.condition === 'repair_needed' || row.item.condition === 'defective').length
+  needsReviewCount: rows.filter((row) => row.item.condition === 'repair_needed' || row.item.condition === 'defective').length,
+  reservedCount: rows.filter((row) => row.item.status === 'reserved').length,
+  unavailableCount: rows.filter((row) => row.item.availableQuantity <= 0 || row.item.status === 'outbound' || row.item.status === 'scrapped').length
 })
 
 export const applyInventoryMovement = (item: InventoryItem, input: InventoryMovementInput): InventoryMovementResult => {

@@ -13,6 +13,7 @@ import {
   inventorySourceTypeLabelMap,
   inventoryStatusLabelMap,
   type InventoryFilters,
+  type InventoryQuickView,
   type InventoryRow
 } from '@/services/inventory/inventorySelectors'
 import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
@@ -28,6 +29,7 @@ const categoryLabelMap: Record<string, string> = {
 
 const initialFilters: InventoryFilters = {
   keyword: '',
+  quickView: 'all',
   sourceType: 'all',
   status: 'all',
   condition: 'all',
@@ -58,6 +60,15 @@ const conditionOptions: Array<{ value: InventoryItemCondition | 'all'; label: st
   { value: 'returned', label: '退货' },
   { value: 'repair_needed', label: '待检修' },
   { value: 'defective', label: '瑕疵' }
+]
+
+const quickViewOptions: Array<{ value: InventoryQuickView; label: string; description: string }> = [
+  { value: 'all', label: '全部库存', description: '所有库存资产' },
+  { value: 'design_samples', label: '设计留样', description: '不售卖的设计样品' },
+  { value: 'customer_returns', label: '客户退货', description: '退货入库与待检商品' },
+  { value: 'needs_review', label: '待检 / 瑕疵', description: '需要库管复核' },
+  { value: 'reserved', label: '已占用', description: '已被预占的库存' },
+  { value: 'unavailable', label: '不可用', description: '无可用数量或已出库/报废' }
 ]
 
 const formatWeight = (weight?: number) => (typeof weight === 'number' ? `${weight}g` : '待补充')
@@ -271,7 +282,33 @@ export const InventoryListPage = () => {
           <span className="stat-card-label">待检 / 瑕疵</span>
           <span className="stat-card-value">{summary.needsReviewCount}</span>
         </div>
+        <div className="stat-card compact-stat">
+          <span className="stat-card-label">已占用</span>
+          <span className="stat-card-value">{summary.reservedCount}</span>
+        </div>
+        <div className="stat-card compact-stat">
+          <span className="stat-card-label">不可用</span>
+          <span className="stat-card-value">{summary.unavailableCount}</span>
+        </div>
       </div>
+
+      <SectionCard title="库管快捷视图" description="按库管日常关注点快速切换库存台账。">
+        <div className="stats-grid compact-stats">
+          {quickViewOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`stat-card compact-stat${filters.quickView === option.value ? ' selected' : ''}`}
+              aria-label={option.label}
+              onClick={() => updateFilter('quickView', option.value)}
+            >
+              <span className="stat-card-label">{option.label}</span>
+              <span className="muted-block">{option.description}</span>
+              <span className="stat-card-value">{filterInventoryRows(rows, { ...filters, quickView: option.value }).length}</span>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
 
       <SectionCard title="库存筛选" description="按来源、状态、成色、库位和关联对象快速定位库存。">
         <div className="filter-grid">

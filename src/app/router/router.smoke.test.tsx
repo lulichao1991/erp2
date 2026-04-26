@@ -1382,6 +1382,8 @@ describe('router smoke', () => {
     expect(screen.getByText('入库登记')).toBeInTheDocument()
     expect(screen.getByText('库存流转')).toBeInTheDocument()
     expect(screen.getByText('库存流转记录')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '客户退货' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '待检 / 瑕疵' })).toBeInTheDocument()
     expect(screen.getByText('山形素圈戒指设计留样')).toBeInTheDocument()
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
@@ -1397,6 +1399,11 @@ describe('router smoke', () => {
     await user.type(screen.getByLabelText('库位筛选'), '常备链身')
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
     expect(screen.queryByText('客户退回山形戒指')).not.toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('库位筛选'))
+    await user.click(screen.getByRole('button', { name: '待检 / 瑕疵' }))
+    expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('通用 18K 项链链身')).not.toBeInTheDocument()
   })
 
   it('records inventory inbound and movement actions locally', async () => {

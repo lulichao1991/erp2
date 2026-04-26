@@ -37,11 +37,21 @@ describe('inventorySelectors', () => {
   it('filters inventory by source, status, condition, location and keyword', () => {
     const rows = buildRows()
 
-    expect(filterInventoryRows(rows, { keyword: '', sourceType: 'design_sample', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
-    expect(filterInventoryRows(rows, { keyword: '', sourceType: 'all', status: 'reserved', condition: 'all', location: '' })).toHaveLength(1)
-    expect(filterInventoryRows(rows, { keyword: '', sourceType: 'all', status: 'all', condition: 'repair_needed', location: '' })).toHaveLength(1)
-    expect(filterInventoryRows(rows, { keyword: '', sourceType: 'all', status: 'all', condition: 'all', location: '常备链身' })).toHaveLength(1)
-    expect(filterInventoryRows(rows, { keyword: 'PUR-202604-001', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'all', sourceType: 'design_sample', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'all', sourceType: 'all', status: 'reserved', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'all', sourceType: 'all', status: 'all', condition: 'repair_needed', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'all', sourceType: 'all', status: 'all', condition: 'all', location: '常备链身' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: 'PUR-202604-001', quickView: 'all', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+  })
+
+  it('filters inventory by warehouse quick views', () => {
+    const rows = buildRows()
+
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'design_samples', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'customer_returns', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'needs_review', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'reserved', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
   })
 
   it('applies inventory movements without changing linked order lines', () => {
