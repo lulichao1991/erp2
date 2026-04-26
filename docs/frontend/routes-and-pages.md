@@ -55,6 +55,7 @@
 - 商品行中心
 - 客户中心
 - 任务中心
+- 生产跟进
 - 产品管理
 - 生产计划（仅工厂角色可见）
 
@@ -63,6 +64,7 @@
 - 不再同时展示“商品任务中心”或“订单中心”
 - `/orders` 旧模块已删除，不作为侧边栏入口展示
 - `/production-plan` 仍可作为工厂角色入口展示，但其视图数据只来自当前 `tasks + purchases + orderLines + products`
+- `/production-follow-up` 是跟单生产推进入口，视图数据只来自当前 `OrderLine` 和所属 `Purchase`
 
 ### `/customers`
 客户中心。
@@ -151,6 +153,22 @@
 - 本页是购买归组页
 - 商品行才是具体执行对象
 - 物流和售后记录默认归属 `orderLineId`
+
+---
+
+### `/production-follow-up`
+生产跟进 / 跟单视图。
+
+用途：
+- 按商品行查看待跟单审核、待下发生产、生产中、待工厂回传、异常 / 逾期
+- 分配工厂、设置工厂计划交期
+- 标记资料已齐、下发生产、标记生产中、标记阻塞
+- 退回客服补资料或退回设计 / 建模修改
+
+说明：
+- 本页只基于 `OrderLine` 的 `lineStatus / productionStatus / factoryStatus` 做生产推进
+- 购买记录只用于展示 `purchaseNo` 和跳转归组页
+- 不恢复旧 `/orders` 或旧订单单件逻辑
 
 ---
 

@@ -1130,6 +1130,51 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('renders production follow-up tabs from current order lines', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/production-follow-up')
+
+    expect(screen.getByRole('heading', { name: '生产跟进' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '切换到待跟单审核' })).toBeInTheDocument()
+    expect(screen.getByText('复古耳钉')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到待下发生产' }))
+    expect(screen.getByText('胸针补石')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到生产中' }))
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到异常 / 逾期' }))
+    expect(screen.getByText('胸针补石')).toBeInTheDocument()
+    expect(screen.getByText('已逾期')).toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
+  it('updates production follow-up status through current order-line state', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/production-follow-up')
+
+    await user.clear(screen.getByLabelText('工厂-ol-zhang-earring-review-001'))
+    await user.type(screen.getByLabelText('工厂-ol-zhang-earring-review-001'), 'factory-demo-001')
+    await user.type(screen.getByLabelText('计划交期-ol-zhang-earring-review-001'), '2026-05-06')
+    await user.click(screen.getByRole('button', { name: '保存工厂计划' }))
+    expect(screen.getByDisplayValue('factory-demo-001')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '标记资料已齐' }))
+    expect(screen.getAllByText('待下发生产').length).toBeGreaterThan(0)
+    expect(screen.getByText('复古耳钉')).toBeInTheDocument()
+
+    const earringRow = screen.getByText('复古耳钉').closest('tr')
+    expect(earringRow).not.toBeNull()
+
+    await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '下发生产' }))
+    expect(screen.getByText('待工厂接收')).toBeInTheDocument()
+
+    await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '标记生产中' }))
+    expect(screen.getAllByText('生产中').length).toBeGreaterThan(0)
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
   it('renders production plan list route without requiring factory role', () => {
     const { container } = renderRoute('/production-plan')
 

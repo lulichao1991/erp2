@@ -52,6 +52,7 @@ type AppDataContextValue = {
   addGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
   removeGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
   saveGlobalSizeParameterDefinitions: (definitions: ProductSizeParameterDefinition[]) => void
+  updateOrderLine: (orderLineId: string, updater: (current: OrderLine) => OrderLine) => OrderLine | undefined
   updateOrderLineProductionInfo: (orderLineId: string, productionInfo: OrderLineProductionInfo) => OrderLine | undefined
   updateTask: (taskId: string, updater: (current: Task) => Task) => Task | undefined
 }
@@ -113,6 +114,22 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
       },
       saveGlobalSizeParameterDefinitions: (definitions) => {
         setProductFieldOptions((current) => saveProductFieldOptions(saveSizeParameterDefinitions(current, definitions)))
+      },
+      updateOrderLine: (orderLineId, updater) => {
+        const found = orderLines.find((item) => item.id === orderLineId)
+        if (!found) {
+          return undefined
+        }
+
+        const nextOrderLine = updater(found)
+        setOrderLines((current) => current.map((item) => (item.id === orderLineId ? nextOrderLine : item)))
+        setPurchases((current) =>
+          current.map((purchase) => ({
+            ...purchase,
+            orderLines: purchase.orderLines.map((item) => (item.id === orderLineId ? nextOrderLine : item))
+          }))
+        )
+        return nextOrderLine
       },
       updateOrderLineProductionInfo: (orderLineId, productionInfo) => {
         const found = orderLines.find((item) => item.id === orderLineId)

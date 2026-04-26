@@ -361,13 +361,126 @@ export const waxOrderLine: OrderLine = {
   finalDisplayQuote: 2680
 }
 
-export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine]
+export const earringReviewOrderLine: OrderLine = {
+  id: 'ol-zhang-earring-review-001',
+  lineNo: 5,
+  lineCode: 'OL-202604-001-05',
+  productionTaskNo: 'EAR-CUSTOM-005',
+  purchaseId,
+  transactionId: purchaseId,
+  customerId: 'customer-zhang-001',
+  name: '复古耳钉',
+  category: 'other',
+  styleName: '复古小花耳钉',
+  versionNo: 'v1',
+  skuCode: 'EAR-CUSTOM-005',
+  quantity: 1,
+  lineStatus: 'pending_merchandiser_review',
+  designStatus: 'not_required',
+  modelingStatus: 'not_required',
+  productionStatus: 'not_started',
+  factoryStatus: 'not_assigned',
+  financeStatus: 'not_required',
+  merchandiserId: 'merchandiser-li',
+  status: 'pending_outsource',
+  currentOwner: '李生产',
+  priority: 'normal',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: false,
+  requiresWax: false,
+  isReferencedProduct: false,
+  selectedSpecValue: '耳钉 6mm',
+  selectedMaterial: '18K金',
+  selectedProcess: '手工抛光',
+  actualRequirements: {
+    material: '18K金',
+    process: '手工抛光',
+    sizeNote: '单只花面约 6mm',
+    remark: '资料已齐，等待跟单复核后下发。'
+  },
+  outsourceInfo: {
+    outsourceStatus: 'pending',
+    supplierName: '待定',
+    plannedDeliveryDate: '2026-04-29',
+    outsourceNote: '待跟单复核。'
+  },
+  productionInfo: {
+    factoryStatus: 'not_started',
+    factoryNote: '待跟单审核。'
+  },
+  expectedDate: '2026-04-29',
+  promisedDate: '2026-05-01',
+  itemSku: 'EAR-CUSTOM-005',
+  finalDisplayQuote: 980
+}
+
+export const broochBlockedOrderLine: OrderLine = {
+  id: 'ol-zhang-brooch-blocked-001',
+  lineNo: 6,
+  lineCode: 'OL-202604-001-06',
+  productionTaskNo: 'BROOCH-CUSTOM-006',
+  purchaseId,
+  transactionId: purchaseId,
+  customerId: 'customer-zhang-001',
+  name: '胸针补石',
+  category: 'other',
+  styleName: '山形胸针',
+  versionNo: 'v1',
+  skuCode: 'BROOCH-CUSTOM-006',
+  quantity: 1,
+  lineStatus: 'pending_factory_production',
+  designStatus: 'completed',
+  modelingStatus: 'not_required',
+  productionStatus: 'blocked',
+  factoryStatus: 'abnormal',
+  financeStatus: 'not_required',
+  merchandiserId: 'merchandiser-wang',
+  factoryId: 'factory-suzhou-gold-001',
+  factoryPlannedDueDate: '2026-04-20',
+  status: 'exception',
+  currentOwner: '王跟单',
+  priority: 'urgent',
+  isUrgent: true,
+  requiresDesign: false,
+  requiresModeling: false,
+  requiresWax: false,
+  isReferencedProduct: false,
+  selectedSpecValue: '胸针 18mm',
+  selectedMaterial: '足银',
+  selectedProcess: '补石镶嵌',
+  actualRequirements: {
+    material: '足银',
+    process: '补石镶嵌',
+    sizeNote: '胸针主体 18mm',
+    specialNotes: ['工厂反馈缺少补石规格'],
+    remark: '资料已下发但工厂反馈补石规格不完整。'
+  },
+  outsourceInfo: {
+    outsourceStatus: 'rework',
+    supplierName: '苏州金工厂',
+    plannedDeliveryDate: '2026-04-20',
+    outsourceNote: '工厂反馈缺少补石规格，等待跟单处理。'
+  },
+  productionInfo: {
+    factoryStatus: 'issue',
+    factoryNote: '补石规格缺失，生产阻塞。'
+  },
+  expectedDate: '2026-04-25',
+  promisedDate: '2026-04-28',
+  itemSku: 'BROOCH-CUSTOM-006',
+  finalDisplayQuote: 1580
+}
+
+export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine, earringReviewOrderLine, broochBlockedOrderLine]
 
 export const orderLineLegacyStatusMock: Record<string, string> = {
   'oi-ring-001': '生产中',
   'oi-pendant-001': '待财务确认',
   'ol-zhang-necklace-001': '待设计',
-  'ol-zhang-wax-001': '待建模'
+  'ol-zhang-wax-001': '待建模',
+  'ol-zhang-earring-review-001': '待跟单审核',
+  'ol-zhang-brooch-blocked-001': '异常/逾期'
 }
 
 export const orderLineCompatibilityExtrasMock: Record<
