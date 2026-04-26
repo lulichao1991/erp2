@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
 import { customersMock, inventoryItemsMock, inventoryMovementsMock } from '@/mocks'
 import {
   applyInventoryMovement,
+  applyInventoryReview,
   buildInventoryRows,
   buildInventorySummary,
   filterInventoryRows,
@@ -95,11 +96,29 @@ type InboundDraft = {
   remark: string
 }
 
+type ReviewDraft = {
+  condition: InventoryItemCondition
+  status: InventoryItemStatus
+  availableQuantity: string
+  location: string
+  operatorName: string
+  note: string
+}
+
 const createMovementDraft = (item?: InventoryItem): MovementDraft => ({
   inventoryItemId: item?.id || '',
   type: 'reserve',
   quantity: '1',
   toLocation: item?.warehouseLocation || '',
+  operatorName: '周库管',
+  note: ''
+})
+
+const createReviewDraft = (item?: InventoryItem): ReviewDraft => ({
+  condition: item?.condition || 'new',
+  status: item?.status || 'in_stock',
+  availableQuantity: String(item?.availableQuantity ?? 0),
+  location: item?.warehouseLocation || '',
   operatorName: '周库管',
   note: ''
 })
@@ -127,6 +146,7 @@ export const InventoryListPage = () => {
   const [movements, setMovements] = useState<InventoryMovement[]>(() => structuredClone(inventoryMovementsMock))
   const [filters, setFilters] = useState<InventoryFilters>(initialFilters)
   const [movementDraft, setMovementDraft] = useState<MovementDraft>(() => createMovementDraft(inventoryItemsMock[0]))
+  const [reviewDraft, setReviewDraft] = useState<ReviewDraft>(() => createReviewDraft(inventoryItemsMock[0]))
   const [inboundDraft, setInboundDraft] = useState<InboundDraft>(initialInboundDraft)
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState(inventoryItemsMock[0]?.id ?? '')
   const [formMessage, setFormMessage] = useState('')
@@ -168,6 +188,19 @@ export const InventoryListPage = () => {
     }))
   }
 
+  const updateReviewDraft = <K extends keyof ReviewDraft>(key: K, value: ReviewDraft[K]) => {
+    setReviewDraft((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  useEffect(() => {
+    if (selectedRow) {
+      setReviewDraft(createReviewDraft(selectedRow.item))
+    }
+  }, [selectedRow])
+
   const submitMovement = () => {
     const currentItem = inventoryItems.find((item) => item.id === movementDraft.inventoryItemId)
     const quantity = toPositiveInteger(movementDraft.quantity)
@@ -191,6 +224,34 @@ export const InventoryListPage = () => {
       setFormMessage(`已登记${inventoryMovementTypeLabelMap[movementDraft.type]}：${currentItem.inventoryCode}`)
     } catch (error) {
       setFormMessage(error instanceof Error ? error.message : '库存流转失败，请检查数量。')
+    }
+  }
+
+  const submitReview = () => {
+    const currentItem = selectedRow?.item
+    if (!currentItem) {
+      setFormMessage('请先选择需要质检处置的库存。')
+      return
+    }
+
+    try {
+      const result = applyInventoryReview(currentItem, {
+        condition: reviewDraft.condition,
+        status: reviewDraft.status,
+        availableQuantity: toPositiveInteger(reviewDraft.availableQuantity),
+        operatorName: reviewDraft.operatorName.trim() || '周库管',
+        occurredAt: formatCurrentTime(),
+        toLocation: reviewDraft.location,
+        note: reviewDraft.note
+      })
+      setInventoryItems((current) => current.map((item) => (item.id === currentItem.id ? result.item : item)))
+      setMovements((current) => [result.movement, ...current])
+      setSelectedInventoryItemId(result.item.id)
+      setMovementDraft(createMovementDraft(result.item))
+      setReviewDraft(createReviewDraft(result.item))
+      setFormMessage(`已完成质检处置：${currentItem.inventoryCode}`)
+    } catch (error) {
+      setFormMessage(error instanceof Error ? error.message : '质检处置失败，请检查数量。')
     }
   }
 
@@ -460,6 +521,64 @@ export const InventoryListPage = () => {
 
       <SectionCard title="库存详情与来源追溯" description="查看单件库存的来源、关联对象和该库存自己的流转记录。">
         {selectedRow ? <InventoryDetail row={selectedRow} movements={selectedMovements} /> : <EmptyState title="未选择库存" description="请选择一条库存记录查看详情。" />}
+      </SectionCard>
+
+      <SectionCard title="库存质检处置" description="用于客户退货、瑕疵件和待检修库存的库管复核；只更新库存资产，不推进商品行状态。">
+        {selectedRow ? (
+          <div className="filter-grid">
+            <label>
+              <span>当前库存</span>
+              <input value={`${selectedRow.item.inventoryCode} / ${selectedRow.item.name}`} readOnly />
+            </label>
+            <label>
+              <span>处置后成色</span>
+              <select value={reviewDraft.condition} onChange={(event) => updateReviewDraft('condition', event.target.value as InventoryItemCondition)}>
+                {conditionOptions
+                  .filter((option): option is { value: InventoryItemCondition; label: string } => option.value !== 'all')
+                  .map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              <span>处置后状态</span>
+              <select value={reviewDraft.status} onChange={(event) => updateReviewDraft('status', event.target.value as InventoryItemStatus)}>
+                {statusOptions
+                  .filter((option): option is { value: InventoryItemStatus; label: string } => option.value !== 'all')
+                  .map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              <span>可用数量</span>
+              <input type="number" min="0" value={reviewDraft.availableQuantity} onChange={(event) => updateReviewDraft('availableQuantity', event.target.value)} />
+            </label>
+            <label>
+              <span>目标库位</span>
+              <input value={reviewDraft.location} onChange={(event) => updateReviewDraft('location', event.target.value)} />
+            </label>
+            <label>
+              <span>质检人</span>
+              <input value={reviewDraft.operatorName} onChange={(event) => updateReviewDraft('operatorName', event.target.value)} />
+            </label>
+            <label>
+              <span>质检结论</span>
+              <input value={reviewDraft.note} onChange={(event) => updateReviewDraft('note', event.target.value)} placeholder="例如 质检通过 / 需维修 / 不可售" />
+            </label>
+            <div className="field-actions">
+              <button type="button" className="button primary" onClick={submitReview}>
+                保存质检处置
+              </button>
+            </div>
+          </div>
+        ) : (
+          <EmptyState title="未选择库存" description="请选择一条库存记录后再做质检处置。" />
+        )}
       </SectionCard>
 
       <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整。">

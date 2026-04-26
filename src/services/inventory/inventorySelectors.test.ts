@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, buildInventoryRows, buildInventorySummary, filterInventoryRows } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, buildInventoryRows, buildInventorySummary, filterInventoryRows } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -108,5 +108,44 @@ describe('inventorySelectors', () => {
         occurredAt: '2026-04-26 10:00'
       })
     ).toThrow('库存流转数量必须大于 0')
+  })
+
+  it('applies warehouse quality review without changing linked order lines', () => {
+    const returnItem = inventoryItemsMock.find((item) => item.id === 'inventory-return-ring-001')
+    expect(returnItem).toBeDefined()
+
+    const result = applyInventoryReview(returnItem!, {
+      condition: 'returned',
+      status: 'in_stock',
+      availableQuantity: 1,
+      operatorName: '周库管',
+      occurredAt: '2026-04-26 12:00',
+      toLocation: 'B-退货可用-01',
+      note: '质检通过，可作为库存资产再次使用。'
+    })
+
+    expect(result.item.condition).toBe('returned')
+    expect(result.item.status).toBe('in_stock')
+    expect(result.item.availableQuantity).toBe(1)
+    expect(result.item.warehouseLocation).toBe('B-退货可用-01')
+    expect(result.item.orderLineId).toBe(returnItem?.orderLineId)
+    expect(result.movement.type).toBe('adjust')
+    expect(result.movement.relatedOrderLineId).toBe(returnItem?.orderLineId)
+    expect(result.movement.note).toBe('质检通过，可作为库存资产再次使用。')
+  })
+
+  it('rejects quality review available quantity above stock quantity', () => {
+    const returnItem = inventoryItemsMock.find((item) => item.id === 'inventory-return-ring-001')
+    expect(returnItem).toBeDefined()
+
+    expect(() =>
+      applyInventoryReview(returnItem!, {
+        condition: 'returned',
+        status: 'in_stock',
+        availableQuantity: 2,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 12:00'
+      })
+    ).toThrow('可用数量不能大于库存数量')
   })
 })

@@ -86,6 +86,16 @@ export type InventoryMovementResult = {
   movement: InventoryMovement
 }
 
+export type InventoryReviewInput = {
+  condition: InventoryItemCondition
+  status: InventoryItemStatus
+  availableQuantity: number
+  operatorName: string
+  occurredAt: string
+  toLocation?: string
+  note?: string
+}
+
 const includesKeyword = (value: string | undefined, keyword: string) => value?.toLowerCase().includes(keyword) ?? false
 
 export const buildInventoryRows = ({
@@ -298,6 +308,45 @@ export const applyInventoryMovement = (item: InventoryItem, input: InventoryMove
     toLocation: nextItem.warehouseLocation,
     relatedOrderLineId: input.relatedOrderLineId,
     note: input.note
+  }
+
+  return {
+    item: nextItem,
+    movement
+  }
+}
+
+export const applyInventoryReview = (item: InventoryItem, input: InventoryReviewInput): InventoryMovementResult => {
+  const availableQuantity = Math.max(0, Math.floor(input.availableQuantity))
+
+  if (availableQuantity > item.quantity) {
+    throw new Error('可用数量不能大于库存数量')
+  }
+
+  const nextAvailableQuantity = ['outbound', 'scrapped'].includes(input.status) ? 0 : availableQuantity
+  const nextItem: InventoryItem = {
+    ...item,
+    condition: input.condition,
+    status: input.status,
+    availableQuantity: nextAvailableQuantity,
+    warehouseLocation: input.toLocation?.trim() || item.warehouseLocation,
+    remark: input.note?.trim() || item.remark
+  }
+
+  const movement: InventoryMovement = {
+    id: `movement-${item.id}-review-${input.occurredAt.replace(/[^0-9]/g, '')}`,
+    inventoryItemId: item.id,
+    inventoryCode: item.inventoryCode,
+    type: 'adjust',
+    quantity: item.quantity,
+    operatorName: input.operatorName,
+    occurredAt: input.occurredAt,
+    fromStatus: item.status,
+    toStatus: nextItem.status,
+    fromLocation: item.warehouseLocation,
+    toLocation: nextItem.warehouseLocation,
+    relatedOrderLineId: item.orderLineId,
+    note: input.note?.trim() || '库存质检处置。'
   }
 
   return {

@@ -1415,6 +1415,22 @@ describe('router smoke', () => {
     expect(screen.getByText('来源追溯')).toBeInTheDocument()
     expect(screen.getAllByText('产品：山形素圈戒指 / 商品行：OL-202604-001-01 / 购买记录：PUR-202604-001 / 客户：张三').length).toBeGreaterThan(0)
     expect(screen.getAllByText('客户退货入库，进入待检库位。').length).toBeGreaterThan(0)
+
+    await user.selectOptions(screen.getByLabelText('处置后成色'), 'returned')
+    await user.selectOptions(screen.getByLabelText('处置后状态'), 'in_stock')
+    const reviewAvailableQuantity = screen.getByLabelText('可用数量')
+    await user.clear(reviewAvailableQuantity)
+    await user.type(reviewAvailableQuantity, '1')
+    const reviewLocationInputs = screen.getAllByLabelText('目标库位')
+    const reviewLocation = reviewLocationInputs[reviewLocationInputs.length - 1] as HTMLElement
+    await user.clear(reviewLocation)
+    await user.type(reviewLocation, 'B-退货可用-01')
+    await user.type(screen.getByLabelText('质检结论'), '质检通过，可再次使用')
+    await user.click(screen.getByRole('button', { name: '保存质检处置' }))
+
+    expect(screen.getByText(/已完成质检处置/)).toBeInTheDocument()
+    expect(screen.getAllByText('B-退货可用-01').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('质检通过，可再次使用').length).toBeGreaterThan(0)
   })
 
   it('records inventory inbound and movement actions locally', async () => {
