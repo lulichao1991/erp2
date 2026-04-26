@@ -16,7 +16,24 @@
 
 当前阶段是：
 
-**前端首轮开发准备阶段**
+**OrderLine-centered ERP v1 mock 工作台收口阶段**
+
+当前已经完成：
+
+- legacy `/orders` runtime 删除与文档收口
+- `Purchase + OrderLine` 作为当前购买与商品执行主线
+- `/order-lines` 商品行中心
+- `/purchases/new` 与 `/purchases/:purchaseId`
+- `/customers` 与 `/customers/:customerId`
+- `/tasks`
+- `/production-follow-up`
+- `/design-modeling`
+- `/factory`
+- `/finance`
+- `/management`
+- `/production-plan`
+- mock role capability 边界
+- `orderLineRiskSelectors` 统一资料完整性、逾期、工厂回传、财务异常和角色待办徽标
 
 这一阶段的重点不是：
 
@@ -25,7 +42,7 @@
 - 完整业务流闭环
 - 复杂权限系统
 
-而是先把这条前端主链路梳理清楚并可直接开工：
+而是保持这条前端主链路稳定：
 
 **产品维护（含规格明细与固定加价规则）  
 → 商品行引用产品  
@@ -37,9 +54,13 @@
 
 ---
 
-## 3. 当前已经明确的核心结论
+说明：本文后续早期段落保留了历史推进记录。如果早期“首轮 / 交易记录 / 商品任务”口径与本节冲突，以本节和 `README.md`、`AGENTS.md`、`routes-and-pages.md` 为准。
 
-### 3.1 首轮核心模块
+---
+
+## 3. 历史首轮核心结论（保留参考）
+
+### 3.1 历史首轮核心模块
 首轮只优先开发两个模块：
 
 1. 商品行中心

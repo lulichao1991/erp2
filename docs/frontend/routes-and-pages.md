@@ -252,6 +252,7 @@
 - 本页只基于 current `Purchase + OrderLine` 数据做汇总
 - 管理看板不承接客服、跟单、设计、工厂或财务录入动作
 - 统计逻辑集中在 management selector 中，不堆在 JSX
+- 生产风险、资料完整性、财务风险等规则优先复用 `orderLineRiskSelectors`
 
 ---
 
@@ -367,6 +368,15 @@
   ├─ 产品详情 /products/:productId
   └─ 产品编辑 /products/:productId/edit
 
+角色工作台
+  ├─ 任务中心 /tasks
+  ├─ 生产跟进 /production-follow-up
+  ├─ 设计建模 /design-modeling
+  ├─ 工厂协同 /factory
+  ├─ 财务中心 /finance
+  ├─ 管理看板 /management
+  └─ 生产计划 /production-plan
+
 legacy /orders
   └─ 已删除；旧实现仅可通过 git 历史回看
 ```
@@ -403,6 +413,16 @@ legacy /orders
 /products/new
 /products/:productId
 /products/:productId/edit
+/customers
+/customers/:customerId
+/tasks
+/production-follow-up
+/design-modeling
+/factory
+/finance
+/management
+/production-plan
+/production-plan/:taskId
 ```
 
 legacy `/orders` 路由已删除；不再列入可访问路由最小集。
@@ -411,15 +431,17 @@ legacy `/orders` 路由已删除；不再列入可访问路由最小集。
 
 ## 9. 暂不复杂化的内容
 
-当前清理收口阶段暂不新增：
+当前 mock v1 阶段暂不复杂化：
 
 - 物流独立列表页
 - 售后独立列表页
-- 财务中心
-- 完整工厂协同系统
+- 真实后端鉴权 / 权限安全
+- 真实文件上传与文件存储
+- 真实财务导出、收退款流水、发票或复杂对账
+- 复杂工厂门户、外部账号体系或工厂结算闭环
 - 产品引用选择器独立页面
 - 来源产品详情独立页面
-- 复杂权限系统
+- 复杂权限系统或流程引擎
 
 ---
 

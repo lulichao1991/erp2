@@ -18,6 +18,13 @@ Customer -> Purchase -> OrderLine -> Product
 - `/products`
 - `/customers`
 - `/customers/:customerId`
+- `/tasks`
+- `/production-follow-up`
+- `/design-modeling`
+- `/factory`
+- `/finance`
+- `/management`
+- `/production-plan`
 
 legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口或当前主文档口径。
 
@@ -44,7 +51,7 @@ legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口
 
 作用：
 - 定义当前主路由与页面职责
-- 明确 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products` 的主入口地位
+- 明确 `/order-lines`、`/purchases/*` 和各角色工作台的主入口地位
 - 明确 legacy `/orders` 已删除，当前页面只围绕 `Purchase + OrderLine`
 
 4. `docs/frontend/ui-structure.md`
@@ -80,20 +87,20 @@ legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口
 
 ---
 
-## 3. 暂留过渡文档
+## 3. 任务板与历史执行记录
 
-以下文档仍保留在 `docs/frontend` 根目录，但不再作为当前主线口径来源。
+以下文档仍保留在 `docs/frontend` 根目录，用于记录已完成能力、暂停项和后续边界。
 
 1. `docs/frontend/frontend-task-board.md`
 
 保留原因：
-- 当前 `README.md` 和 `AGENTS.md` 仍明确引用该文件
-- 本轮只做历史文档归档，先不修改 README / AGENTS 的引用链
+- 记录 Purchase + OrderLine 主线已完成页面与能力
+- 记录 legacy `/orders` 删除后的禁止事项和回滚口径
+- 记录当前 mock v1 与真实后端 / 真实权限 / 真实文件上传之间的边界
 
 阅读规则：
-- 仅作为早期任务拆解与执行历史参考
-- 如与 `Purchase + OrderLine` 主线冲突，以当前主文档为准
-- 后续若要归档，应先同步更新 `README.md` 和 `AGENTS.md` 的引用
+- 可作为任务追溯和能力清单阅读
+- 如与 `AGENTS.md`、`README.md` 或 `routes-and-pages.md` 冲突，以这些当前主文档为准
 
 ---
 
