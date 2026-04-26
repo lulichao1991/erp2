@@ -4,6 +4,7 @@ import {
   getOrderLineFinanceStatus,
   getOrderLineLineStatus
 } from '@/services/orderLine/orderLineWorkflow'
+import { getFinanceRiskStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type { OrderLine } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 
@@ -52,34 +53,7 @@ export const calculateFinanceSummary = (line: OrderLine) => {
   }
 }
 
-export const getFinanceRiskLabels = (line: OrderLine) => {
-  const risks: string[] = []
-  const financeStatus = getOrderLineFinanceStatus(line)
-  const factoryStatus = getOrderLineFactoryStatus(line)
-  const settlementAmount = getFactorySettlementAmount(line)
-  const salesAmount = getLineSalesAmount(line)
-
-  if (financeStatus === 'abnormal') {
-    risks.push('财务异常')
-  }
-  if (factoryStatus === 'abnormal') {
-    risks.push('工厂异常')
-  }
-  if ((factoryStatus === 'returned' || getOrderLineLineStatus(line) === 'factory_returned') && !line.productionData?.totalWeight) {
-    risks.push('工厂未回传重量')
-  }
-  if (line.productionData?.totalWeight && line.productionData?.netMetalWeight && line.productionData.netMetalWeight > line.productionData.totalWeight) {
-    risks.push('净金重大于总重')
-  }
-  if ((factoryStatus === 'returned' || getOrderLineLineStatus(line) === 'factory_returned') && settlementAmount <= 0) {
-    risks.push('工厂结算金额为空')
-  }
-  if (salesAmount <= 0) {
-    risks.push('销售金额为空')
-  }
-
-  return risks
-}
+export const getFinanceRiskLabels = (line: OrderLine) => getFinanceRiskStatus(line).labels
 
 export const buildFinanceRows = (orderLines: OrderLine[], purchases: Purchase[]): FinanceRow[] =>
   orderLines.map((line) => {

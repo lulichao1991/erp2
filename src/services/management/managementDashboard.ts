@@ -1,6 +1,5 @@
-import { getOrderLineCompleteness } from '@/services/orderLine/orderLineCustomerService'
-import { calculateFinanceSummary, getFinanceRiskLabels, getLineSalesAmount } from '@/services/orderLine/orderLineFinance'
-import { isProductionFollowUpOverdue } from '@/services/orderLine/orderLineProductionFollowUp'
+import { calculateFinanceSummary, getLineSalesAmount } from '@/services/orderLine/orderLineFinance'
+import { getFinanceRiskStatus, getOrderLineCompleteness, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import {
   getOrderLineDesignStatus,
   getOrderLineFactoryStatus,
@@ -103,16 +102,6 @@ const isSameMonth = (left?: string, right = new Date()) => {
   return parsed.getFullYear() === right.getFullYear() && parsed.getMonth() === right.getMonth()
 }
 
-const isDueSoon = (line: OrderLine, referenceDate: Date) => {
-  const dueDate = parseDate(line.factoryPlannedDueDate)
-  if (!dueDate || getOrderLineProductionStatus(line) === 'completed') {
-    return false
-  }
-
-  const diffDays = (dueDate.getTime() - referenceDate.getTime()) / 86_400_000
-  return diffDays >= 0 && diffDays <= 3
-}
-
 const getCycleDays = (line: OrderLine) => {
   const startedAt = parseDate(line.productionSentAt)
   const completedAt = parseDate(line.productionCompletedAt || line.productionData?.completedAt)
@@ -156,8 +145,8 @@ export const buildManagementDashboardMetrics = (
     },
     statusDistribution,
     productionRisks: {
-      overdueCount: orderLines.filter((line) => isProductionFollowUpOverdue(line)).length,
-      dueSoonCount: orderLines.filter((line) => isDueSoon(line, referenceDate)).length,
+      overdueCount: orderLines.filter((line) => getProductionDelayStatus(line, referenceDate, line.factoryPlannedDueDate).overdue).length,
+      dueSoonCount: orderLines.filter((line) => getProductionDelayStatus(line, referenceDate, line.factoryPlannedDueDate).dueSoon).length,
       blockedCount: orderLines.filter((line) => getOrderLineProductionStatus(line) === 'blocked').length,
       pendingFactoryReturnCount: orderLines.filter((line) => getOrderLineProductionStatus(line) === 'in_production' && !['returned', 'abnormal'].includes(getOrderLineFactoryStatus(line))).length,
       designIncompleteCount: orderLines.filter((line) => line.requiresDesign && getOrderLineDesignStatus(line) !== 'completed').length,
@@ -169,7 +158,7 @@ export const buildManagementDashboardMetrics = (
       confirmedDepositAmount: purchases.reduce((sum, purchase) => sum + (purchase.finance?.depositStatus === 'confirmed' ? purchase.finance.depositAmount || 0 : 0), 0),
       pendingBalanceAmount: purchases.reduce((sum, purchase) => sum + (purchase.finance?.finalPaymentStatus === 'confirmed' ? 0 : purchase.finance?.balanceAmount || 0), 0),
       pendingFactorySettlementCount: orderLines.filter((line) => getOrderLineFinanceStatus(line) === 'pending').length,
-      financeAbnormalCount: orderLines.filter((line) => getFinanceRiskLabels(line).length > 0 || getOrderLineFinanceStatus(line) === 'abnormal').length,
+      financeAbnormalCount: orderLines.filter((line) => getFinanceRiskStatus(line).labels.length > 0 || getOrderLineFinanceStatus(line) === 'abnormal').length,
       estimatedGrossProfit: totalGrossProfit,
       estimatedGrossProfitRate: totalSalesAmount > 0 ? Number(((totalGrossProfit / totalSalesAmount) * 100).toFixed(1)) : 0
     },
@@ -188,7 +177,7 @@ export const buildManagementDashboardMetrics = (
         taskCount: lines.length,
         inProductionCount: lines.filter((line) => getOrderLineFactoryStatus(line) === 'in_production' || getOrderLineProductionStatus(line) === 'in_production').length,
         completedCount: lines.filter((line) => getOrderLineProductionStatus(line) === 'completed').length,
-        overdueCount: lines.filter((line) => isProductionFollowUpOverdue(line)).length,
+        overdueCount: lines.filter((line) => getProductionDelayStatus(line, referenceDate, line.factoryPlannedDueDate).overdue).length,
         abnormalCount: lines.filter((line) => getOrderLineFactoryStatus(line) === 'abnormal' || getOrderLineProductionStatus(line) === 'blocked').length,
         averageCycleDays: cycleDays.length > 0 ? Number((cycleDays.reduce((sum, value) => sum + value, 0) / cycleDays.length).toFixed(1)) : undefined
       }
