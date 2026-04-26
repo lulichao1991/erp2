@@ -164,6 +164,32 @@ export type OrderLineProductionInfo = {
   factoryNote?: string
 }
 
+export type OrderLineProductionData = {
+  shippedAt?: string
+  completedAt?: string
+  totalWeight?: number
+  netMetalWeight?: number
+  actualMaterial?: string
+  materialLossNote?: string
+  mainStoneType?: string
+  mainStoneQuantity?: number
+  mainStoneUnit?: string
+  mainStoneUnitPrice?: number
+  mainStoneAmount?: number
+  sideStoneType?: string
+  sideStoneCount?: number
+  sideStoneTotalCarat?: number
+  sideStoneUnitPrice?: number
+  sideStoneAmount?: number
+  baseLaborCost?: number
+  extraLaborCost?: number
+  extraLaborCostNote?: string
+  totalLaborCost?: number
+  factoryNote?: string
+  finishedImageUrls?: string[]
+  settlementFileUrls?: string[]
+}
+
 export type OrderLine = {
   id: string
   lineNo?: number
@@ -219,6 +245,7 @@ export type OrderLine = {
   designInfo?: OrderLineDesignInfo
   outsourceInfo?: OrderLineOutsourceInfo
   productionInfo?: OrderLineProductionInfo
+  productionData?: OrderLineProductionData
   quote?: QuoteResult
   expectedDate?: string
   promisedDate?: string

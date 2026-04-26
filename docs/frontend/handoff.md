@@ -859,6 +859,8 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - 生产跟进动作通过 current `useAppData.updateOrderLine` 更新商品行，不恢复旧 `/orders` runtime
 - `/design-modeling` 已作为设计 / 建模工作台接入，按 `OrderLine.designStatus / modelingStatus` 展示待设计、设计中、待建模、建模中、待修改和已完成任务
 - 设计 / 建模工作台第一版只记录 mock 文件名 / URL 和备注，不接真实上传，也不展示客户隐私或财务金额
+- `/factory` 已作为工厂协同中心接入，按 `OrderLine.factoryId / productionStatus / factoryStatus` 展示分配给当前 mock 工厂的生产任务
+- 工厂协同第一版支持接收、开始生产、生产完成、工厂回传和异常标记；不展示客户联系方式、地址、销售价格、定金、尾款、利润或财务备注
 - 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
 - 不直接 mutate `orderLines` 数组或 mock 对象
 

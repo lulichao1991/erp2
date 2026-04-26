@@ -57,6 +57,7 @@
 - 任务中心
 - 生产跟进
 - 设计建模
+- 工厂协同（仅工厂角色可见）
 - 产品管理
 - 生产计划（仅工厂角色可见）
 
@@ -67,6 +68,7 @@
 - `/production-plan` 仍可作为工厂角色入口展示，但其视图数据只来自当前 `tasks + purchases + orderLines + products`
 - `/production-follow-up` 是跟单生产推进入口，视图数据只来自当前 `OrderLine` 和所属 `Purchase`
 - `/design-modeling` 是设计 / 建模工作台，视图数据只来自当前 `OrderLine`
+- `/factory` 是工厂协同中心，只展示分配给当前 mock 工厂的 `OrderLine` 生产信息
 
 ### `/customers`
 客户中心。
@@ -188,6 +190,23 @@
 - 本页只基于 `OrderLine` 的设计、建模和出蜡字段
 - 不展示客户联系方式、销售金额、定金、尾款或利润
 - 不接真实文件上传，第一版使用 mock file URL / file name 记录
+
+---
+
+### `/factory`
+工厂协同中心。
+
+用途：
+- 查看分配给当前 mock 工厂的商品行生产任务
+- 接收任务、标记开始生产、标记生产完成
+- 填写重量、材质、石料、工费、成品图和结算单等生产回传数据
+- 提交给跟单 / 财务确认
+- 标记工厂异常并填写工厂备注
+
+说明：
+- 本页只基于 `OrderLine.factoryId / productionStatus / factoryStatus / productionData`
+- 不展示客户姓名、联系方式、收货地址、销售价格、定金、尾款、利润或财务备注
+- 当前为前端 mock 角色与 mock 数据，不接真实后端鉴权或真实上传
 
 ---
 
