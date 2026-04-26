@@ -57,6 +57,15 @@ export const ringOrderLine: OrderLine = {
   requiresDesign: true,
   requiresModeling: false,
   requiresWax: false,
+  designFiles: [
+    {
+      id: 'design-file-ring-001',
+      name: '山形戒指确认稿.pdf',
+      url: 'data:text/plain;charset=utf-8,ring-design'
+    }
+  ],
+  designNote: '戒指设计稿已确认。',
+  designCompletedAt: '2026-04-23 09:00',
   isReferencedProduct: true,
   productId: ringProduct.id,
   sourceProduct: {
@@ -223,7 +232,7 @@ export const necklaceOrderLine: OrderLine = {
   skuCode: 'NECK-CUSTOM-042',
   quantity: 1,
   lineStatus: 'pending_design',
-  designStatus: 'in_progress',
+  designStatus: 'revision_requested',
   modelingStatus: 'pending',
   productionStatus: 'not_started',
   factoryStatus: 'not_assigned',
@@ -231,6 +240,9 @@ export const necklaceOrderLine: OrderLine = {
   assignedDesignerId: 'designer-chen',
   assignedModelerId: 'modeler-lin',
   merchandiserId: 'merchandiser-wang',
+  designNote: '第一版吊牌草图需要调整山形弧线。',
+  modelingNote: '设计确认后进入建模。',
+  revisionReason: '客户要求吊牌山形弧线更柔和。',
   status: 'designing',
   currentOwner: '陈设计',
   priority: 'normal',
@@ -252,7 +264,7 @@ export const necklaceOrderLine: OrderLine = {
     remark: '客户希望项链与山形系列风格一致。'
   },
   designInfo: {
-    designStatus: 'in_progress',
+    designStatus: 'rework',
     assignedDesigner: '陈设计',
     requiresRemodeling: true,
     designDeadline: '2026-04-25',
@@ -308,6 +320,16 @@ export const waxOrderLine: OrderLine = {
   assignedDesignerId: 'designer-chen',
   assignedModelerId: 'modeler-lin',
   merchandiserId: 'merchandiser-wang',
+  designFiles: [
+    {
+      id: 'design-file-wax-001',
+      name: '手链设计确认稿.pdf',
+      url: 'data:text/plain;charset=utf-8,wax-design'
+    }
+  ],
+  designNote: '设计稿已确认。',
+  modelingNote: '等待建模领取任务。',
+  designCompletedAt: '2026-04-24 17:00',
   status: 'pending_design',
   currentOwner: '林建模',
   priority: 'normal',
