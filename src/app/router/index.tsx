@@ -18,6 +18,7 @@ import { ProductionFollowUpPage } from '@/pages/productionFollowUp/ProductionFol
 import { DesignModelingWorkbenchPage } from '@/pages/designModeling/DesignModelingWorkbenchPage'
 import { FactoryTaskCenterPage } from '@/pages/factory/FactoryTaskCenterPage'
 import { FinanceCenterPage } from '@/pages/finance/FinanceCenterPage'
+import { ManagementDashboardPage } from '@/pages/management/ManagementDashboardPage'
 
 export const AppRouter = () => (
   <Routes>
@@ -35,6 +36,7 @@ export const AppRouter = () => (
       <Route path="/design-modeling" element={<DesignModelingWorkbenchPage />} />
       <Route path="/factory" element={<FactoryTaskCenterPage />} />
       <Route path="/finance" element={<FinanceCenterPage />} />
+      <Route path="/management" element={<ManagementDashboardPage />} />
       <Route path="/production-plan" element={<ProductionPlanListPage />} />
       <Route path="/production-plan/:taskId" element={<ProductionPlanDetailPage />} />
       <Route path="/products" element={<ProductListPage />} />
