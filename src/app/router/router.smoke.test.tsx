@@ -1280,6 +1280,43 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('renders finance center from current purchase and order-line data', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/finance')
+
+    expect(screen.getByRole('heading', { name: '财务中心' })).toBeInTheDocument()
+    expect(screen.getByText('财务中心围绕 Purchase 金额汇总和 OrderLine 工厂回传数据做确认、异常标记和锁定，不推进设计、建模或生产状态。')).toBeInTheDocument()
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
+    expect(screen.getByText('待确认尾款')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到财务异常' }))
+    expect(screen.getByText('胸针补石')).toBeInTheDocument()
+    expect(screen.getByText('工厂异常')).toBeInTheDocument()
+
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
+  it('confirms finance settlement and final payment without changing production ownership', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/finance')
+
+    await user.click(screen.getByRole('button', { name: '确认尾款' }))
+    expect(screen.getByText('尾款：已确认')).toBeInTheDocument()
+
+    const pendantRow = screen.getByText('山形吊坠').closest('tr')
+    expect(pendantRow).not.toBeNull()
+    await user.clear(within(pendantRow as HTMLElement).getByLabelText('工厂结算金额-oi-pendant-001'))
+    await user.type(within(pendantRow as HTMLElement).getByLabelText('工厂结算金额-oi-pendant-001'), '560')
+    await user.type(within(pendantRow as HTMLElement).getByLabelText('财务备注-oi-pendant-001'), '工厂结算确认')
+    await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: '确认工厂结算' }))
+
+    expect(screen.getAllByText('财务已确认').length).toBeGreaterThan(0)
+    expect(screen.getByText('山形吊坠')).toBeInTheDocument()
+    expect(screen.queryByText('标记生产中')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
   it('renders production plan list route without requiring factory role', () => {
     const { container } = renderRoute('/production-plan')
 

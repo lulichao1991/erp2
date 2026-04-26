@@ -48,6 +48,7 @@ type AppDataContextValue = {
   setCurrentUserRole: (role: TaskAssigneeRole) => void
   saveProduct: (payload: Product) => Product
   updateProduct: (productId: string, updater: (current: Product) => Product) => Product | undefined
+  updatePurchase: (purchaseId: string, updater: (current: Purchase) => Purchase) => Purchase | undefined
   createEmptyProduct: () => Product
   addGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
   removeGlobalProductFieldOption: (field: ProductFieldOptionKey, value: string) => void
@@ -103,6 +104,15 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         }
         const next = updater(found)
         setProducts((current) => current.map((item) => (item.id === productId ? next : item)))
+        return next
+      },
+      updatePurchase: (purchaseId, updater) => {
+        const found = purchases.find((item) => item.id === purchaseId)
+        if (!found) {
+          return undefined
+        }
+        const next = updater(found)
+        setPurchases((current) => current.map((item) => (item.id === purchaseId ? next : item)))
         return next
       },
       createEmptyProduct: () => createEmptyProduct(),

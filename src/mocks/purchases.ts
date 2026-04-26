@@ -28,8 +28,11 @@ export const purchaseMock: Purchase = {
     dealPrice: 8500,
     depositAmount: 5000,
     balanceAmount: 3500,
+    depositStatus: 'confirmed',
+    finalPaymentStatus: 'pending',
     invoiced: false,
     remark: '购买记录只汇总财务，商品推进以商品行为准。',
+    financeNote: '尾款待财务复核后确认。',
     transactions: [
       {
         id: 'finance-purchase-001-deposit',

@@ -308,6 +308,23 @@ type OrderLine = {
   designInfo?: OrderLineDesignInfo
   outsourceInfo?: OrderLineOutsourceInfo
   productionInfo?: OrderLineProductionInfo
+  lineSalesAmount?: number
+  allocatedDepositAmount?: number
+  allocatedFinalPaymentAmount?: number
+  materialCost?: number
+  mainStoneCost?: number
+  sideStoneCost?: number
+  laborCost?: number
+  extraLaborCost?: number
+  logisticsCost?: number
+  afterSalesCost?: number
+  factorySettlementAmount?: number
+  estimatedGrossProfit?: number
+  estimatedGrossProfitRate?: number
+  financeConfirmedAt?: string
+  financeAbnormalReason?: string
+  financeNote?: string
+  financeLocked?: boolean
   quote?: QuoteResult
 
   expectedDate?: string
@@ -346,6 +363,7 @@ type OrderLineProductionData = {
 - 生产跟进视图基于 `lineStatus / productionStatus / factoryStatus / factoryPlannedDueDate` 分组，不依赖旧订单模型
 - 设计 / 建模工作台基于 `designStatus / modelingStatus / designFiles / modelingFiles / waxFiles` 分组和记录，不展示客户隐私或财务金额
 - 工厂协同中心基于 `factoryId / productionStatus / factoryStatus / productionData` 展示和回传，不读取购买记录客户与金额字段
+- 财务中心基于 `Purchase.finance` 与 `OrderLine.financeStatus / productionData / factorySettlementAmount` 做尾款、工厂结算和成本确认
 
 ---
 
