@@ -6,6 +6,7 @@ import {
   getTaskStatusLabel,
   getTaskTypeLabel
 } from '@/services/workflow/workflowMeta'
+import { getOrderLineTaskGroups } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 import type { Task, TaskStatus, TaskType } from '@/types/task'
@@ -22,7 +23,7 @@ export const TaskListHeader = () => (
   />
 )
 
-export const TaskQuickStats = ({ tasks }: { tasks: Task[] }) => {
+export const TaskQuickStats = ({ tasks, orderLines = [] }: { tasks: Task[]; orderLines?: OrderLine[] }) => {
   const stats = [
     { label: '全部任务', value: tasks.length },
     { label: '待处理', value: tasks.filter((item) => item.status === 'todo').length },
@@ -33,13 +34,25 @@ export const TaskQuickStats = ({ tasks }: { tasks: Task[] }) => {
   ]
 
   return (
-    <div className="stats-grid compact-stats">
-      {stats.map((item) => (
-        <div key={item.label} className="stat-card compact-stat">
-          <div className="stat-card-label">{item.label}</div>
-          <div className="stat-card-value">{item.value}</div>
+    <div className="stack">
+      <div className="stats-grid compact-stats">
+        {stats.map((item) => (
+          <div key={item.label} className="stat-card compact-stat">
+            <div className="stat-card-label">{item.label}</div>
+            <div className="stat-card-value">{item.value}</div>
+          </div>
+        ))}
+      </div>
+      <SectionCard title="商品行任务分组" description="按 OrderLine 状态生成任务分组，供后续客服、设计、跟单、工厂和财务视图复用。" className="compact-card">
+        <div className="stats-grid compact-stats">
+          {getOrderLineTaskGroups(orderLines).map((item) => (
+            <div key={item.value} className="stat-card compact-stat">
+              <div className="stat-card-label">{item.label}</div>
+              <div className="stat-card-value">{item.count}</div>
+            </div>
+          ))}
         </div>
-      ))}
+      </SectionCard>
     </div>
   )
 }

@@ -38,6 +38,52 @@ export type OrderLineStatus =
   | 'cancelled'
   | 'exception'
 
+export type OrderLineLineStatus =
+  | 'draft'
+  | 'pending_customer_confirmation'
+  | 'pending_design'
+  | 'pending_modeling'
+  | 'pending_merchandiser_review'
+  | 'pending_factory_production'
+  | 'in_production'
+  | 'factory_returned'
+  | 'pending_finance_confirmation'
+  | 'ready_to_ship'
+  | 'completed'
+  | 'after_sales'
+
+export type OrderLineWorkflowDesignStatus =
+  | 'not_required'
+  | 'pending'
+  | 'in_progress'
+  | 'revision_requested'
+  | 'completed'
+
+export type OrderLineWorkflowModelingStatus = OrderLineWorkflowDesignStatus
+
+export type OrderLineWorkflowProductionStatus =
+  | 'not_started'
+  | 'pending_dispatch'
+  | 'dispatched'
+  | 'in_production'
+  | 'completed'
+  | 'delayed'
+  | 'blocked'
+
+export type OrderLineFactoryStatus =
+  | 'not_assigned'
+  | 'pending_acceptance'
+  | 'accepted'
+  | 'in_production'
+  | 'returned'
+  | 'abnormal'
+
+export type OrderLineFinanceStatus =
+  | 'not_required'
+  | 'pending'
+  | 'confirmed'
+  | 'abnormal'
+
 export type OrderLineActionType = 'created' | 'status_changed' | 'note'
 
 export type OrderLineLog = {
@@ -132,6 +178,19 @@ export type OrderLine = {
   versionNo?: string
   skuCode?: string
   quantity: number
+  lineStatus?: OrderLineLineStatus | string
+  designStatus?: OrderLineWorkflowDesignStatus | string
+  modelingStatus?: OrderLineWorkflowModelingStatus | string
+  productionStatus?: OrderLineWorkflowProductionStatus | string
+  factoryStatus?: OrderLineFactoryStatus | string
+  financeStatus?: OrderLineFinanceStatus | string
+  assignedDesignerId?: string
+  assignedModelerId?: string
+  merchandiserId?: string
+  factoryId?: string
+  productionSentAt?: string
+  factoryPlannedDueDate?: string
+  productionCompletedAt?: string
   status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority

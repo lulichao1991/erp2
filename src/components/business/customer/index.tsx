@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { EmptyState, InfoField, InfoGrid, SectionCard, StatusTag } from '@/components/common'
+import { getOrderLineLineStatus, getOrderLineLineStatusLabel } from '@/services/orderLine/orderLineWorkflow'
 import type { Customer } from '@/types/customer'
 import type { OrderLine } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
@@ -20,23 +21,6 @@ const channelLabelMap: Record<string, string> = {
   wechat: '微信',
   offline: '线下',
   other: '其他'
-}
-
-const orderLineStatusLabelMap: Record<string, string> = {
-  draft: '草稿',
-  pending_confirm: '待确认',
-  pending_measurement: '待测量',
-  pending_design: '待设计',
-  designing: '设计中',
-  pending_outsource: '待下厂',
-  in_production: '生产中',
-  pending_factory_feedback: '待工厂回传',
-  pending_shipment: '待发货',
-  shipped: '已发货',
-  after_sales: '售后中',
-  completed: '已完成',
-  cancelled: '已取消',
-  exception: '异常'
 }
 
 const formatChannels = (channels: string[]) => channels.map((channel) => channelLabelMap[channel] || channel).join(' / ') || '—'
@@ -210,7 +194,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
                 <td>{line.lineCode || line.id}</td>
                 <td>{line.name}</td>
                 <td>
-                  <StatusTag value={orderLineStatusLabelMap[String(line.status)] || String(line.status)} />
+                  <StatusTag value={getOrderLineLineStatusLabel(getOrderLineLineStatus(line))} />
                 </td>
                 <td>{line.currentOwner || '待分配'}</td>
                 <td>{line.promisedDate || '—'}</td>

@@ -204,18 +204,85 @@ type OrderLineStatus =
   | 'cancelled'
   | 'exception'
 
+type OrderLineLineStatus =
+  | 'draft'
+  | 'pending_customer_confirmation'
+  | 'pending_design'
+  | 'pending_modeling'
+  | 'pending_merchandiser_review'
+  | 'pending_factory_production'
+  | 'in_production'
+  | 'factory_returned'
+  | 'pending_finance_confirmation'
+  | 'ready_to_ship'
+  | 'completed'
+  | 'after_sales'
+
+type OrderLineWorkflowDesignStatus =
+  | 'not_required'
+  | 'pending'
+  | 'in_progress'
+  | 'revision_requested'
+  | 'completed'
+
+type OrderLineWorkflowModelingStatus = OrderLineWorkflowDesignStatus
+
+type OrderLineWorkflowProductionStatus =
+  | 'not_started'
+  | 'pending_dispatch'
+  | 'dispatched'
+  | 'in_production'
+  | 'completed'
+  | 'delayed'
+  | 'blocked'
+
+type OrderLineFactoryStatus =
+  | 'not_assigned'
+  | 'pending_acceptance'
+  | 'accepted'
+  | 'in_production'
+  | 'returned'
+  | 'abnormal'
+
+type OrderLineFinanceStatus =
+  | 'not_required'
+  | 'pending'
+  | 'confirmed'
+  | 'abnormal'
+
 type OrderLine = {
   id: string
   lineNo?: number
   lineCode?: string
+  productionTaskNo?: string
   purchaseId?: string
   customerId?: string
   name: string
   category?: ProductCategory
+  styleName?: string
+  versionNo?: string
+  skuCode?: string
   quantity: number
+  lineStatus?: OrderLineLineStatus | string
+  designStatus?: OrderLineWorkflowDesignStatus | string
+  modelingStatus?: OrderLineWorkflowModelingStatus | string
+  productionStatus?: OrderLineWorkflowProductionStatus | string
+  factoryStatus?: OrderLineFactoryStatus | string
+  financeStatus?: OrderLineFinanceStatus | string
+  assignedDesignerId?: string
+  assignedModelerId?: string
+  merchandiserId?: string
+  factoryId?: string
+  productionSentAt?: string
+  factoryPlannedDueDate?: string
+  productionCompletedAt?: string
   status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority
+  isUrgent?: boolean
+  requiresDesign?: boolean
+  requiresModeling?: boolean
+  requiresWax?: boolean
 
   isReferencedProduct: boolean
   productId?: string
@@ -242,7 +309,9 @@ type OrderLine = {
 说明：
 - `purchaseId` 是商品行归属购买记录的主要字段
 - 如果历史代码里仍有 `transactionId`，只能作为兼容字段理解
-- 页面筛选、状态推进、物流、售后都应优先基于 `OrderLine`
+- `lineStatus` 是多角色工作流主状态，页面筛选、状态推进和任务分组优先基于它
+- `status` 短期保留为兼容展示字段，新增逻辑不要继续扩大它的主流程用途
+- 物流、售后、设计、建模、生产、工厂和财务信息都应优先落在 `OrderLine`
 
 ---
 

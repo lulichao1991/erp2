@@ -20,7 +20,7 @@ export const purchaseMock: Purchase = {
   expectedDate: '2026-04-30',
   promisedDate: '2026-05-02',
   riskTags: ['同次购买多件商品', '单件售后独立跟进'],
-  remark: '张三一次购买 3 件商品：戒指生产中、吊坠待发货、项链设计中。',
+  remark: '张三一次购买 4 件商品：戒指生产中、吊坠待财务确认、项链待设计、手链待建模。',
   aggregateStatus: 'in_progress',
   orderLineCount: orderLinesMock.length,
   orderLines: orderLinesMock,
@@ -62,7 +62,7 @@ export const purchaseMock: Purchase = {
       transactionId: 'o-202604-001',
       type: 'purchase_created',
       title: '创建购买记录',
-      description: '同一次购买下创建山形戒指、山形吊坠、定制项链三条商品行。',
+      description: '同一次购买下创建山形戒指、山形吊坠、定制项链、手链蜡版四条商品行。',
       actorName: '王客服',
       createdAt: '2026-04-21 10:45'
     },

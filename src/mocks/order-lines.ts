@@ -39,6 +39,17 @@ export const ringOrderLine: OrderLine = {
   versionNo: 'v3',
   skuCode: 'RING-SH-016',
   quantity: 1,
+  lineStatus: 'in_production',
+  designStatus: 'completed',
+  modelingStatus: 'not_required',
+  productionStatus: 'in_production',
+  factoryStatus: 'in_production',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-chen',
+  merchandiserId: 'merchandiser-li',
+  factoryId: 'factory-suzhou-gold-001',
+  productionSentAt: '2026-04-23 09:30',
+  factoryPlannedDueDate: '2026-04-26',
   status: 'in_production',
   currentOwner: '李生产',
   priority: 'urgent',
@@ -121,6 +132,18 @@ export const pendantOrderLine: OrderLine = {
   versionNo: 'v2',
   skuCode: 'PDT-SH-S',
   quantity: 1,
+  lineStatus: 'pending_finance_confirmation',
+  designStatus: 'completed',
+  modelingStatus: 'not_required',
+  productionStatus: 'completed',
+  factoryStatus: 'returned',
+  financeStatus: 'pending',
+  assignedDesignerId: 'designer-wang',
+  merchandiserId: 'merchandiser-wang',
+  factoryId: 'factory-hangzhou-enamel-001',
+  productionSentAt: '2026-04-23 16:30',
+  factoryPlannedDueDate: '2026-04-25',
+  productionCompletedAt: '2026-04-25 15:20',
   status: 'pending_shipment',
   currentOwner: '王客服',
   priority: 'high',
@@ -199,6 +222,15 @@ export const necklaceOrderLine: OrderLine = {
   versionNo: 'v1',
   skuCode: 'NECK-CUSTOM-042',
   quantity: 1,
+  lineStatus: 'pending_design',
+  designStatus: 'in_progress',
+  modelingStatus: 'pending',
+  productionStatus: 'not_started',
+  factoryStatus: 'not_assigned',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-chen',
+  assignedModelerId: 'modeler-lin',
+  merchandiserId: 'merchandiser-wang',
   status: 'designing',
   currentOwner: '陈设计',
   priority: 'normal',
@@ -253,12 +285,89 @@ export const necklaceOrderLine: OrderLine = {
   finalDisplayQuote: 2360
 }
 
-export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine]
+export const waxOrderLine: OrderLine = {
+  id: 'ol-zhang-wax-001',
+  lineNo: 4,
+  lineCode: 'OL-202604-001-04',
+  productionTaskNo: 'WAX-BR-001',
+  purchaseId,
+  transactionId: purchaseId,
+  customerId: 'customer-zhang-001',
+  name: '手链蜡版确认',
+  category: 'bracelet',
+  styleName: '山形开口手链',
+  versionNo: 'v1',
+  skuCode: 'WAX-BR-001',
+  quantity: 1,
+  lineStatus: 'pending_modeling',
+  designStatus: 'completed',
+  modelingStatus: 'pending',
+  productionStatus: 'not_started',
+  factoryStatus: 'not_assigned',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-chen',
+  assignedModelerId: 'modeler-lin',
+  merchandiserId: 'merchandiser-wang',
+  status: 'pending_design',
+  currentOwner: '林建模',
+  priority: 'normal',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: true,
+  requiresWax: true,
+  isReferencedProduct: false,
+  selectedSpecValue: '开口手链 58mm',
+  selectedMaterial: '18K金',
+  selectedProcess: '手工抛光',
+  selectedSpecialOptions: ['出蜡确认'],
+  actualRequirements: {
+    material: '18K金',
+    process: '手工抛光',
+    sizeNote: '内径 58mm，开口 18mm',
+    specialNotes: ['需先出蜡给客户确认佩戴弧度'],
+    remark: '设计稿已确认，等待建模出蜡。'
+  },
+  designInfo: {
+    designStatus: 'completed',
+    assignedDesigner: '陈设计',
+    requiresRemodeling: true,
+    designDeadline: '2026-04-24',
+    designNote: '设计稿已确认，建模待开始。'
+  },
+  outsourceInfo: {
+    outsourceStatus: 'pending',
+    supplierName: '待定',
+    plannedDeliveryDate: '2026-05-01',
+    outsourceNote: '建模完成后再下发生产。'
+  },
+  productionInfo: {
+    factoryStatus: 'not_started',
+    factoryNote: '未进入生产。'
+  },
+  quote: {
+    basePrice: 1980,
+    priceAdjustments: [
+      { type: 'material', ruleKey: '18K金', delta: 360 },
+      { type: 'process', ruleKey: '手工抛光', delta: 180 },
+      { type: 'special', ruleKey: '出蜡确认', delta: 160 }
+    ],
+    systemQuote: 2680,
+    status: 'ready',
+    warnings: []
+  },
+  expectedDate: '2026-05-01',
+  promisedDate: '2026-05-03',
+  itemSku: 'WAX-BR-001',
+  finalDisplayQuote: 2680
+}
+
+export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine]
 
 export const orderLineLegacyStatusMock: Record<string, string> = {
   'oi-ring-001': '生产中',
-  'oi-pendant-001': '待发货',
-  'ol-zhang-necklace-001': '设计确认中'
+  'oi-pendant-001': '待财务确认',
+  'ol-zhang-necklace-001': '待设计',
+  'ol-zhang-wax-001': '待建模'
 }
 
 export const orderLineCompatibilityExtrasMock: Record<

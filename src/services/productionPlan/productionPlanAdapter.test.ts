@@ -138,6 +138,9 @@ describe('productionPlanAdapter', () => {
     const receivedTask = { ...factoryTask!, status: 'in_progress' as const }
     const readyItem = {
       ...orderLine!,
+      lineStatus: 'pending_factory_production',
+      productionStatus: 'pending_dispatch',
+      factoryStatus: 'not_assigned',
       productionInfo: {
         ...orderLine!.productionInfo,
         factoryStatus: 'not_started'
@@ -145,6 +148,9 @@ describe('productionPlanAdapter', () => {
     }
     const producingItem = {
       ...orderLine!,
+      lineStatus: 'in_production',
+      productionStatus: 'in_production',
+      factoryStatus: 'in_production',
       productionInfo: {
         ...orderLine!.productionInfo,
         factoryStatus: 'in_progress'
@@ -152,6 +158,9 @@ describe('productionPlanAdapter', () => {
     }
     const legacyProducingItem = {
       ...orderLine!,
+      lineStatus: undefined,
+      productionStatus: undefined,
+      factoryStatus: undefined,
       productionInfo: {
         ...orderLine!.productionInfo,
         factoryStatus: '生产中' as 'in_progress'
@@ -160,6 +169,9 @@ describe('productionPlanAdapter', () => {
     const pendingReportTask = { ...receivedTask, status: 'pending_confirm' as const }
     const pendingFeedbackItem = {
       ...orderLine!,
+      lineStatus: 'in_production',
+      productionStatus: 'in_production',
+      factoryStatus: 'in_production',
       productionInfo: {
         ...orderLine!.productionInfo,
         factoryStatus: 'pending_feedback'
@@ -168,6 +180,8 @@ describe('productionPlanAdapter', () => {
     const reportedTask = { ...receivedTask, status: 'done' as const }
     const issueItem = {
       ...orderLine!,
+      productionStatus: 'blocked',
+      factoryStatus: 'abnormal',
       productionInfo: {
         ...orderLine!.productionInfo,
         factoryStatus: 'issue'
@@ -175,6 +189,9 @@ describe('productionPlanAdapter', () => {
     }
     const legacyIssueItem = {
       ...orderLine!,
+      lineStatus: undefined,
+      productionStatus: undefined,
+      factoryStatus: undefined,
       productionInfo: {
         ...orderLine!.productionInfo,
         factoryStatus: '有异常' as 'issue'

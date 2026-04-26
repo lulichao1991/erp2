@@ -5,7 +5,7 @@ import { useAppData } from '@/hooks/useAppData'
 import type { TaskStatus, TaskType } from '@/types/task'
 
 export const TaskListPage = () => {
-  const { tasks } = useAppData()
+  const { orderLines, tasks } = useAppData()
   const [filters, setFilters] = useState<{
     keyword: string
     type: 'all' | TaskType
@@ -43,7 +43,7 @@ export const TaskListPage = () => {
     <PageContainer>
       <TaskListHeader />
       <div className="stack">
-        <TaskQuickStats tasks={tasks} />
+        <TaskQuickStats tasks={tasks} orderLines={orderLines} />
         <TaskFilterBar value={filters} onChange={setFilters} />
         <TaskTable tasks={filteredTasks} />
       </div>

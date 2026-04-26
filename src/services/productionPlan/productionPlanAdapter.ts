@@ -3,6 +3,7 @@ import type { Product, ProductCategory, ProductAssetFile } from '@/types/product
 import type { ProductionPlanDetail, ProductionPlanFile, ProductionPlanFileGroup, ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
 import type { Purchase, PurchaseTimelineRecord } from '@/types/purchase'
 import type { Task } from '@/types/task'
+import { getOrderLineFactoryStatus, getOrderLineProductionStatus } from '@/services/orderLine/orderLineWorkflow'
 
 const productCategoryLabelMap: Record<ProductCategory, string> = {
   ring: '戒指',
@@ -163,30 +164,36 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
 }
 
 export const getProductionPlanStage = (task: Task, orderLine: OrderLine): ProductionPlanStage => {
+  const workflowFactoryStatus = getOrderLineFactoryStatus(orderLine)
+  const workflowProductionStatus = getOrderLineProductionStatus(orderLine)
   const factoryStatus = normalizeFactoryStatus(getLineFactoryFeedback(orderLine)?.factoryStatus)
 
-  if (factoryStatus === 'issue') {
+  if (workflowFactoryStatus === 'abnormal' || workflowProductionStatus === 'blocked' || factoryStatus === 'issue') {
     return 'issue'
   }
 
-  if (task.status === 'done' || factoryStatus === 'completed') {
+  if (task.status === 'done' || workflowFactoryStatus === 'returned' || workflowProductionStatus === 'completed' || factoryStatus === 'completed') {
     return 'reported'
   }
 
-  if (factoryStatus === 'in_progress') {
+  if (task.status === 'pending_confirm' || factoryStatus === 'pending_feedback') {
+    return 'pending_report'
+  }
+
+  if (workflowFactoryStatus === 'in_production' || workflowProductionStatus === 'in_production' || factoryStatus === 'in_progress') {
     return 'in_production'
   }
 
-  if (task.status === 'todo') {
-    return 'pending_receive'
+  if (workflowProductionStatus === 'pending_dispatch' || workflowProductionStatus === 'dispatched') {
+    return 'ready_to_produce'
   }
 
   if (task.status === 'in_progress') {
     return 'ready_to_produce'
   }
 
-  if (task.status === 'pending_confirm' || factoryStatus === 'pending_feedback') {
-    return 'pending_report'
+  if (task.status === 'todo') {
+    return 'pending_receive'
   }
 
   return 'pending_receive'
