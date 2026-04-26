@@ -59,6 +59,7 @@
 - 设计建模
 - 工厂协同（仅工厂角色可见）
 - 财务中心
+- 管理看板
 - 产品管理
 - 生产计划（仅工厂角色可见）
 
@@ -71,6 +72,7 @@
 - `/design-modeling` 是设计 / 建模工作台，视图数据只来自当前 `OrderLine`
 - `/factory` 是工厂协同中心，只展示分配给当前 mock 工厂的 `OrderLine` 生产信息
 - `/finance` 是财务中心，围绕 `Purchase.finance` 和 `OrderLine` 成本 / 工厂回传数据做确认
+- `/management` 是管理看板，围绕 `Purchase + OrderLine` 汇总业务、生产风险、财务、角色负载和工厂表现
 
 ### `/customers`
 客户中心。
@@ -225,6 +227,21 @@
 - 本页围绕 `Purchase.finance` 与 `OrderLine.financeStatus / productionData`
 - 财务可以查看金额和成本，但不负责推进设计、建模或生产状态
 - 当前不做真实导出、后端收款流水或复杂财务审批
+
+---
+
+### `/management`
+管理看板。
+
+用途：
+- 查看 Purchase 和 OrderLine 业务总览
+- 查看商品行状态分布
+- 查看生产风险、财务概览、角色负载和工厂表现
+
+说明：
+- 本页只基于 current `Purchase + OrderLine` 数据做汇总
+- 管理看板不承接客服、跟单、设计、工厂或财务录入动作
+- 统计逻辑集中在 management selector 中，不堆在 JSX
 
 ---
 

@@ -1317,6 +1317,22 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('renders management dashboard from current workflow metrics', () => {
+    const { container } = renderRoute('/management')
+
+    expect(screen.getByRole('heading', { name: '管理看板' })).toBeInTheDocument()
+    expect(screen.getByText('管理看板基于 Purchase 与 OrderLine 的 current workflow 汇总业务、生产、财务、角色负载和工厂表现，不参与具体录入。')).toBeInTheDocument()
+    expect(screen.getByText('业务总览')).toBeInTheDocument()
+    expect(screen.getByText('商品行状态分布')).toBeInTheDocument()
+    expect(screen.getByText('生产风险')).toBeInTheDocument()
+    expect(screen.getByText('财务概览')).toBeInTheDocument()
+    expect(screen.getByText('角色负载')).toBeInTheDocument()
+    expect(screen.getByText('工厂表现')).toBeInTheDocument()
+    expect(screen.getByText('跟单待审核')).toBeInTheDocument()
+    expect(screen.getByText('factory-suzhou-gold-001')).toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
   it('renders production plan list route without requiring factory role', () => {
     const { container } = renderRoute('/production-plan')
 
