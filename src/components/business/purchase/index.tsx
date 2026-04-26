@@ -10,8 +10,9 @@ import {
   getOrderLineLineStatusLabel,
   factoryWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
+import { getCustomerServiceNextLineStatus, getOrderLineCompleteness } from '@/services/orderLine/orderLineCustomerService'
 import type { Customer } from '@/types/customer'
-import type { OrderLine } from '@/types/order-line'
+import type { OrderLine, OrderLineLineStatus } from '@/types/order-line'
 import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { QuoteResult } from '@/types/quote'
@@ -66,6 +67,7 @@ export type OrderLineDraft = {
   needsModeling: boolean
   needsWax: boolean
   urgent: boolean
+  lineStatus: OrderLineLineStatus | string
   ownerName: string
   promisedDate: string
 }
@@ -156,6 +158,7 @@ const createOrderLineDraft = (): OrderLineDraft => ({
   needsModeling: false,
   needsWax: false,
   urgent: false,
+  lineStatus: 'draft',
   ownerName: '客服A',
   promisedDate: ''
 })
@@ -164,7 +167,8 @@ const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => ({
   ...line,
   id: createOrderLineDraftId(),
   lineCode: '',
-  productionTaskNo: ''
+  productionTaskNo: '',
+  lineStatus: 'draft'
 })
 
 const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
@@ -256,6 +260,15 @@ const buildSpecialOptionPatch = (line: OrderLineDraft, option: string, checked: 
   selectedSpecialOptions: checked
     ? [...line.selectedSpecialOptions.filter((item) => item !== option), option]
     : line.selectedSpecialOptions.filter((item) => item !== option)
+})
+
+const buildDraftCompletenessInput = (line: OrderLineDraft) => ({
+  productName: line.productName,
+  category: line.category,
+  material: line.material,
+  size: line.spec || line.sizeNote,
+  craftRequirements: line.process,
+  productionTaskNo: line.productionTaskNo
 })
 
 const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
@@ -923,12 +936,30 @@ export const OrderLineDraftCard = ({
   const selectedSpec = getSelectedSpec(line, product)
   const quote = buildOrderLineDraftQuote(line)
   const referableProducts = getReferableProducts()
+  const completeness = getOrderLineCompleteness(buildDraftCompletenessInput(line))
+  const nextConfirmStatus = getCustomerServiceNextLineStatus({
+    requiresDesign: line.needsDesign,
+    requiresModeling: line.needsModeling
+  })
+  const handleCustomerConfirm = () => {
+    if (!completeness.complete) {
+      return
+    }
+    onChange({ lineStatus: nextConfirmStatus })
+  }
 
   return (
     <div className="subtle-panel">
       <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <strong>商品行 {line.lineCode || tempLineNo}</strong>
         <div className="row wrap">
+          <strong>商品行 {line.lineCode || tempLineNo}</strong>
+          <StatusTag value={getOrderLineLineStatusLabel(line.lineStatus)} />
+          <StatusTag value={completeness.complete ? '资料完整' : '资料缺失'} />
+        </div>
+        <div className="row wrap">
+          <button type="button" className="button secondary small" onClick={handleCustomerConfirm} disabled={!completeness.complete}>
+            标记客服确认完成
+          </button>
           <button type="button" className="button ghost small" onClick={onDuplicate}>
             复制商品行
           </button>
@@ -936,6 +967,10 @@ export const OrderLineDraftCard = ({
             删除商品行
           </button>
         </div>
+      </div>
+      <div className="text-caption">
+        资料完整度 {completeness.completed}/{completeness.total} · {completeness.summary}
+        {completeness.complete ? ` · 确认后进入「${getOrderLineLineStatusLabel(nextConfirmStatus)}」` : ''}
       </div>
       <div className="field-grid three">
         <label className="field-control">

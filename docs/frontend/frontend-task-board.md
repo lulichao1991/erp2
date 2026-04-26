@@ -103,6 +103,8 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 在同一笔购买记录下维护多条商品行草稿
 - 每条商品行草稿可独立引用产品、选择规格并生成参考报价
 - 每条商品行草稿可录入生产任务编号、货号 / SKU、款式、版本、尺寸、印记、设计 / 建模 / 出蜡需求
+- 每条商品行草稿展示资料完整度和缺失项
+- 客服确认完成后，按 `requiresDesign / requiresModeling` 分流到 `pending_design / pending_modeling / pending_merchandiser_review`
 - 页面语义已从旧“新建订单”收口为“新建购买记录”
 
 验收口径：
@@ -164,6 +166,7 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - `/order-lines` 与 `/purchases/:purchaseId` 使用同一套商品行状态更新语义
 - 状态更新按商品行独立发生
 - `lineStatus` 已作为多角色工作流主状态字段接入 `/order-lines` 筛选、快捷视图、购买记录详情和任务分组
+- 商品行详情抽屉展示客服资料完整度，并可执行客服确认分流
 - 设计 / 建模 / 生产 / 工厂 / 财务状态字段已落在 `OrderLine`，用于后续跟单、设计建模、工厂和财务视图
 - `status` 短期保留为兼容展示字段，后续新增逻辑优先使用 `lineStatus`
 
