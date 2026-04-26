@@ -11,6 +11,7 @@ import {
   factoryWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
 import { getCustomerServiceNextLineStatus, getOrderLineCompleteness } from '@/services/orderLine/orderLineCustomerService'
+import { getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type { Customer } from '@/types/customer'
 import type { OrderLine, OrderLineLineStatus } from '@/types/order-line'
 import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
@@ -412,25 +413,7 @@ const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelM
 
 const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
 
-const getTimePressure = (promisedDate?: string) => {
-  if (!promisedDate) {
-    return { label: '待确认交期', variant: 'normal' as const }
-  }
-
-  const promised = new Date(`${promisedDate}T23:59:59`)
-  const now = new Date()
-  const diffDays = Math.ceil((promised.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) {
-    return { label: `已超时 ${Math.abs(diffDays)} 天`, variant: 'overdue' as const }
-  }
-
-  if (diffDays <= 3) {
-    return { label: `剩余 ${diffDays} 天`, variant: 'dueSoon' as const }
-  }
-
-  return { label: `剩余 ${diffDays} 天`, variant: 'normal' as const }
-}
+const getTimePressure = (line: OrderLine, promisedDate?: string) => getProductionDelayStatus(line, new Date(), promisedDate, { respectCompleted: false })
 
 const isActiveLogisticsRecord = (record?: LogisticsRecord) => record?.recordStatus !== 'voided'
 
@@ -580,7 +563,7 @@ export const PurchaseOrderLineTable = ({
             {rows.map(({ line, purchase }) => {
               const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id && isActiveLogisticsRecord(item))
               const afterSalesCase = findCurrentAfterSalesCase(afterSalesCases, line.id)
-              const pressure = getTimePressure(line.promisedDate || purchase.promisedDate)
+              const pressure = getTimePressure(line, line.promisedDate || purchase.promisedDate)
               const row = { line, purchase }
               const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
                 if (isInteractiveTarget(event.target)) {

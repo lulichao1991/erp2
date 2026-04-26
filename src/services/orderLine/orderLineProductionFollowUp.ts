@@ -6,6 +6,7 @@ import {
   productionWorkflowStatusLabelMap,
   factoryWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
+import { getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type { OrderLine, OrderLineWorkflowProductionStatus } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 
@@ -30,22 +31,8 @@ export const productionFollowUpTabs: Array<{ value: ProductionFollowUpTab; label
   { value: 'risk', label: '异常 / 逾期' }
 ]
 
-const isPastDate = (date?: string) => {
-  if (!date) {
-    return false
-  }
-
-  const parsed = new Date(`${date}T23:59:59`)
-  if (Number.isNaN(parsed.getTime())) {
-    return false
-  }
-
-  return parsed.getTime() < Date.now()
-}
-
 export const isProductionFollowUpOverdue = (line: OrderLine) => {
-  const productionStatus = getOrderLineProductionStatus(line)
-  return isPastDate(line.factoryPlannedDueDate) && productionStatus !== 'completed'
+  return getProductionDelayStatus(line, new Date(), line.factoryPlannedDueDate).overdue
 }
 
 export const isProductionFollowUpRisk = (line: OrderLine) => {

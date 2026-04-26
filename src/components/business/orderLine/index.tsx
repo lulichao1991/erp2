@@ -22,11 +22,8 @@ import {
   modelingWorkflowStatusLabelMap,
   financeWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
-import {
-  buildOrderLineCompletenessInput,
-  getCustomerServiceNextLineStatus,
-  getOrderLineCompleteness
-} from '@/services/orderLine/orderLineCustomerService'
+import { getCustomerServiceNextLineStatus } from '@/services/orderLine/orderLineCustomerService'
+import { getOrderLineCompleteness, getOrderLineRisks, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type {
   OrderLine,
   OrderLineLineStatus,
@@ -269,25 +266,7 @@ const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelM
 const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
 const getAfterSalesTypeLabel = (type?: string) => (type ? afterSalesTypeLabelMap[type] || type : '未分类')
 
-const getTimePressure = (promisedDate?: string) => {
-  if (!promisedDate) {
-    return { label: '待确认交期', variant: 'normal' as const, overdue: false }
-  }
-
-  const promised = new Date(`${promisedDate}T23:59:59`)
-  const now = new Date()
-  const diffDays = Math.ceil((promised.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) {
-    return { label: `已超时 ${Math.abs(diffDays)} 天`, variant: 'overdue' as const, overdue: true }
-  }
-
-  if (diffDays <= 3) {
-    return { label: `剩余 ${diffDays} 天`, variant: 'dueSoon' as const, overdue: false }
-  }
-
-  return { label: `剩余 ${diffDays} 天`, variant: 'normal' as const, overdue: false }
-}
+const getTimePressure = (line: OrderLine, promisedDate?: string) => getProductionDelayStatus(line, new Date(), promisedDate, { respectCompleted: false })
 
 const getParameterSummary = (line: OrderLine) =>
   [
@@ -305,17 +284,7 @@ const getFactorySummary = (line: OrderLine) =>
 const getOutsourceStatusLabel = (status?: string) => (status ? outsourceStatusLabelMap[status] || status : '待确认')
 
 const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) => {
-  const hasOpenAfterSales = afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
-  const pressure = getTimePressure(line.promisedDate)
-  const completeness = getOrderLineCompleteness(buildOrderLineCompletenessInput(line))
-
-  return [
-    !completeness.complete ? '资料缺失' : null,
-    hasOpenAfterSales ? '售后跟进' : null,
-    pressure.overdue ? '已超时' : null,
-    line.isUrgent || line.priority === 'urgent' ? '加急' : null,
-    line.priority === 'vip' ? 'VIP' : null
-  ].filter((item): item is string => Boolean(item))
+  return getOrderLineRisks(line, { afterSalesCases, dueDate: line.promisedDate }).map((risk) => risk.label)
 }
 
 const getLineOwner = (line: OrderLine, purchase?: Purchase) => line.currentOwner || purchase?.ownerName || ''
@@ -858,7 +827,7 @@ const OrderLineStatusUpdatePanel = ({
   const currentLineStatus = getOrderLineLineStatus(line)
   const [nextStatus, setNextStatus] = useState(String(currentLineStatus))
   const [statusMessage, setStatusMessage] = useState('')
-  const completeness = getOrderLineCompleteness(buildOrderLineCompletenessInput(line))
+  const completeness = getOrderLineCompleteness(line)
   const customerConfirmStatus = getCustomerServiceNextLineStatus({
     requiresDesign: Boolean(line.requiresDesign),
     requiresModeling: Boolean(line.requiresModeling)
@@ -1795,7 +1764,7 @@ export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCent
     const purchaseText = [purchase?.purchaseNo, purchase?.platformOrderNo, purchase?.id].filter(Boolean).join(' ').toLowerCase()
     const customerText = [customer?.name, customer?.phone, customer?.wechat, customer?.id].filter(Boolean).join(' ').toLowerCase()
     const hasActiveAfterSales = getLineHasActiveAfterSales(line, afterSalesCases)
-    const overdue = getTimePressure(line.promisedDate).overdue
+    const overdue = getTimePressure(line, line.promisedDate).overdue
     const lineStatus = getOrderLineLineStatus(line)
     const matchesKeyword =
       keyword.length === 0 ||
@@ -1856,7 +1825,7 @@ export const OrderLineQuickStats = ({ rows, afterSalesCases = afterSalesMock }: 
     { label: '生产中', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'in_production').length },
     { label: '待财务确认', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_finance_confirmation').length },
     { label: '售后中', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))).length },
-    { label: '已超时', value: rows.filter(({ line }) => getTimePressure(line.promisedDate).overdue).length }
+    { label: '已超时', value: rows.filter(({ line }) => getTimePressure(line, line.promisedDate).overdue).length }
   ]
 
   return (
@@ -2033,7 +2002,7 @@ export const OrderLineTable = ({
           const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
           const logistics = findCurrentLogisticsRecord(logisticsRecords, line.id)
           const afterSales = findCurrentAfterSalesCase(afterSalesCases, line.id)
-          const pressure = getTimePressure(line.promisedDate)
+          const pressure = getTimePressure(line, line.promisedDate)
           const riskLabels = getLineRiskLabels(line, afterSalesCases)
           const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
             if (!onOpenDetail || isInteractiveTarget(event.target)) {
