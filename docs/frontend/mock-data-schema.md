@@ -103,7 +103,7 @@ type Customer = {
 
 说明：
 - 客户是长期沉淀对象
-- 当前可以先只做轻量 mock，不要求完整客户中心页面
+- 当前客户中心是基于 `customers + purchases + orderLines + afterSalesCases` 的轻量只读聚合，不做复杂 CRM、画像或营销自动化
 
 ---
 
@@ -364,6 +364,7 @@ type OrderLineProductionData = {
 - 设计 / 建模工作台基于 `designStatus / modelingStatus / designFiles / modelingFiles / waxFiles` 分组和记录，不展示客户隐私或财务金额
 - 工厂协同中心基于 `factoryId / productionStatus / factoryStatus / productionData` 展示和回传，不读取购买记录客户与金额字段
 - 财务中心基于 `Purchase.finance` 与 `OrderLine.financeStatus / productionData / factorySettlementAmount` 做尾款、工厂结算和成本确认
+- 资料完整性、生产逾期、工厂回传异常、财务异常和角色待办徽标统一通过 `orderLineRiskSelectors` 读取 `OrderLine` 与关联记录计算，页面不要重复散落规则
 
 ---
 
