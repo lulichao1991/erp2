@@ -67,12 +67,22 @@
 - 导航中只展示“商品行中心”
 - 不再同时展示“商品任务中心”或“订单中心”
 - `/orders` 旧模块已删除，不作为侧边栏入口展示
+- 侧边栏会根据当前前端 mock role capability 显示可见入口；这不是后端权限系统
 - `/production-plan` 仍可作为工厂角色入口展示，但其视图数据只来自当前 `tasks + purchases + orderLines + products`
 - `/production-follow-up` 是跟单生产推进入口，视图数据只来自当前 `OrderLine` 和所属 `Purchase`
 - `/design-modeling` 是设计 / 建模工作台，视图数据只来自当前 `OrderLine`
 - `/factory` 是工厂协同中心，只展示分配给当前 mock 工厂的 `OrderLine` 生产信息
 - `/finance` 是财务中心，围绕 `Purchase.finance` 和 `OrderLine` 成本 / 工厂回传数据做确认
 - `/management` 是管理看板，围绕 `Purchase + OrderLine` 汇总业务、生产风险、财务、角色负载和工厂表现
+
+角色入口口径：
+- 客服可见客户、商品行、任务和产品相关入口
+- 跟单可见生产跟进、生产计划、商品行和任务入口
+- 设计 / 建模可见设计建模、商品行、任务和产品入口
+- 工厂可见工厂协同和生产计划入口
+- 财务可见财务中心和商品行入口
+- 管理可见管理看板和各业务观察入口
+- 管理员可见全部前端入口
 
 ### `/customers`
 客户中心。

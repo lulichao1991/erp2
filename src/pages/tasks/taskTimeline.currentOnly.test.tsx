@@ -15,7 +15,7 @@ vi.mock('@/hooks/useAppData', () => ({
 }))
 
 const createCurrentOnlyAppData = () => ({
-  currentUserRole: 'operations',
+  currentUserRole: 'merchandiser',
   tasks: mockTasks,
   purchases: purchasesMock,
   orderLines: orderLinesMock,

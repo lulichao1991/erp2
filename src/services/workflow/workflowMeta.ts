@@ -1,3 +1,4 @@
+import { roleCapabilities } from '@/services/access/roleCapabilities'
 import type { TaskAssigneeRole, TaskPriority, TaskStatus, TaskType } from '@/types/task'
 
 export const taskPriorityLabelMap: Record<TaskPriority, string> = {
@@ -24,11 +25,14 @@ export const taskStatusLabelMap: Record<TaskStatus, string> = {
 }
 
 export const taskAssigneeRoleLabelMap: Record<TaskAssigneeRole, string> = {
-  customer_service: '客服',
-  designer: '设计',
-  operations: '跟单/运营',
-  factory: '工厂',
-  management: '管理'
+  customer_service: roleCapabilities.customer_service.label,
+  merchandiser: roleCapabilities.merchandiser.label,
+  designer: roleCapabilities.designer.label,
+  modeler: roleCapabilities.modeler.label,
+  factory: roleCapabilities.factory.label,
+  finance: roleCapabilities.finance.label,
+  manager: roleCapabilities.manager.label,
+  admin: roleCapabilities.admin.label
 }
 
 export const getTaskPriorityLabel = (priority: TaskPriority) => taskPriorityLabelMap[priority]
