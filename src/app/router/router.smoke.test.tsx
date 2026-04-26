@@ -1382,9 +1382,10 @@ describe('router smoke', () => {
     expect(screen.getByText('入库登记')).toBeInTheDocument()
     expect(screen.getByText('库存流转')).toBeInTheDocument()
     expect(screen.getByText('库存流转记录')).toBeInTheDocument()
+    expect(screen.getByText('库存详情与来源追溯')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '客户退货' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待检 / 瑕疵' })).toBeInTheDocument()
-    expect(screen.getByText('山形素圈戒指设计留样')).toBeInTheDocument()
+    expect(screen.getAllByText('山形素圈戒指设计留样').length).toBeGreaterThan(0)
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
@@ -1393,7 +1394,7 @@ describe('router smoke', () => {
 
     await user.selectOptions(screen.getByLabelText('来源筛选'), 'customer_return')
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
-    expect(screen.queryByText('山形素圈戒指设计留样')).not.toBeInTheDocument()
+    expect(screen.getAllByText('INV-RT-202604-002').length).toBeGreaterThan(0)
 
     await user.selectOptions(screen.getByLabelText('来源筛选'), 'all')
     await user.type(screen.getByLabelText('库位筛选'), '常备链身')
@@ -1404,6 +1405,16 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '待检 / 瑕疵' }))
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
     expect(screen.queryByText('通用 18K 项链链身')).not.toBeInTheDocument()
+
+    const returnRow = screen
+      .getAllByText('INV-RT-202604-002')
+      .map((element) => element.closest('tr'))
+      .find((row) => row && within(row).queryByRole('button', { name: '查看详情' }))
+    expect(returnRow).not.toBeNull()
+    await user.click(within(returnRow as HTMLElement).getByRole('button', { name: '查看详情' }))
+    expect(screen.getByText('来源追溯')).toBeInTheDocument()
+    expect(screen.getAllByText('产品：山形素圈戒指 / 商品行：OL-202604-001-01 / 购买记录：PUR-202604-001 / 客户：张三').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('客户退货入库，进入待检库位。').length).toBeGreaterThan(0)
   })
 
   it('records inventory inbound and movement actions locally', async () => {
@@ -1419,7 +1430,7 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '登记入库' }))
 
     expect(screen.getByText(/已新增入库/)).toBeInTheDocument()
-    expect(screen.getByText('设计部门未售样戒')).toBeInTheDocument()
+    expect(screen.getAllByText('设计部门未售样戒').length).toBeGreaterThan(0)
 
     const movementItemSelect = screen.getByLabelText('库存商品')
     await user.selectOptions(movementItemSelect, Array.from((movementItemSelect as HTMLSelectElement).options).find((option) => option.text.includes('设计部门未售样戒'))?.value || '')
@@ -1430,7 +1441,7 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '登记流转' }))
 
     expect(screen.getByText(/已登记占用/)).toBeInTheDocument()
-    expect(screen.getByText('为后续拍摄预占')).toBeInTheDocument()
+    expect(screen.getAllByText('为后续拍摄预占').length).toBeGreaterThan(0)
   })
 
   it('renders production plan list route without requiring factory role', () => {

@@ -128,6 +128,7 @@ export const InventoryListPage = () => {
   const [filters, setFilters] = useState<InventoryFilters>(initialFilters)
   const [movementDraft, setMovementDraft] = useState<MovementDraft>(() => createMovementDraft(inventoryItemsMock[0]))
   const [inboundDraft, setInboundDraft] = useState<InboundDraft>(initialInboundDraft)
+  const [selectedInventoryItemId, setSelectedInventoryItemId] = useState(inventoryItemsMock[0]?.id ?? '')
   const [formMessage, setFormMessage] = useState('')
 
   const rows = useMemo(
@@ -143,6 +144,8 @@ export const InventoryListPage = () => {
   )
   const visibleRows = useMemo(() => filterInventoryRows(rows, filters), [filters, rows])
   const summary = useMemo(() => buildInventorySummary(rows), [rows])
+  const selectedRow = useMemo(() => rows.find((row) => row.item.id === selectedInventoryItemId) ?? visibleRows[0] ?? rows[0], [rows, selectedInventoryItemId, visibleRows])
+  const selectedMovements = useMemo(() => movements.filter((movement) => movement.inventoryItemId === selectedRow?.item.id), [movements, selectedRow])
 
   const updateFilter = <K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) => {
     setFilters((current) => ({
@@ -239,6 +242,7 @@ export const InventoryListPage = () => {
 
     setInventoryItems((current) => [item, ...current])
     setMovements((current) => [movement, ...current])
+    setSelectedInventoryItemId(item.id)
     setMovementDraft(createMovementDraft(item))
     setInboundDraft(initialInboundDraft)
     setFormMessage(`已新增入库：${item.inventoryCode}`)
@@ -451,7 +455,11 @@ export const InventoryListPage = () => {
       </div>
 
       <SectionCard title="库存台账" description="库管视角只管理库存资产，不推进商品行生产、财务或售后状态。">
-        {visibleRows.length > 0 ? <InventoryTable rows={visibleRows} /> : <EmptyState title="暂无库存记录" description="当前筛选条件下没有库存商品，请放宽筛选或切回全部来源。" />}
+        {visibleRows.length > 0 ? <InventoryTable rows={visibleRows} selectedId={selectedRow?.item.id} onSelect={setSelectedInventoryItemId} /> : <EmptyState title="暂无库存记录" description="当前筛选条件下没有库存商品，请放宽筛选或切回全部来源。" />}
+      </SectionCard>
+
+      <SectionCard title="库存详情与来源追溯" description="查看单件库存的来源、关联对象和该库存自己的流转记录。">
+        {selectedRow ? <InventoryDetail row={selectedRow} movements={selectedMovements} /> : <EmptyState title="未选择库存" description="请选择一条库存记录查看详情。" />}
       </SectionCard>
 
       <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整。">
@@ -461,7 +469,7 @@ export const InventoryListPage = () => {
   )
 }
 
-const InventoryTable = ({ rows }: { rows: InventoryRow[] }) => (
+const InventoryTable = ({ rows, selectedId, onSelect }: { rows: InventoryRow[]; selectedId?: string; onSelect: (id: string) => void }) => (
   <div className="table-wrap">
     <table className="data-table">
       <thead>
@@ -473,11 +481,12 @@ const InventoryTable = ({ rows }: { rows: InventoryRow[] }) => (
           <th>状态</th>
           <th>入库信息</th>
           <th>备注</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.item.id}>
+          <tr key={row.item.id} className={selectedId === row.item.id ? 'selected-row' : undefined}>
             <td>
               <strong>{row.item.inventoryCode}</strong>
               <span className="muted-block">{row.item.name}</span>
@@ -509,10 +518,67 @@ const InventoryTable = ({ rows }: { rows: InventoryRow[] }) => (
               <span className="muted-block">库管：{row.item.keeperName}</span>
             </td>
             <td>{row.item.remark || '无'}</td>
+            <td>
+              <button type="button" className="button ghost small" onClick={() => onSelect(row.item.id)}>
+                查看详情
+              </button>
+            </td>
           </tr>
         ))}
       </tbody>
     </table>
+  </div>
+)
+
+const InventoryDetail = ({ row, movements }: { row: InventoryRow; movements: InventoryMovement[] }) => (
+  <div className="stack">
+    <div className="info-grid">
+      <div>
+        <span className="info-label">库存编号</span>
+        <strong>{row.item.inventoryCode}</strong>
+      </div>
+      <div>
+        <span className="info-label">库存商品</span>
+        <strong>{row.item.name}</strong>
+      </div>
+      <div>
+        <span className="info-label">来源类型</span>
+        <StatusTag value={row.sourceLabel} />
+      </div>
+      <div>
+        <span className="info-label">状态</span>
+        <StatusTag value={row.statusLabel} />
+      </div>
+      <div>
+        <span className="info-label">成色</span>
+        <StatusTag value={row.conditionLabel} />
+      </div>
+      <div>
+        <span className="info-label">数量</span>
+        <strong>
+          {row.item.availableQuantity} / {row.item.quantity} 可用
+        </strong>
+      </div>
+      <div>
+        <span className="info-label">库位</span>
+        <strong>{row.item.warehouseLocation}</strong>
+      </div>
+      <div>
+        <span className="info-label">入库时间</span>
+        <strong>{row.item.receivedAt}</strong>
+      </div>
+    </div>
+
+    <div className="subtle-panel">
+      <strong>来源追溯</strong>
+      <p className="text-muted">{row.linkedSummary}</p>
+      <InventoryLinks row={row} />
+    </div>
+
+    <div>
+      <strong>该库存流转记录</strong>
+      {movements.length > 0 ? <MovementTable movements={movements} /> : <EmptyState title="暂无流转记录" description="当前库存还没有单独的流转记录。" />}
+    </div>
   </div>
 )
 
