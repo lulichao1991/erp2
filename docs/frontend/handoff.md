@@ -855,6 +855,8 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - 设计 / 建模 / 生产 / 工厂 / 财务分流字段已落在 `OrderLine`
 - 客服资料完整度统一检查商品名称、品类、材质、尺寸 / 规格、工艺要求、生产任务编号
 - 客服确认完成后按 `requiresDesign / requiresModeling` 分流到待设计、待建模或待跟单审核
+- `/production-follow-up` 已作为跟单生产跟进视图接入，按 `OrderLine.lineStatus / productionStatus / factoryStatus` 展示待审核、待下发、生产中、待回传、异常 / 逾期
+- 生产跟进动作通过 current `useAppData.updateOrderLine` 更新商品行，不恢复旧 `/orders` runtime
 - 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
 - 不直接 mutate `orderLines` 数组或 mock 对象
 

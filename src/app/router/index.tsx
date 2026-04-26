@@ -14,6 +14,7 @@ import { TaskDetailPage } from '@/pages/tasks/TaskDetailPage'
 import { TaskListPage } from '@/pages/tasks/TaskListPage'
 import { ProductionPlanDetailPage } from '@/pages/productionPlan/ProductionPlanDetailPage'
 import { ProductionPlanListPage } from '@/pages/productionPlan/ProductionPlanListPage'
+import { ProductionFollowUpPage } from '@/pages/productionFollowUp/ProductionFollowUpPage'
 
 export const AppRouter = () => (
   <Routes>
@@ -27,6 +28,7 @@ export const AppRouter = () => (
       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
       <Route path="/tasks" element={<TaskListPage />} />
       <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
+      <Route path="/production-follow-up" element={<ProductionFollowUpPage />} />
       <Route path="/production-plan" element={<ProductionPlanListPage />} />
       <Route path="/production-plan/:taskId" element={<ProductionPlanDetailPage />} />
       <Route path="/products" element={<ProductListPage />} />

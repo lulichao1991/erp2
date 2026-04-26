@@ -1006,6 +1006,15 @@ img {
   font: 600 20px/24px 'Inter', 'SF Pro', system-ui, sans-serif;
 }
 
+button.stat-card {
+  text-align: left;
+}
+
+.stat-card.selected {
+  border-color: var(--color-primary-600);
+  box-shadow: var(--shadow-hover);
+}
+
 .table-shell {
   overflow: auto;
   background: var(--color-bg-card);

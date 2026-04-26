@@ -19,6 +19,10 @@ const getSidebarShortLabel = (label: string) => {
     return '生产'
   }
 
+  if (label === '生产跟进') {
+    return '跟进'
+  }
+
   if (label === '产品管理') {
     return '产品'
   }
