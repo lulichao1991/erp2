@@ -23,6 +23,7 @@ Customer -> Purchase -> OrderLine -> Product
 - `/design-modeling`
 - `/factory`
 - `/finance`
+- `/inventory`
 - `/management`
 - `/production-plan`
 
@@ -63,7 +64,7 @@ legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口
 5. `docs/frontend/mock-data-schema.md`
 
 作用：
-- 定义 `Customer / Purchase / OrderLine / ProductSnapshot` 等当前主对象
+- 定义 `Customer / Purchase / OrderLine / ProductSnapshot / InventoryItem` 等当前主对象
 - 明确 `TransactionRecord` 只能作为 `Purchase` 的兼容别名
 - 明确当前 mock 主线为 `purchases.ts + order-lines.ts`
 

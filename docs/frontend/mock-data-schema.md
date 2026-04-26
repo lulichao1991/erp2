@@ -51,6 +51,7 @@ mock 数据只用于：
 - `Purchase`
 - `OrderLine`
 - `Product`
+- `InventoryItem`
 - `ProductSpecRow`
 - `ProductPriceRule`
 - `ProductSnapshot`
@@ -59,6 +60,8 @@ mock 数据只用于：
 - `QuoteResult`
 
 不要把产品模板、购买公共信息和单件商品执行对象混成一个对象。
+
+库存资产也要和产品模板、商品行执行对象分开：`InventoryItem` 是库管台账记录，可以关联 Product / Purchase / OrderLine，但不替代它们。
 
 ---
 
@@ -419,7 +422,63 @@ type Product = {
 
 ---
 
-## 7. ProductSpecRow（产品规格明细）
+## 7. InventoryItem（仓库商品 / 库存资产）
+
+```ts
+type InventoryItemSourceType =
+  | 'design_sample'
+  | 'customer_return'
+  | 'stock_purchase'
+  | 'consignment'
+  | 'other'
+
+type InventoryItemStatus = 'in_stock' | 'reserved' | 'outbound' | 'scrapped'
+
+type InventoryItemCondition =
+  | 'new'
+  | 'sample'
+  | 'returned'
+  | 'repair_needed'
+  | 'defective'
+
+type InventoryItem = {
+  id: string
+  inventoryCode: string
+  name: string
+  category?: ProductCategory
+  sourceType: InventoryItemSourceType
+  sourceLabel?: string
+  productId?: string
+  productName?: string
+  orderLineId?: string
+  purchaseId?: string
+  customerId?: string
+  material?: string
+  size?: string
+  craftRequirements?: string
+  weight?: number
+  quantity: number
+  availableQuantity: number
+  warehouseLocation: string
+  ownerDepartment: 'design' | 'customer_service' | 'warehouse' | 'factory' | 'other'
+  condition: InventoryItemCondition
+  status: InventoryItemStatus
+  receivedAt: string
+  keeperName: string
+  remark?: string
+}
+```
+
+说明：
+- `InventoryItem` 是库管库存资产台账，不是产品模板，也不是商品行执行对象
+- 设计部门生产出来但不售卖的款式可以作为 `design_sample` 入库
+- 客户退货可以作为 `customer_return` 入库，并关联原 `purchaseId / orderLineId / customerId`
+- 常备采购、寄售或其他库存可以不关联商品行，但仍保持独立库存编号
+- 库存记录不推进 `OrderLine.lineStatus`、生产状态、财务状态或售后状态
+
+---
+
+## 8. ProductSpecRow（产品规格明细）
 
 ```ts
 type ProductSpecRow = {
@@ -437,7 +496,7 @@ type ProductSpecRow = {
 
 ---
 
-## 8. ProductPriceRule（固定加价规则）
+## 9. ProductPriceRule（固定加价规则）
 
 ```ts
 type ProductPriceRuleType = 'material' | 'process' | 'special' | 'other'
@@ -455,7 +514,7 @@ type ProductPriceRule = {
 
 ---
 
-## 9. ProductSnapshot（来源产品快照）
+## 10. ProductSnapshot（来源产品快照）
 
 ```ts
 type ProductSnapshot = {
@@ -478,7 +537,7 @@ type ProductSnapshot = {
 
 ---
 
-## 10. QuoteResult（系统参考报价）
+## 11. QuoteResult（系统参考报价）
 
 ```ts
 type QuoteResult = {
@@ -502,7 +561,7 @@ type QuoteResult = {
 
 ---
 
-## 11. LogisticsRecord（物流记录）
+## 12. LogisticsRecord（物流记录）
 
 ```ts
 type LogisticsRecord = {
@@ -531,7 +590,7 @@ type LogisticsRecord = {
 
 ---
 
-## 12. AfterSalesCase（售后记录）
+## 13. AfterSalesCase（售后记录）
 
 ```ts
 type AfterSalesCase = {

@@ -8,6 +8,7 @@ export type RoleField =
   | 'production_files'
   | 'factory_return'
   | 'finance_cost'
+  | 'inventory_item'
   | 'management_metrics'
 
 export type RoleAction =
@@ -17,6 +18,7 @@ export type RoleAction =
   | 'design_modeling_update'
   | 'factory_return_submit'
   | 'finance_confirm'
+  | 'inventory_manage'
   | 'management_view'
 
 export type RoleCapability = {
@@ -36,6 +38,7 @@ const allRoutes = [
   '/design-modeling',
   '/factory',
   '/finance',
+  '/inventory',
   '/management',
   '/products',
   '/production-plan'
@@ -49,6 +52,7 @@ const allFields: RoleField[] = [
   'production_files',
   'factory_return',
   'finance_cost',
+  'inventory_item',
   'management_metrics'
 ]
 
@@ -59,10 +63,11 @@ const allActions: RoleAction[] = [
   'design_modeling_update',
   'factory_return_submit',
   'finance_confirm',
+  'inventory_manage',
   'management_view'
 ]
 
-export const roleOptions: TaskAssigneeRole[] = ['customer_service', 'merchandiser', 'designer', 'modeler', 'factory', 'finance', 'manager', 'admin']
+export const roleOptions: TaskAssigneeRole[] = ['customer_service', 'merchandiser', 'designer', 'modeler', 'factory', 'warehouse', 'finance', 'manager', 'admin']
 
 export const roleCapabilities: Record<TaskAssigneeRole, RoleCapability> = {
   customer_service: {
@@ -99,6 +104,13 @@ export const roleCapabilities: Record<TaskAssigneeRole, RoleCapability> = {
     visibleFields: ['order_line_requirements', 'production_files', 'factory_return'],
     editableFields: ['factory_return'],
     allowedActions: ['factory_return_submit']
+  },
+  warehouse: {
+    label: '库管',
+    visibleRoutes: ['/', '/inventory', '/order-lines', '/products'],
+    visibleFields: ['order_line_requirements', 'production_files', 'inventory_item'],
+    editableFields: ['inventory_item'],
+    allowedActions: ['inventory_manage']
   },
   finance: {
     label: '财务',

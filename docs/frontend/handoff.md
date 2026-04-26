@@ -30,9 +30,11 @@
 - `/design-modeling`
 - `/factory`
 - `/finance`
+- `/inventory`
 - `/management`
 - `/production-plan`
 - mock role capability 边界
+- 仓库商品管理第一版，以 `InventoryItem` 记录设计留样、客户退货、常备采购和其他库存
 - `orderLineRiskSelectors` 统一资料完整性、逾期、工厂回传、财务异常和角色待办徽标
 
 这一阶段的重点不是：

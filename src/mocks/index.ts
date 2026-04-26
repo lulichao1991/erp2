@@ -1,4 +1,5 @@
 export * from '@/mocks/customers'
+export * from '@/mocks/inventory'
 export * from '@/mocks/order-line-logs'
 export * from '@/mocks/order-lines'
 export * from '@/mocks/purchases'

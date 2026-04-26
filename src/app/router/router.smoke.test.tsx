@@ -597,6 +597,7 @@ describe('router smoke', () => {
       { path: '/customers', heading: '客户中心' },
       { path: '/customers/customer-zhang-001', heading: '客户详情' },
       { path: '/tasks', heading: '任务中心' },
+      { path: '/inventory', heading: '仓库商品管理' },
       { path: '/production-plan', heading: '工厂生产计划' },
       { path: '/production-plan/task-factory-001', heading: '生产任务详情' }
     ]
@@ -1344,8 +1345,15 @@ describe('router smoke', () => {
     await user.selectOptions(roleSelect, 'factory')
     expect(nav.getByRole('link', { name: /工厂/ })).toBeInTheDocument()
     expect(nav.getByRole('link', { name: /生产/ })).toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /仓库/ })).not.toBeInTheDocument()
     expect(nav.queryByRole('link', { name: /财务/ })).not.toBeInTheDocument()
     expect(nav.queryByRole('link', { name: /管理/ })).not.toBeInTheDocument()
+
+    await user.selectOptions(roleSelect, 'warehouse')
+    expect(nav.getByRole('link', { name: /仓库/ })).toBeInTheDocument()
+    expect(nav.getByRole('link', { name: /商品行/ })).toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /财务/ })).not.toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /工厂/ })).not.toBeInTheDocument()
 
     await user.selectOptions(roleSelect, 'finance')
     expect(nav.getByRole('link', { name: /财务/ })).toBeInTheDocument()
@@ -1362,6 +1370,30 @@ describe('router smoke', () => {
 
     await user.selectOptions(roleSelect, 'manager')
     expect(nav.getByRole('link', { name: /管理/ })).toBeInTheDocument()
+  })
+
+  it('renders inventory item management as warehouse ledger without legacy orders', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/inventory')
+
+    expect(screen.getByRole('heading', { name: '仓库商品管理' })).toBeInTheDocument()
+    expect(screen.getByText('仓库商品管理是库存资产台账，记录设计留样、客户退货、常备采购和其他库存；它可以关联 Product / Purchase / OrderLine，但不替代产品模板或商品行执行流。')).toBeInTheDocument()
+    expect(screen.getByText('库存台账')).toBeInTheDocument()
+    expect(screen.getByText('山形素圈戒指设计留样')).toBeInTheDocument()
+    expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: '查看产品模板' }).length).toBeGreaterThan(0)
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+
+    await user.selectOptions(screen.getByLabelText('来源筛选'), 'customer_return')
+    expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形素圈戒指设计留样')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('来源筛选'), 'all')
+    await user.type(screen.getByLabelText('库位筛选'), '常备链身')
+    expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
+    expect(screen.queryByText('客户退回山形戒指')).not.toBeInTheDocument()
   })
 
   it('renders production plan list route without requiring factory role', () => {
