@@ -18,7 +18,7 @@ const taskTypeTitleMap: Record<TaskType, string> = {
 const taskTypeRoleMap: Record<TaskType, TaskAssigneeRole> = {
   order_process: 'customer_service',
   design_modeling: 'designer',
-  production_prep: 'operations',
+  production_prep: 'merchandiser',
   factory_production: 'factory',
   after_sales: 'customer_service'
 }

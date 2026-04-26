@@ -8,6 +8,7 @@ import {
   saveProductFieldOptions,
   saveSizeParameterDefinitions
 } from '@/services/product/productFieldOptions'
+import { normalizeRole } from '@/services/access/roleCapabilities'
 import { createEmptyProduct, getProductList } from '@/services/product/productQueries'
 import { getTaskList } from '@/services/task/taskQueries'
 import { getTaskStatusLabel } from '@/services/workflow/workflowMeta'
@@ -22,15 +23,11 @@ const currentUserRoleStorageKey = 'erp-demo-current-role'
 
 const getInitialCurrentUserRole = (): TaskAssigneeRole => {
   if (typeof window === 'undefined') {
-    return 'operations'
+    return 'admin'
   }
 
   const rawValue = window.localStorage.getItem(currentUserRoleStorageKey)
-  if (rawValue === 'customer_service' || rawValue === 'designer' || rawValue === 'operations' || rawValue === 'factory' || rawValue === 'management') {
-    return rawValue
-  }
-
-  return 'operations'
+  return normalizeRole(rawValue ?? undefined)
 }
 
 type AppDataContextValue = {

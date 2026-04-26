@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildDesignModelingRows,
   designModelingTabs,
@@ -40,6 +41,7 @@ export const DesignModelingWorkbenchPage = () => {
 
   const rows = useMemo(() => buildDesignModelingRows(appData.orderLines), [appData.orderLines])
   const visibleRows = useMemo(() => filterDesignModelingRowsByTab(rows, activeTab), [activeTab, rows])
+  const canUpdateDesignModeling = canPerformAction(appData.currentUserRole, 'design_modeling_update')
 
   const getDraft = (line: OrderLine): RowDraft => ({
     designNote: rowDrafts[line.id]?.designNote ?? line.designNote ?? line.designInfo?.designNote ?? '',
@@ -195,6 +197,7 @@ export const DesignModelingWorkbenchPage = () => {
               onModelingComplete={completeModeling}
               onRevision={requestRevision}
               onRecordWax={recordWaxFile}
+              canEdit={canUpdateDesignModeling}
             />
           ) : (
             <EmptyState title="暂无设计建模任务" description="当前视图下没有需要处理的商品行。" />
@@ -216,7 +219,8 @@ const DesignModelingTable = ({
   onModelingInProgress,
   onModelingComplete,
   onRevision,
-  onRecordWax
+  onRecordWax,
+  canEdit
 }: {
   rows: DesignModelingRow[]
   getDraft: (line: OrderLine) => RowDraft
@@ -229,6 +233,7 @@ const DesignModelingTable = ({
   onModelingComplete: (line: OrderLine) => void
   onRevision: (line: OrderLine) => void
   onRecordWax: (line: OrderLine) => void
+  canEdit: boolean
 }) => (
   <div className="table-shell">
     <table className="table">
@@ -284,7 +289,7 @@ const DesignModelingTable = ({
                     onChange={(event) => onDraftChange(line, { waxFactorySentAt: event.target.value })}
                   />
                 </label>
-                <button type="button" className="button ghost small spacer-top" onClick={() => onRecordWax(line)}>
+                <button type="button" className="button ghost small spacer-top" onClick={() => onRecordWax(line)} disabled={!canEdit}>
                   记录出蜡资料
                 </button>
               </td>
@@ -304,25 +309,25 @@ const DesignModelingTable = ({
               </td>
               <td>
                 <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onClaimDesign(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onClaimDesign(line)} disabled={!canEdit}>
                     领取设计任务
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onDesignInProgress(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onDesignInProgress(line)} disabled={!canEdit}>
                     标记设计中
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onDesignComplete(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onDesignComplete(line)} disabled={!canEdit}>
                     标记设计完成
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onClaimModeling(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onClaimModeling(line)} disabled={!canEdit}>
                     领取建模任务
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onModelingInProgress(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onModelingInProgress(line)} disabled={!canEdit}>
                     标记建模中
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onModelingComplete(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onModelingComplete(line)} disabled={!canEdit}>
                     标记建模完成
                   </button>
-                  <button type="button" className="button ghost small" onClick={() => onRevision(line)}>
+                  <button type="button" className="button ghost small" onClick={() => onRevision(line)} disabled={!canEdit}>
                     标记需修改
                   </button>
                 </div>

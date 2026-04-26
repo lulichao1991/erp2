@@ -1,10 +1,9 @@
 import { useLocation } from 'react-router-dom'
 import { useAppData } from '@/hooks/useAppData'
 import { getModuleLabel } from '@/app/router/routeConfig'
+import { roleOptions } from '@/services/access/roleCapabilities'
 import { getTaskAssigneeRoleLabel } from '@/services/workflow/workflowMeta'
 import type { TaskAssigneeRole } from '@/types/task'
-
-const roleOptions: TaskAssigneeRole[] = ['customer_service', 'designer', 'operations', 'factory', 'management']
 
 export const AppTopbar = () => {
   const location = useLocation()

@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import { sidebarItems } from '@/app/router/routeConfig'
 import { useAppData } from '@/hooks/useAppData'
+import { canViewRoute, roleOptions } from '@/services/access/roleCapabilities'
 import { getTaskAssigneeRoleLabel } from '@/services/workflow/workflowMeta'
 import type { TaskAssigneeRole } from '@/types/task'
-
-const roleOptions: TaskAssigneeRole[] = ['customer_service', 'designer', 'operations', 'factory', 'management']
 
 const getSidebarShortLabel = (label: string) => {
   if (label === '商品行中心') {
@@ -52,7 +51,7 @@ const getSidebarShortLabel = (label: string) => {
 
 export const AppSidebar = () => {
   const appData = useAppData()
-  const visibleSidebarItems = sidebarItems.filter((item) => !item.visibleRoles || item.visibleRoles.includes(appData.currentUserRole))
+  const visibleSidebarItems = sidebarItems.filter((item) => canViewRoute(appData.currentUserRole, item.path))
 
   return (
     <aside className="app-sidebar">

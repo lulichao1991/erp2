@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildFactoryTaskRows,
   currentFactoryId,
@@ -66,6 +67,7 @@ export const FactoryTaskCenterPage = () => {
 
   const rows = useMemo(() => buildFactoryTaskRows(appData.orderLines, currentFactoryId), [appData.orderLines])
   const visibleRows = useMemo(() => filterFactoryTaskRowsByTab(rows, activeTab), [activeTab, rows])
+  const canSubmitFactoryReturn = canPerformAction(appData.currentUserRole, 'factory_return_submit')
 
   const getDraft = (line: OrderLine) => drafts[line.id] ?? createReturnDraft(line)
   const updateDraft = (line: OrderLine, patch: Partial<FactoryReturnDraft>) => {
@@ -239,6 +241,7 @@ export const FactoryTaskCenterPage = () => {
               onComplete={completeProduction}
               onAbnormal={markAbnormal}
               onSubmitReturn={submitReturn}
+              canEdit={canSubmitFactoryReturn}
             />
           ) : (
             <EmptyState title="暂无工厂任务" description="当前视图下没有分配给本工厂的商品行。" />
@@ -257,7 +260,8 @@ const FactoryTaskTable = ({
   onStart,
   onComplete,
   onAbnormal,
-  onSubmitReturn
+  onSubmitReturn,
+  canEdit
 }: {
   rows: FactoryTaskRow[]
   getDraft: (line: OrderLine) => FactoryReturnDraft
@@ -267,6 +271,7 @@ const FactoryTaskTable = ({
   onComplete: (line: OrderLine) => void
   onAbnormal: (line: OrderLine) => void
   onSubmitReturn: (line: OrderLine) => void
+  canEdit: boolean
 }) => (
   <div className="table-shell">
     <table className="table">
@@ -331,19 +336,19 @@ const FactoryTaskTable = ({
               </td>
               <td>
                 <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onAccept(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onAccept(line)} disabled={!canEdit}>
                     接收任务
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onStart(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onStart(line)} disabled={!canEdit}>
                     标记开始生产
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onComplete(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onComplete(line)} disabled={!canEdit}>
                     标记生产完成
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit}>
                     提交回传
                   </button>
-                  <button type="button" className="button ghost small" onClick={() => onAbnormal(line)}>
+                  <button type="button" className="button ghost small" onClick={() => onAbnormal(line)} disabled={!canEdit}>
                     标记异常
                   </button>
                 </div>

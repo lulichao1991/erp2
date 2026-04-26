@@ -1333,6 +1333,37 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('switches mock roles and limits primary navigation by capability', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/')
+    const roleSelect = screen.getAllByLabelText('角色模式')[0]
+    const sidebarNav = container.querySelector('.sidebar-nav')
+    expect(sidebarNav).not.toBeNull()
+    const nav = within(sidebarNav as HTMLElement)
+
+    await user.selectOptions(roleSelect, 'factory')
+    expect(nav.getByRole('link', { name: /工厂/ })).toBeInTheDocument()
+    expect(nav.getByRole('link', { name: /生产/ })).toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /财务/ })).not.toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /管理/ })).not.toBeInTheDocument()
+
+    await user.selectOptions(roleSelect, 'finance')
+    expect(nav.getByRole('link', { name: /财务/ })).toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /工厂/ })).not.toBeInTheDocument()
+
+    await user.selectOptions(roleSelect, 'designer')
+    expect(nav.getByRole('link', { name: /设计/ })).toBeInTheDocument()
+
+    await user.selectOptions(roleSelect, 'modeler')
+    expect(nav.getByRole('link', { name: /设计/ })).toBeInTheDocument()
+
+    await user.selectOptions(roleSelect, 'merchandiser')
+    expect(nav.getByRole('link', { name: /跟进/ })).toBeInTheDocument()
+
+    await user.selectOptions(roleSelect, 'manager')
+    expect(nav.getByRole('link', { name: /管理/ })).toBeInTheDocument()
+  })
+
   it('renders production plan list route without requiring factory role', () => {
     const { container } = renderRoute('/production-plan')
 

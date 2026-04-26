@@ -7,11 +7,11 @@ export const sidebarItems: NavItem[] = [
   { label: '任务中心', path: '/tasks', icon: '◎' },
   { label: '生产跟进', path: '/production-follow-up', icon: '◒' },
   { label: '设计建模', path: '/design-modeling', icon: '◐' },
-  { label: '工厂协同', path: '/factory', icon: '◑', visibleRoles: ['factory'] },
+  { label: '工厂协同', path: '/factory', icon: '◑' },
   { label: '财务中心', path: '/finance', icon: '◓' },
   { label: '管理看板', path: '/management', icon: '◔' },
   { label: '产品管理', path: '/products', icon: '◇' },
-  { label: '生产计划', path: '/production-plan', icon: '◍', visibleRoles: ['factory'] }
+  { label: '生产计划', path: '/production-plan', icon: '◍' }
 ]
 
 export const getModuleLabel = (pathname: string) => {

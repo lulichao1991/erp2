@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildFinanceRows,
   calculateFinanceSummary,
@@ -41,6 +42,7 @@ export const FinanceCenterPage = () => {
   const rows = useMemo(() => buildFinanceRows(appData.orderLines, appData.purchases), [appData.orderLines, appData.purchases])
   const visibleRows = useMemo(() => filterFinanceRowsByTab(rows, activeTab), [activeTab, rows])
   const purchase = appData.getPurchase('o-202604-001')
+  const canConfirmFinance = canPerformAction(appData.currentUserRole, 'finance_confirm')
 
   const getDraft = (line: OrderLine) => drafts[line.id] ?? createFinanceDraft(line)
   const updateDraft = (line: OrderLine, patch: Partial<FinanceDraft>) => {
@@ -163,10 +165,10 @@ export const FinanceCenterPage = () => {
         <div className="row wrap spacer-top">
           <StatusTag value={`定金：${purchase?.finance?.depositStatus === 'confirmed' ? '已确认' : '待确认'}`} />
           <StatusTag value={`尾款：${purchase?.finance?.finalPaymentStatus === 'confirmed' ? '已确认' : '待确认'}`} />
-          <button type="button" className="button secondary small" onClick={confirmDeposit}>
+          <button type="button" className="button secondary small" onClick={confirmDeposit} disabled={!canConfirmFinance}>
             确认定金
           </button>
-          <button type="button" className="button secondary small" onClick={confirmFinalPayment}>
+          <button type="button" className="button secondary small" onClick={confirmFinalPayment} disabled={!canConfirmFinance}>
             确认尾款
           </button>
         </div>
@@ -197,6 +199,7 @@ export const FinanceCenterPage = () => {
               onConfirmSettlement={confirmSettlement}
               onMarkAbnormal={markAbnormal}
               onLock={lockFinance}
+              canEdit={canConfirmFinance}
             />
           ) : (
             <EmptyState title="暂无财务任务" description="当前视图下没有需要处理的商品行。" />
@@ -213,7 +216,8 @@ const FinanceTable = ({
   onDraftChange,
   onConfirmSettlement,
   onMarkAbnormal,
-  onLock
+  onLock,
+  canEdit
 }: {
   rows: FinanceRow[]
   getDraft: (line: OrderLine) => FinanceDraft
@@ -221,6 +225,7 @@ const FinanceTable = ({
   onConfirmSettlement: (row: FinanceRow) => void
   onMarkAbnormal: (row: FinanceRow) => void
   onLock: (line: OrderLine) => void
+  canEdit: boolean
 }) => (
   <div className="table-shell">
     <table className="table">
@@ -289,13 +294,13 @@ const FinanceTable = ({
               </td>
               <td>
                 <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onConfirmSettlement(row)}>
+                  <button type="button" className="button secondary small" onClick={() => onConfirmSettlement(row)} disabled={!canEdit}>
                     确认工厂结算
                   </button>
-                  <button type="button" className="button ghost small" onClick={() => onMarkAbnormal(row)}>
+                  <button type="button" className="button ghost small" onClick={() => onMarkAbnormal(row)} disabled={!canEdit}>
                     标记财务异常
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onLock(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onLock(line)} disabled={!canEdit}>
                     锁定财务数据
                   </button>
                 </div>

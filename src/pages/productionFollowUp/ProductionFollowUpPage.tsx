@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildProductionFollowUpRows,
   filterProductionFollowUpRowsByTab,
@@ -41,6 +42,7 @@ export const ProductionFollowUpPage = () => {
 
   const rows = useMemo(() => buildProductionFollowUpRows(appData.orderLines, appData.purchases), [appData.orderLines, appData.purchases])
   const visibleRows = useMemo(() => filterProductionFollowUpRowsByTab(rows, activeTab), [activeTab, rows])
+  const canDispatchProduction = canPerformAction(appData.currentUserRole, 'production_dispatch')
 
   const getDraft = (line: OrderLine): RowDraft => ({
     factoryId: rowDrafts[line.id]?.factoryId ?? line.factoryId ?? '',
@@ -180,6 +182,7 @@ export const ProductionFollowUpPage = () => {
               onMarkBlocked={markBlocked}
               onReturnToCustomerService={returnToCustomerService}
               onReturnToDesignOrModeling={returnToDesignOrModeling}
+              canEdit={canDispatchProduction}
             />
           ) : (
             <EmptyState title="暂无商品行" description="当前视图下没有需要跟进的商品行。" />
@@ -200,7 +203,8 @@ const ProductionFollowUpTable = ({
   onMarkInProduction,
   onMarkBlocked,
   onReturnToCustomerService,
-  onReturnToDesignOrModeling
+  onReturnToDesignOrModeling,
+  canEdit
 }: {
   rows: ProductionFollowUpRow[]
   getDraft: (line: OrderLine) => RowDraft
@@ -212,6 +216,7 @@ const ProductionFollowUpTable = ({
   onMarkBlocked: (line: OrderLine) => void
   onReturnToCustomerService: (line: OrderLine) => void
   onReturnToDesignOrModeling: (line: OrderLine) => void
+  canEdit: boolean
 }) => (
   <div className="table-shell">
     <table className="table">
@@ -274,7 +279,7 @@ const ProductionFollowUpTable = ({
                     />
                   </label>
                 </div>
-                <button type="button" className="button ghost small spacer-top" onClick={() => onSaveFactoryPlan(line)}>
+                <button type="button" className="button ghost small spacer-top" onClick={() => onSaveFactoryPlan(line)} disabled={!canEdit}>
                   保存工厂计划
                 </button>
               </td>
@@ -289,22 +294,22 @@ const ProductionFollowUpTable = ({
               </td>
               <td>
                 <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit}>
                     标记资料已齐
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit}>
                     下发生产
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)}>
+                  <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit}>
                     标记生产中
                   </button>
-                  <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)}>
+                  <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit}>
                     标记阻塞
                   </button>
-                  <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)}>
+                  <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
                     退回客服补资料
                   </button>
-                  <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)}>
+                  <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
                     退回设计/建模修改
                   </button>
                 </div>

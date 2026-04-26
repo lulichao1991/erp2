@@ -4,7 +4,15 @@ export type TaskStatus = 'todo' | 'in_progress' | 'pending_confirm' | 'done' | '
 
 export type TaskPriority = 'normal' | 'high' | 'urgent'
 
-export type TaskAssigneeRole = 'customer_service' | 'designer' | 'operations' | 'factory' | 'management'
+export type TaskAssigneeRole =
+  | 'customer_service'
+  | 'merchandiser'
+  | 'designer'
+  | 'modeler'
+  | 'factory'
+  | 'finance'
+  | 'manager'
+  | 'admin'
 
 export type Task = {
   id: string
