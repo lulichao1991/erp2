@@ -1,5 +1,7 @@
 # Legacy /orders Removal Completion
 
+> 归档说明：本文只记录 legacy `/orders` 删除完成历史。当前路由与页面口径以 `docs/frontend/routes-and-pages.md` 为准。
+
 This document records the completed removal of the legacy `/orders` module.
 
 ## Final Status

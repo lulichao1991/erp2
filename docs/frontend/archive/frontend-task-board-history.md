@@ -1,4 +1,8 @@
-# 前端任务板（Purchase + OrderLine 收口版）
+# Archived Frontend Task Board History
+
+> 归档说明：本文保留旧任务拆解历史，不代表当前项目真相。当前口径以 `AGENTS.md`、`README.md`、`docs/frontend/docs-index.md` 和 `docs/frontend/handoff.md` 为准。
+
+# 前端任务板（历史收口版）
 
 ## 1. 文档定位
 
@@ -442,7 +446,7 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 输出删除完成后的回滚口径
 
 当前记录：
-- 迁移准备文档：`docs/frontend/legacy-orders-removal-plan.md`
+- 迁移准备文档已归档为：`docs/frontend/archive/legacy-orders-removal-completion.md`
 - 已梳理 legacy route smoke tests 保留 / 迁移 / 删除门槛
 - 已梳理 productionPlan fallback 迁移顺序
 - productionPlan 页面正常路径已 current-only，不再传 `appData.orders`

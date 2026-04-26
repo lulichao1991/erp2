@@ -1,626 +1,251 @@
-# Mock 数据结构草案（Purchase + OrderLine）
+# Mock 数据结构（Current Workflow）
 
-## 1. 文档目标
-本文件用于统一当前前端 mock 数据结构，避免 AI / 前端在开发过程中随意发明字段名、对象关系和计算结果结构。
+## 目标
+本文件只记录当前前端 mock 所需的对象边界和字段语义。历史 Phase 1 / Phase 2 规划在 `docs/frontend/archive/`，不作为当前 mock 依据。
 
-当前 mock 数据结构服务于以下主链路：
+当前对象关系：
 
-**产品维护（含规格明细与固定加价规则）  
--> 商品行引用产品  
--> 选择规格  
--> 自动带出规格参数  
--> 自动带出基础价格  
--> 叠加固定加价规则  
--> 生成系统参考报价**
+```text
+Customer
+  -> Purchase
+    -> OrderLine
+      -> ProductSnapshot
+      -> LogisticsRecord / AfterSalesCase / QuoteResult
+```
 
----
+## 使用原则
+- 先 mock 跑通 UI 和状态流转，再接真实接口。
+- `OrderLine` 是主操作对象；不要把单件执行字段塞回 `Purchase`。
+- `Product` 是模板；商品行引用产品后保存 `ProductSnapshot`。
+- 物流、售后默认关联 `orderLineId`。
+- `OrderLine.lineStatus` 是工作流主状态；`status` 只作短期兼容展示。
 
-## 2. 使用原则
+## Customer
+客户主档，用于沉淀长期客户信息、历史购买记录、历史商品行和售后摘要。
 
-### 2.1 当前只服务前端联调
-mock 数据只用于：
-- 页面展示
-- 页面跳转
-- 组件联调
-- 自动报价前端逻辑演示
+建议字段：
+- `id`
+- `name`
+- `phone`
+- `wechat`
+- `email`
+- `tags`
+- `notes`
+- `purchaseIds`
+- `orderLineIds`
+- `afterSalesCaseIds`
+- `createdAt`
+- `updatedAt`
 
-不要求完全等同后端数据库设计。
+## Purchase
+购买记录，一次购买行为的公共信息容器。
 
-### 2.2 字段语义必须稳定
-以下字段的语义禁止随意改动：
-
+建议字段：
+- `id`
 - `purchaseNo`
+- `platform`
 - `platformOrderNo`
-- `lineCode`
+- `customerId`
+- `customerSnapshot`
+- `receiver`
+- `paidAt`
+- `paymentSummary`
+- `finance`
+- `remark`
+- `aggregateStatus`
+- `orderLineIds`
+- `createdAt`
+- `updatedAt`
+
+不要放入单件商品执行字段，例如设计状态、建模状态、工厂状态、单件发货状态或单件售后状态。
+
+## OrderLine
+商品行，一件商品对应一条独立执行对象。
+
+基础字段：
+- `id`
+- `lineNo`
 - `purchaseId`
-- `orderLineId`
-- `sourceProductId`
-- `sourceProductVersion`
-- `selectedSpecValue`
-- `selectedSpecSnapshot`
-- `basePrice`
-- `priceAdjustments`
-- `systemQuote`
+- `customerId`
+- `productId`
+- `productSnapshot`
+- `productName`
+- `category`
+- `sku`
+- `styleCode`
+- `version`
+- `quantity`
 
-如果一定要改，必须同步更新相关页面、组件、mock 数据和文档。
+需求与报价：
+- `selectedSpecId`
+- `selectedSpecLabel`
+- `actualMaterial`
+- `actualSize`
+- `actualCraft`
+- `engraving`
+- `specialRequirements`
+- `quote`
+- `finalPrice`
 
-### 2.3 对象关系必须明确
-当前至少要分清这些对象：
+工作流：
+- `lineStatus`
+- `status`（短期兼容展示）
+- `requiresDesign`
+- `requiresModeling`
+- `designStatus`
+- `modelingStatus`
+- `productionStatus`
+- `factoryStatus`
+- `financeStatus`
 
-- `Customer`
-- `Purchase`
-- `OrderLine`
-- `Product`
-- `ProductSpecRow`
-- `ProductPriceRule`
-- `ProductSnapshot`
-- `LogisticsRecord`
-- `AfterSalesCase`
-- `QuoteResult`
+执行信息：
+- `ownerId`
+- `designerId`
+- `modelerId`
+- `merchandiserId`
+- `factoryId`
+- `customerConfirmedAt`
+- `plannedDueDate`
+- `factoryPlannedDueDate`
+- `productionData`
+- `files`
+- `notes`
+- `createdAt`
+- `updatedAt`
 
-不要把产品模板、购买公共信息和单件商品执行对象混成一个对象。
+客服确认分流：
 
----
-
-## 3. Customer（客户主档）
-
-```ts
-type CustomerTag =
-  | 'new'
-  | 'returning'
-  | 'vip'
-  | 'high_value'
-  | 'after_sales_sensitive'
-  | 'blacklist_watch'
-  | 'other'
-
-type CustomerChannel =
-  | 'taobao'
-  | 'tmall'
-  | 'xiaohongshu'
-  | 'wechat'
-  | 'offline'
-  | 'other'
-
-type Customer = {
-  id: string
-  name?: string
-  phone?: string
-  wechat?: string
-  defaultRecipientName?: string
-  defaultRecipientPhone?: string
-  defaultRecipientAddress?: string
-  sourceChannels: CustomerChannel[]
-  tags: CustomerTag[]
-  remark?: string
-  firstTransactionAt?: string
-  lastTransactionAt?: string
-  totalTransactionCount: number
-  totalOrderLineCount: number
-  totalAfterSalesCount: number
-}
+```text
+requiresDesign -> pending_design
+requiresModeling -> pending_modeling
+otherwise -> pending_merchandiser_review
 ```
 
-说明：
-- 客户是长期沉淀对象
-- 当前可以先只做轻量 mock，不要求完整客户中心页面
+## Product
+产品模板，用于维护标准资料、规格明细、价格规则、定制规则、生产参考和文件资料。
 
----
+建议字段：
+- `id`
+- `name`
+- `category`
+- `sku`
+- `styleCode`
+- `version`
+- `status`
+- `baseMaterial`
+- `defaultCraft`
+- `specMode`
+- `specs`
+- `priceRules`
+- `customizationRules`
+- `productionReference`
+- `files`
+- `createdAt`
+- `updatedAt`
 
-## 4. Purchase（购买记录）
+`Product` 不直接进入生产、设计、物流或售后流转。
 
-```ts
-type PurchaseAggregateStatus =
-  | 'draft'
-  | 'in_progress'
-  | 'partially_shipped'
-  | 'completed'
-  | 'after_sales'
-  | 'exception'
-  | 'cancelled'
+## ProductSnapshot
+商品行引用产品时保存的来源快照。
 
-type PurchaseType =
-  | 'semi_custom'
-  | 'full_custom'
-  | 'spot_goods'
-  | 'internal'
+建议字段：
+- `productId`
+- `productName`
+- `sku`
+- `styleCode`
+- `version`
+- `category`
+- `baseMaterial`
+- `defaultCraft`
+- `specs`
+- `priceRules`
+- `capturedAt`
 
-type PurchaseSourceChannel =
-  | 'taobao'
-  | 'tmall'
-  | 'xiaohongshu'
-  | 'wechat'
-  | 'offline'
-  | 'other'
+## QuoteResult
+系统参考报价结果。
 
-type Purchase = {
-  id: string
-  purchaseNo: string
-  platformOrderNo?: string
-  sourceChannel: PurchaseSourceChannel
-  shopName?: string
-  customerId?: string
-  purchaseType: PurchaseType
-  ownerName: string
-  recipientName?: string
-  recipientPhone?: string
-  recipientAddress?: string
-  paymentAt?: string
-  expectedDate?: string
-  promisedDate?: string
-  riskTags: string[]
-  remark?: string
-
-  /**
-   * 仅用于购买记录聚合展示，不作为主流程驱动状态。
-   */
-  aggregateStatus: PurchaseAggregateStatus
-
-  /**
-   * 冗余字段，便于列表页直接显示。
-   */
-  orderLineCount: number
-
-  /**
-   * 当前 mock 可直接内嵌，后续真实接口可按需拆分。
-   */
-  orderLines: OrderLine[]
-  finance?: PurchaseFinanceInfo
-  latestActivityAt?: string
-  timeline: PurchaseTimelineRecord[]
-}
-```
-
-说明：
-- `Purchase` 保存一次购买中的公共信息
-- `Purchase` 不是系统真正的主操作对象
-- 多件商品同次购买时，应拆为多条 `OrderLine`
-- 单件商品执行字段不得塞回 `Purchase`
-
----
-
-## 5. OrderLine（商品行）
-
-商品行是系统真正的业务执行对象，不等于产品模板，也不等于购买记录。
-
-一件商品对应一条独立商品行。同一次购买中的多个商品行可以分别推进规格确认、设计、委外、生产、发货和售后。
-
-```ts
-type OrderLinePriority = 'normal' | 'high' | 'urgent' | 'vip'
-
-type OrderLineStatus =
-  | 'draft'
-  | 'pending_confirm'
-  | 'pending_measurement'
-  | 'pending_design'
-  | 'designing'
-  | 'pending_outsource'
-  | 'in_production'
-  | 'pending_factory_feedback'
-  | 'pending_shipment'
-  | 'shipped'
-  | 'after_sales'
-  | 'completed'
-  | 'cancelled'
-  | 'exception'
-
-type OrderLineLineStatus =
-  | 'draft'
-  | 'pending_customer_confirmation'
-  | 'pending_design'
-  | 'pending_modeling'
-  | 'pending_merchandiser_review'
-  | 'pending_factory_production'
-  | 'in_production'
-  | 'factory_returned'
-  | 'pending_finance_confirmation'
-  | 'ready_to_ship'
-  | 'completed'
-  | 'after_sales'
-
-type OrderLineWorkflowDesignStatus =
-  | 'not_required'
-  | 'pending'
-  | 'in_progress'
-  | 'revision_requested'
-  | 'completed'
-
-type OrderLineWorkflowModelingStatus = OrderLineWorkflowDesignStatus
-
-type OrderLineWorkflowProductionStatus =
-  | 'not_started'
-  | 'pending_dispatch'
-  | 'dispatched'
-  | 'in_production'
-  | 'completed'
-  | 'delayed'
-  | 'blocked'
-
-type OrderLineFactoryStatus =
-  | 'not_assigned'
-  | 'pending_acceptance'
-  | 'accepted'
-  | 'in_production'
-  | 'returned'
-  | 'abnormal'
-
-type OrderLineFinanceStatus =
-  | 'not_required'
-  | 'pending'
-  | 'confirmed'
-  | 'abnormal'
-
-type OrderLine = {
-  id: string
-  lineNo?: number
-  lineCode?: string
-  productionTaskNo?: string
-  purchaseId?: string
-  customerId?: string
-  name: string
-  category?: ProductCategory
-  styleName?: string
-  versionNo?: string
-  skuCode?: string
-  quantity: number
-  lineStatus?: OrderLineLineStatus | string
-  designStatus?: OrderLineWorkflowDesignStatus | string
-  modelingStatus?: OrderLineWorkflowModelingStatus | string
-  productionStatus?: OrderLineWorkflowProductionStatus | string
-  factoryStatus?: OrderLineFactoryStatus | string
-  financeStatus?: OrderLineFinanceStatus | string
-  productionData?: OrderLineProductionData
-  assignedDesignerId?: string
-  assignedModelerId?: string
-  merchandiserId?: string
-  factoryId?: string
-  productionSentAt?: string
-  factoryPlannedDueDate?: string
-  productionCompletedAt?: string
-  designFiles?: OrderLineUploadedFile[]
-  modelingFiles?: OrderLineUploadedFile[]
-  waxFiles?: OrderLineUploadedFile[]
-  designNote?: string
-  modelingNote?: string
-  revisionReason?: string
-  waxFactorySentAt?: string
-  designCompletedAt?: string
-  modelingCompletedAt?: string
-  status: OrderLineStatus | string
-  currentOwner?: string
-  priority?: OrderLinePriority
-  isUrgent?: boolean
-  requiresDesign?: boolean
-  requiresModeling?: boolean
-  requiresWax?: boolean
-
-  isReferencedProduct: boolean
-  productId?: string
-  sourceProduct?: ProductSnapshot
-
-  selectedSpecValue?: string
-  selectedSpecSnapshot?: ProductSpecRow
-  selectedMaterial?: string
-  selectedProcess?: string
-  selectedSpecialOptions?: string[]
-
-  actualRequirements?: OrderLineActualRequirements
-  designInfo?: OrderLineDesignInfo
-  outsourceInfo?: OrderLineOutsourceInfo
-  productionInfo?: OrderLineProductionInfo
-  lineSalesAmount?: number
-  allocatedDepositAmount?: number
-  allocatedFinalPaymentAmount?: number
-  materialCost?: number
-  mainStoneCost?: number
-  sideStoneCost?: number
-  laborCost?: number
-  extraLaborCost?: number
-  logisticsCost?: number
-  afterSalesCost?: number
-  factorySettlementAmount?: number
-  estimatedGrossProfit?: number
-  estimatedGrossProfitRate?: number
-  financeConfirmedAt?: string
-  financeAbnormalReason?: string
-  financeNote?: string
-  financeLocked?: boolean
-  quote?: QuoteResult
-
-  expectedDate?: string
-  promisedDate?: string
-  finishedAt?: string
-}
-
-type OrderLineProductionData = {
-  shippedAt?: string
-  completedAt?: string
-  totalWeight?: number
-  netMetalWeight?: number
-  actualMaterial?: string
-  materialLossNote?: string
-  mainStoneType?: string
-  mainStoneQuantity?: number
-  sideStoneType?: string
-  sideStoneCount?: number
-  baseLaborCost?: number
-  extraLaborCost?: number
-  totalLaborCost?: number
-  factoryNote?: string
-  finishedImageUrls?: string[]
-  settlementFileUrls?: string[]
-}
-```
-
-说明：
-- `purchaseId` 是商品行归属购买记录的主要字段
-- 如果历史代码里仍有 `transactionId`，只能作为兼容字段理解
-- `lineStatus` 是多角色工作流主状态，页面筛选、状态推进和任务分组优先基于它
-- `status` 短期保留为兼容展示字段，新增逻辑不要继续扩大它的主流程用途
-- 物流、售后、设计、建模、生产、工厂和财务信息都应优先落在 `OrderLine`
-- 客服资料完整度至少检查 `productName/name`、`category`、材质、尺寸 / 规格、工艺要求和 `productionTaskNo`
-- 客服确认完成后按设计 / 建模需求分流到后续 `lineStatus`
-- 生产跟进视图基于 `lineStatus / productionStatus / factoryStatus / factoryPlannedDueDate` 分组，不依赖旧订单模型
-- 设计 / 建模工作台基于 `designStatus / modelingStatus / designFiles / modelingFiles / waxFiles` 分组和记录，不展示客户隐私或财务金额
-- 工厂协同中心基于 `factoryId / productionStatus / factoryStatus / productionData` 展示和回传，不读取购买记录客户与金额字段
-- 财务中心基于 `Purchase.finance` 与 `OrderLine.financeStatus / productionData / factorySettlementAmount` 做尾款、工厂结算和成本确认
-
----
-
-## 6. Product（产品模板）
-
-```ts
-type ProductStatus = 'draft' | 'enabled' | 'disabled'
-
-type ProductCategory =
-  | 'ring'
-  | 'pendant'
-  | 'necklace'
-  | 'earring'
-  | 'bracelet'
-  | 'other'
-
-type Product = {
-  id: string
-  code: string
-  name: string
-  shortName?: string
-  category: ProductCategory
-  series?: string
-  styleTags: string[]
-  sceneTags: string[]
-  status: ProductStatus
-  isReferable: boolean
-  version: string
-  coverImage?: string
-  galleryImages: string[]
-  supportedMaterials: string[]
-  defaultMaterial?: string
-  supportedProcesses: string[]
-  defaultProcess?: string
-  supportedSpecialOptions: string[]
-  specMode: 'none' | 'single_axis'
-  specName?: string
-  specDisplayType?: 'tags' | 'select'
-  isSpecRequired?: boolean
-  specs: ProductSpecRow[]
-  priceRules: ProductPriceRule[]
-  customRules: ProductCustomRules
-  productionReference: ProductProductionReference
-  assets: ProductAssets
-}
-```
-
-说明：
-- `Product` 是产品模板
-- 商品行引用产品时保留来源快照
-- 商品行的实际需求可以在模板基础上调整
-
----
-
-## 7. ProductSpecRow（产品规格明细）
-
-```ts
-type ProductSpecRow = {
-  id: string
-  productId: string
-  specValue: string
-  sortOrder: number
-  status: 'enabled' | 'disabled'
-  basePrice?: number
-  referenceWeight?: number
-  note?: string
-  sizeFields: ProductSizeField[]
-}
-```
-
----
-
-## 8. ProductPriceRule（固定加价规则）
-
-```ts
-type ProductPriceRuleType = 'material' | 'process' | 'special' | 'other'
-
-type ProductPriceRule = {
-  id: string
-  productId: string
-  type: ProductPriceRuleType
-  ruleKey: string
-  delta: number
-  enabled: boolean
-  note?: string
-}
-```
-
----
-
-## 9. ProductSnapshot（来源产品快照）
-
-```ts
-type ProductSnapshot = {
-  sourceProductId: string
-  sourceProductCode: string
-  sourceProductName: string
-  sourceProductVersion: string
-  category?: ProductCategory
-  sourceSpecValue?: string
-  defaultMaterial?: string
-  defaultProcess?: string
-  snapshotAt?: string
-}
-```
-
-说明：
-- 用于商品行与来源产品模板的关系显示和核对
-- 首轮保留最关键的来源关系信息
-- 不把 `Product` 本体直接复制为商品行执行对象
-
----
-
-## 10. QuoteResult（系统参考报价）
-
-```ts
-type QuoteResult = {
-  basePrice?: number
-  priceAdjustments: Array<{
-    type: 'material' | 'process' | 'special' | 'other'
-    ruleKey: string
-    delta: number
-  }>
-  systemQuote?: number
-  status: 'idle' | 'waiting_spec' | 'ready' | 'warning'
-  warnings: QuoteWarning[]
-}
-```
-
-首轮固定计算公式：
+首轮公式固定为：
 
 ```text
 系统参考报价 = 规格基础价 + 所有生效固定加价之和
 ```
 
----
+建议字段：
+- `basePrice`
+- `adjustments`
+- `total`
+- `warnings`
+- `calculatedAt`
 
-## 11. LogisticsRecord（物流记录）
+首轮至少提示：
+- 未选规格
+- 当前规格没有基础价格
+- 当前附加项没有对应价格规则
 
-```ts
-type LogisticsRecord = {
-  id: string
-  orderLineId: string
-  purchaseId?: string
-  recordStatus?: 'active' | 'voided'
-  logisticsType?: 'measurement_tool' | 'goods' | 'after_sales' | 'other'
-  direction?: 'outbound' | 'return'
-  company?: string
-  carrier?: string
-  trackingNo?: string
-  shippedAt?: string
-  signedAt?: string
-  deliveredAt?: string
-  voidedAt?: string
-  voidReason?: string
-  remark?: string
-}
-```
+## LogisticsRecord
+物流记录默认关联商品行。
 
-说明：
-- `orderLineId` 必填
-- `purchaseId` 只用于归组查询
-- 不默认把物流挂在整笔购买上
+建议字段：
+- `id`
+- `purchaseId`
+- `orderLineId`
+- `carrier`
+- `trackingNo`
+- `status`
+- `shippedAt`
+- `deliveredAt`
+- `notes`
 
----
+## AfterSalesCase
+售后记录默认关联商品行。
 
-## 12. AfterSalesCase（售后记录）
+建议字段：
+- `id`
+- `purchaseId`
+- `orderLineId`
+- `caseNo`
+- `type`
+- `status`
+- `reason`
+- `resolution`
+- `createdAt`
+- `updatedAt`
 
-```ts
-type AfterSalesCase = {
-  id: string
-  orderLineId: string
-  purchaseId?: string
-  customerId?: string
-  type?: 'resize' | 'repair' | 'repolish' | 'remake' | 'resend' | 'refund' | 'exchange' | 'other'
-  reason?: string
-  status?: 'open' | 'processing' | 'waiting_return' | 'resolved' | 'closed' | 'in_progress'
-  responsibleParty?: string
-  createdAt?: string
-  closedAt?: string
-  remark?: string
-}
-```
-
-说明：
-- `orderLineId` 必填
-- 支持同一次购买中的单件商品独立进入售后
-
----
-
-## 13. 当前 mock 文件建议
-
+## Mock 文件建议
 ```text
-src/mocks/
-  customers.ts
-  purchases.ts
-  order-lines.ts
-  products.ts
-  supporting-records.ts
-  transactions.ts # Purchase mock 的历史兼容别名
+src/
+  types/
+    customer.ts
+    purchase.ts
+    order-line.ts
+    product.ts
+    quote.ts
+    supporting-records.ts
+    transaction.ts
+  mocks/
+    customers.ts
+    purchases.ts
+    order-lines.ts
+    products.ts
+    supporting-records.ts
+    transactions.ts
 ```
 
-说明：
-- `purchases.ts` 是当前购买记录 mock 主线
-- `order-lines.ts` 是当前商品行 mock 主线
-- `transactions.ts` 只能作为 `Purchase` 的历史兼容导出
-- legacy `orders.ts` 已删除，不再作为 mock 入口
+兼容说明：
+- `transaction.ts` / `transactions.ts` 只能作为 `Purchase` 的历史兼容别名。
+- 不恢复 `src/mocks/orders.ts` 或 `src/types/order.ts`。
+- `SourceProductSnapshot` 只能作为 `ProductSnapshot` 的历史兼容命名。
 
----
+## 必须覆盖的样例
+1. 同一次购买，多件商品，多条商品行。
+2. 戒指选择规格后自动带出参数、基础价、固定加价和系统参考报价。
+3. 吊坠选择规格后自动带出参数、基础价、固定加价和系统参考报价。
+4. 同一次购买中多件商品分开发货。
+5. 同一次购买中只有一件商品进入售后。
 
-## 14. 历史兼容命名
-
-当前不再把 `TransactionRecord` 作为主模型。
-
-允许保留的兼容关系：
-- `TransactionRecord` = `Purchase` 的历史兼容别名
-- `SourceProductSnapshot` = `ProductSnapshot` 的历史兼容命名
-
----
-
-## 15. 必须覆盖的 mock 场景
-
-### 场景 1：同一次购买，多件商品，多条商品行
-- 购买记录 1 条
-- 商品行多条
-- 商品行中心显示多行
-- 购买记录详情页显示本次购买下的所有商品行
-
-### 场景 2：戒指自动带价
-- 选择规格
-- 自动带出规格参数
-- 自动带出基础价格
-- 叠加材质 / 工艺 / 特殊需求固定加价
-- 生成系统参考报价
-
-### 场景 3：吊坠自动带价
-- 选择规格
-- 自动带出规格参数
-- 自动带出基础价格
-- 叠加工艺 / 特殊需求固定加价
-- 生成系统参考报价
-
-### 场景 4：同一次购买中多件商品分开发货
-- 一件商品先发
-- 另一件商品后发
-
-### 场景 5：同一次购买中只有一件商品进入售后
-- 一件商品进入售后
-- 其他商品正常完成
-
----
-
-## 16. 验收标准
-
-- mock 能表达 `Customer -> Purchase -> OrderLine`
-- `Purchase` 不承载单件商品执行字段
-- `OrderLine` 能承载来源产品、规格、报价、设计、委外、生产、物流、售后关联
-- `LogisticsRecord` 和 `AfterSalesCase` 默认关联 `orderLineId`
-- `TransactionRecord` 只作为兼容别名出现
-- legacy `orders.ts` 不再作为 runtime mock 保留
+## 验收标准
+- 商品行中心显示的是 `OrderLine` 列表。
+- 购买记录详情页能展示同一 `Purchase` 下的多条 `OrderLine`。
+- 生产、设计 / 建模、工厂、财务视图不读取旧订单模型。
+- 物流和售后可以按商品行独立展示。
+- 报价样例能稳定产出系统参考报价。
