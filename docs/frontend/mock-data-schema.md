@@ -312,6 +312,8 @@ type OrderLine = {
 - `lineStatus` 是多角色工作流主状态，页面筛选、状态推进和任务分组优先基于它
 - `status` 短期保留为兼容展示字段，新增逻辑不要继续扩大它的主流程用途
 - 物流、售后、设计、建模、生产、工厂和财务信息都应优先落在 `OrderLine`
+- 客服资料完整度至少检查 `productName/name`、`category`、材质、尺寸 / 规格、工艺要求和 `productionTaskNo`
+- 客服确认完成后按设计 / 建模需求分流到后续 `lineStatus`
 
 ---
 

@@ -883,6 +883,8 @@ describe('router smoke', () => {
     expect(within(firstLineCard as HTMLElement).getByLabelText('商品名称')).toHaveValue('山形戒指')
     expect(within(firstLineCard as HTMLElement).getByText(/来源产品：山形素圈戒指/)).toBeInTheDocument()
     expect(within(firstLineCard as HTMLElement).getByText('请先选择规格')).toBeInTheDocument()
+    expect(within(firstLineCard as HTMLElement).getByText(/资料完整度 5\/6/)).toBeInTheDocument()
+    expect(within(firstLineCard as HTMLElement).getByRole('button', { name: '标记客服确认完成' })).toBeDisabled()
 
     await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('规格'), 'spec-ring-16')
     await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('材质'), '18K金')
@@ -890,6 +892,9 @@ describe('router smoke', () => {
     await user.click(within(firstLineCard as HTMLElement).getByRole('checkbox', { name: '刻字' }))
     expect(within(firstLineCard as HTMLElement).getByText(/面宽 3.8mm/)).toBeInTheDocument()
     expect(within(firstLineCard as HTMLElement).getByText('¥ 2,000')).toBeInTheDocument()
+    expect(within(firstLineCard as HTMLElement).getByText(/资料完整度 6\/6/)).toBeInTheDocument()
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '标记客服确认完成' }))
+    expect(within(firstLineCard as HTMLElement).getByText('待设计')).toBeInTheDocument()
 
     await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '查看来源产品' }))
     expect(screen.getByText('来源产品详情')).toBeInTheDocument()
@@ -944,6 +949,7 @@ describe('router smoke', () => {
           skuCode: 'PD-RING-001',
           styleName: '山形戒指',
           versionNo: 'v3',
+          lineStatus: 'pending_design',
           needsDesign: true,
           needsModeling: false,
           quoteResult: expect.objectContaining({ systemQuote: 2000 })

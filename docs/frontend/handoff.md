@@ -853,6 +853,8 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - 当前工作流主状态使用 `OrderLine.lineStatus`
 - `OrderLine.status` 短期保留为兼容展示字段，新筛选、任务分组和后续角色视图优先使用 `lineStatus`
 - 设计 / 建模 / 生产 / 工厂 / 财务分流字段已落在 `OrderLine`
+- 客服资料完整度统一检查商品名称、品类、材质、尺寸 / 规格、工艺要求、生产任务编号
+- 客服确认完成后按 `requiresDesign / requiresModeling` 分流到待设计、待建模或待跟单审核
 - 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
 - 不直接 mutate `orderLines` 数组或 mock 对象
 

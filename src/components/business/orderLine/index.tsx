@@ -22,6 +22,11 @@ import {
   modelingWorkflowStatusLabelMap,
   financeWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
+import {
+  buildOrderLineCompletenessInput,
+  getCustomerServiceNextLineStatus,
+  getOrderLineCompleteness
+} from '@/services/orderLine/orderLineCustomerService'
 import type {
   OrderLine,
   OrderLineLineStatus,
@@ -302,8 +307,10 @@ const getOutsourceStatusLabel = (status?: string) => (status ? outsourceStatusLa
 const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) => {
   const hasOpenAfterSales = afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
   const pressure = getTimePressure(line.promisedDate)
+  const completeness = getOrderLineCompleteness(buildOrderLineCompletenessInput(line))
 
   return [
+    !completeness.complete ? '资料缺失' : null,
     hasOpenAfterSales ? '售后跟进' : null,
     pressure.overdue ? '已超时' : null,
     line.isUrgent || line.priority === 'urgent' ? '加急' : null,
@@ -851,6 +858,11 @@ const OrderLineStatusUpdatePanel = ({
   const currentLineStatus = getOrderLineLineStatus(line)
   const [nextStatus, setNextStatus] = useState(String(currentLineStatus))
   const [statusMessage, setStatusMessage] = useState('')
+  const completeness = getOrderLineCompleteness(buildOrderLineCompletenessInput(line))
+  const customerConfirmStatus = getCustomerServiceNextLineStatus({
+    requiresDesign: Boolean(line.requiresDesign),
+    requiresModeling: Boolean(line.requiresModeling)
+  })
 
   useEffect(() => {
     setNextStatus(String(getOrderLineLineStatus(line)))
@@ -877,10 +889,26 @@ const OrderLineStatusUpdatePanel = ({
     setStatusMessage(`已将状态从 ${previousLabel} 更新为 ${nextLabel}`)
   }
 
+  const handleCustomerConfirm = () => {
+    if (!onStatusChange || !completeness.complete) {
+      return
+    }
+
+    if (customerConfirmStatus === getOrderLineLineStatus(line)) {
+      setStatusMessage('当前商品行已经在目标分流状态。')
+      return
+    }
+
+    onStatusChange(line.id, customerConfirmStatus)
+    setStatusMessage(`客服确认完成，已分流到 ${getStatusLabel(customerConfirmStatus)}`)
+  }
+
   return (
     <DetailSection title="更新状态">
       <div className="field-grid three">
         <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
+        <InfoField label="资料完整度" value={`${completeness.completed}/${completeness.total}`} />
+        <InfoField label="资料检查" value={<StatusTag value={completeness.complete ? '资料完整' : '资料缺失'} />} />
         <label className="field-control">
           <span className="field-label">目标状态</span>
           <select className="select" aria-label="目标状态" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}>
@@ -896,7 +924,14 @@ const OrderLineStatusUpdatePanel = ({
           <button type="button" className="button primary small" onClick={handleUpdate} disabled={!onStatusChange}>
             更新状态
           </button>
+          <button type="button" className="button secondary small" onClick={handleCustomerConfirm} disabled={!onStatusChange || !completeness.complete}>
+            客服确认完成
+          </button>
         </div>
+      </div>
+      <div className="text-caption spacer-top">
+        {completeness.summary}
+        {completeness.complete ? `；客服确认后进入「${getStatusLabel(customerConfirmStatus)}」。` : '；请先补齐资料后再确认。'}
       </div>
       {statusMessage ? (
         <div role="status" className="success-alert spacer-top">
