@@ -1175,6 +1175,53 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('renders design modeling workbench from current order lines', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/design-modeling')
+
+    expect(screen.getByRole('heading', { name: '设计 / 建模工作台' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '切换到待设计' })).toBeInTheDocument()
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到待建模' }))
+    expect(screen.getByText('手链蜡版确认')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到待修改' }))
+    expect(screen.getByDisplayValue('客户要求吊牌山形弧线更柔和。')).toBeInTheDocument()
+
+    expect(screen.queryByText('张三')).not.toBeInTheDocument()
+    expect(screen.queryByText('8500')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
+  it('updates design and modeling status from the workbench', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/design-modeling')
+
+    await user.click(screen.getByRole('button', { name: '切换到待设计' }))
+    const necklaceRow = screen.getByText('定制项链').closest('tr')
+    expect(necklaceRow).not.toBeNull()
+
+    await user.clear(within(necklaceRow as HTMLElement).getByLabelText('设计备注-ol-zhang-necklace-001'))
+    await user.type(within(necklaceRow as HTMLElement).getByLabelText('设计备注-ol-zhang-necklace-001'), '第二版设计已确认')
+    await user.click(within(necklaceRow as HTMLElement).getByRole('button', { name: '标记设计完成' }))
+
+    expect(screen.getAllByText('待建模').length).toBeGreaterThan(0)
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+    const updatedNecklaceRow = screen.getByText('定制项链').closest('tr')
+    expect(updatedNecklaceRow).not.toBeNull()
+
+    await user.type(within(updatedNecklaceRow as HTMLElement).getByLabelText('出蜡文件-ol-zhang-necklace-001'), '项链出蜡文件.3dm')
+    await user.type(within(updatedNecklaceRow as HTMLElement).getByLabelText('发送出蜡厂时间-ol-zhang-necklace-001'), '2026-05-04 10:00')
+    await user.click(within(updatedNecklaceRow as HTMLElement).getByRole('button', { name: '记录出蜡资料' }))
+    expect(within(updatedNecklaceRow as HTMLElement).getByText((_, node) => node?.textContent === '设计文件 0 / 建模文件 0 / 出蜡文件 1')).toBeInTheDocument()
+
+    await user.click(within(updatedNecklaceRow as HTMLElement).getByRole('button', { name: '标记建模完成' }))
+    expect(screen.getAllByText('已完成').length).toBeGreaterThan(0)
+    expect(screen.getByText('定制项链')).toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
   it('renders production plan list route without requiring factory role', () => {
     const { container } = renderRoute('/production-plan')
 

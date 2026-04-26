@@ -191,6 +191,15 @@ export type OrderLine = {
   productionSentAt?: string
   factoryPlannedDueDate?: string
   productionCompletedAt?: string
+  designFiles?: OrderLineUploadedFile[]
+  modelingFiles?: OrderLineUploadedFile[]
+  waxFiles?: OrderLineUploadedFile[]
+  designNote?: string
+  modelingNote?: string
+  revisionReason?: string
+  waxFactorySentAt?: string
+  designCompletedAt?: string
+  modelingCompletedAt?: string
   status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority

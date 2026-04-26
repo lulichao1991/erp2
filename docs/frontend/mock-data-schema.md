@@ -276,6 +276,15 @@ type OrderLine = {
   productionSentAt?: string
   factoryPlannedDueDate?: string
   productionCompletedAt?: string
+  designFiles?: OrderLineUploadedFile[]
+  modelingFiles?: OrderLineUploadedFile[]
+  waxFiles?: OrderLineUploadedFile[]
+  designNote?: string
+  modelingNote?: string
+  revisionReason?: string
+  waxFactorySentAt?: string
+  designCompletedAt?: string
+  modelingCompletedAt?: string
   status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority
@@ -315,6 +324,7 @@ type OrderLine = {
 - 客服资料完整度至少检查 `productName/name`、`category`、材质、尺寸 / 规格、工艺要求和 `productionTaskNo`
 - 客服确认完成后按设计 / 建模需求分流到后续 `lineStatus`
 - 生产跟进视图基于 `lineStatus / productionStatus / factoryStatus / factoryPlannedDueDate` 分组，不依赖旧订单模型
+- 设计 / 建模工作台基于 `designStatus / modelingStatus / designFiles / modelingFiles / waxFiles` 分组和记录，不展示客户隐私或财务金额
 
 ---
 
