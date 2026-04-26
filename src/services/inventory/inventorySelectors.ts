@@ -1,5 +1,5 @@
 import type { Customer } from '@/types/customer'
-import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus } from '@/types/inventory'
+import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
 import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
@@ -25,6 +25,15 @@ export const inventoryConditionLabelMap: Record<InventoryItemCondition, string> 
   returned: '退货',
   repair_needed: '待检修',
   defective: '瑕疵'
+}
+
+export const inventoryMovementTypeLabelMap: Record<InventoryMovementType, string> = {
+  inbound: '入库',
+  reserve: '占用',
+  release: '释放',
+  outbound: '出库',
+  scrap: '报废',
+  adjust: '调整'
 }
 
 export type InventoryFilters = {
@@ -55,6 +64,21 @@ export type InventorySummary = {
   designSampleCount: number
   customerReturnCount: number
   needsReviewCount: number
+}
+
+export type InventoryMovementInput = {
+  type: InventoryMovementType
+  quantity: number
+  operatorName: string
+  occurredAt: string
+  toLocation?: string
+  relatedOrderLineId?: string
+  note?: string
+}
+
+export type InventoryMovementResult = {
+  item: InventoryItem
+  movement: InventoryMovement
 }
 
 const includesKeyword = (value: string | undefined, keyword: string) => value?.toLowerCase().includes(keyword) ?? false
@@ -155,3 +179,102 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   customerReturnCount: rows.filter((row) => row.item.sourceType === 'customer_return').length,
   needsReviewCount: rows.filter((row) => row.item.condition === 'repair_needed' || row.item.condition === 'defective').length
 })
+
+export const applyInventoryMovement = (item: InventoryItem, input: InventoryMovementInput): InventoryMovementResult => {
+  const quantity = Math.max(0, Math.floor(input.quantity))
+  const fromStatus = item.status
+  const fromLocation = item.warehouseLocation
+  let nextItem: InventoryItem = { ...item }
+
+  if (quantity <= 0) {
+    throw new Error('库存流转数量必须大于 0')
+  }
+
+  if (input.type === 'reserve') {
+    if (quantity > item.availableQuantity) {
+      throw new Error('占用数量不能大于可用数量')
+    }
+    const availableQuantity = item.availableQuantity - quantity
+    nextItem = {
+      ...item,
+      availableQuantity,
+      status: availableQuantity === 0 ? 'reserved' : item.status
+    }
+  }
+
+  if (input.type === 'release') {
+    const availableQuantity = Math.min(item.quantity, item.availableQuantity + quantity)
+    nextItem = {
+      ...item,
+      availableQuantity,
+      status: availableQuantity > 0 ? 'in_stock' : item.status
+    }
+  }
+
+  if (input.type === 'outbound') {
+    if (quantity > item.quantity) {
+      throw new Error('出库数量不能大于库存数量')
+    }
+    const nextQuantity = item.quantity - quantity
+    const availableQuantity = Math.min(item.availableQuantity, nextQuantity)
+    nextItem = {
+      ...item,
+      quantity: nextQuantity,
+      availableQuantity,
+      status: nextQuantity === 0 ? 'outbound' : availableQuantity > 0 ? 'in_stock' : 'reserved'
+    }
+  }
+
+  if (input.type === 'scrap') {
+    if (quantity > item.quantity) {
+      throw new Error('报废数量不能大于库存数量')
+    }
+    const nextQuantity = item.quantity - quantity
+    const availableQuantity = Math.min(item.availableQuantity, nextQuantity)
+    nextItem = {
+      ...item,
+      quantity: nextQuantity,
+      availableQuantity,
+      condition: nextQuantity === 0 ? item.condition : 'defective',
+      status: nextQuantity === 0 ? 'scrapped' : item.status
+    }
+  }
+
+  if (input.type === 'adjust') {
+    nextItem = {
+      ...item,
+      warehouseLocation: input.toLocation?.trim() || item.warehouseLocation
+    }
+  }
+
+  if (input.type === 'inbound') {
+    nextItem = {
+      ...item,
+      quantity: item.quantity + quantity,
+      availableQuantity: item.availableQuantity + quantity,
+      warehouseLocation: input.toLocation?.trim() || item.warehouseLocation,
+      status: 'in_stock'
+    }
+  }
+
+  const movement: InventoryMovement = {
+    id: `movement-${item.id}-${input.type}-${input.occurredAt.replace(/[^0-9]/g, '')}`,
+    inventoryItemId: item.id,
+    inventoryCode: item.inventoryCode,
+    type: input.type,
+    quantity,
+    operatorName: input.operatorName,
+    occurredAt: input.occurredAt,
+    fromStatus,
+    toStatus: nextItem.status,
+    fromLocation,
+    toLocation: nextItem.warehouseLocation,
+    relatedOrderLineId: input.relatedOrderLineId,
+    note: input.note
+  }
+
+  return {
+    item: nextItem,
+    movement
+  }
+}

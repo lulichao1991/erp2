@@ -467,6 +467,30 @@ type InventoryItem = {
   keeperName: string
   remark?: string
 }
+
+type InventoryMovementType =
+  | 'inbound'
+  | 'reserve'
+  | 'release'
+  | 'outbound'
+  | 'scrap'
+  | 'adjust'
+
+type InventoryMovement = {
+  id: string
+  inventoryItemId: string
+  inventoryCode: string
+  type: InventoryMovementType
+  quantity: number
+  operatorName: string
+  occurredAt: string
+  fromStatus?: InventoryItemStatus
+  toStatus?: InventoryItemStatus
+  fromLocation?: string
+  toLocation?: string
+  relatedOrderLineId?: string
+  note?: string
+}
 ```
 
 说明：
@@ -475,6 +499,7 @@ type InventoryItem = {
 - 客户退货可以作为 `customer_return` 入库，并关联原 `purchaseId / orderLineId / customerId`
 - 常备采购、寄售或其他库存可以不关联商品行，但仍保持独立库存编号
 - 库存记录不推进 `OrderLine.lineStatus`、生产状态、财务状态或售后状态
+- 库存流转记录只描述库存资产变化：入库、占用、释放、出库、报废和调整
 
 ---
 

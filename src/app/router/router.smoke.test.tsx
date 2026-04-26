@@ -1379,6 +1379,9 @@ describe('router smoke', () => {
     expect(screen.getByRole('heading', { name: '仓库商品管理' })).toBeInTheDocument()
     expect(screen.getByText('仓库商品管理是库存资产台账，记录设计留样、客户退货、常备采购和其他库存；它可以关联 Product / Purchase / OrderLine，但不替代产品模板或商品行执行流。')).toBeInTheDocument()
     expect(screen.getByText('库存台账')).toBeInTheDocument()
+    expect(screen.getByText('入库登记')).toBeInTheDocument()
+    expect(screen.getByText('库存流转')).toBeInTheDocument()
+    expect(screen.getByText('库存流转记录')).toBeInTheDocument()
     expect(screen.getByText('山形素圈戒指设计留样')).toBeInTheDocument()
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
@@ -1394,6 +1397,33 @@ describe('router smoke', () => {
     await user.type(screen.getByLabelText('库位筛选'), '常备链身')
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
     expect(screen.queryByText('客户退回山形戒指')).not.toBeInTheDocument()
+  })
+
+  it('records inventory inbound and movement actions locally', async () => {
+    const user = userEvent.setup()
+    renderRoute('/inventory')
+
+    await user.type(screen.getByLabelText('商品名称'), '设计部门未售样戒')
+    await user.selectOptions(screen.getByLabelText('入库来源'), 'design_sample')
+    await user.type(screen.getByLabelText('材质'), '银版')
+    const quantityInputs = screen.getAllByLabelText('数量')
+    await user.clear(quantityInputs[0] as HTMLElement)
+    await user.type(quantityInputs[0] as HTMLElement, '2')
+    await user.click(screen.getByRole('button', { name: '登记入库' }))
+
+    expect(screen.getByText(/已新增入库/)).toBeInTheDocument()
+    expect(screen.getByText('设计部门未售样戒')).toBeInTheDocument()
+
+    const movementItemSelect = screen.getByLabelText('库存商品')
+    await user.selectOptions(movementItemSelect, Array.from((movementItemSelect as HTMLSelectElement).options).find((option) => option.text.includes('设计部门未售样戒'))?.value || '')
+    await user.selectOptions(screen.getByLabelText('操作类型'), 'reserve')
+    await user.clear(screen.getAllByLabelText('数量')[1] as HTMLElement)
+    await user.type(screen.getAllByLabelText('数量')[1] as HTMLElement, '1')
+    await user.type(screen.getAllByLabelText('备注')[1] as HTMLElement, '为后续拍摄预占')
+    await user.click(screen.getByRole('button', { name: '登记流转' }))
+
+    expect(screen.getByText(/已登记占用/)).toBeInTheDocument()
+    expect(screen.getByText('为后续拍摄预占')).toBeInTheDocument()
   })
 
   it('renders production plan list route without requiring factory role', () => {

@@ -1,4 +1,4 @@
-import type { InventoryItem } from '@/types/inventory'
+import type { InventoryItem, InventoryMovement } from '@/types/inventory'
 
 export const inventoryItemsMock: InventoryItem[] = [
   {
@@ -95,3 +95,45 @@ export const inventoryItemsMock: InventoryItem[] = [
 ]
 
 export const mockInventoryItems = inventoryItemsMock
+
+export const inventoryMovementsMock: InventoryMovement[] = [
+  {
+    id: 'inventory-movement-design-sample-ring-001',
+    inventoryItemId: 'inventory-design-sample-ring-001',
+    inventoryCode: 'INV-DS-202604-001',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-23 18:20',
+    toStatus: 'in_stock',
+    toLocation: 'A-设计样品-01',
+    note: '设计部门留样入库。'
+  },
+  {
+    id: 'inventory-movement-return-ring-001',
+    inventoryItemId: 'inventory-return-ring-001',
+    inventoryCode: 'INV-RT-202604-002',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-25 11:10',
+    toStatus: 'reserved',
+    toLocation: 'B-退货待检-03',
+    relatedOrderLineId: 'oi-ring-001',
+    note: '客户退货入库，进入待检库位。'
+  },
+  {
+    id: 'inventory-movement-stock-chain-001',
+    inventoryItemId: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    type: 'inbound',
+    quantity: 5,
+    operatorName: '周库管',
+    occurredAt: '2026-04-20 09:30',
+    toStatus: 'in_stock',
+    toLocation: 'C-常备链身-02',
+    note: '常备链身采购入库。'
+  }
+]
+
+export const mockInventoryMovements = inventoryMovementsMock

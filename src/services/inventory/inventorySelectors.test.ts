@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { buildInventoryRows, buildInventorySummary, filterInventoryRows } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, buildInventoryRows, buildInventorySummary, filterInventoryRows } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -42,5 +42,61 @@ describe('inventorySelectors', () => {
     expect(filterInventoryRows(rows, { keyword: '', sourceType: 'all', status: 'all', condition: 'repair_needed', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', sourceType: 'all', status: 'all', condition: 'all', location: '常备链身' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: 'PUR-202604-001', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+  })
+
+  it('applies inventory movements without changing linked order lines', () => {
+    const stockItem = inventoryItemsMock.find((item) => item.id === 'inventory-stock-chain-001')
+    expect(stockItem).toBeDefined()
+
+    const reserveResult = applyInventoryMovement(stockItem!, {
+      type: 'reserve',
+      quantity: 2,
+      operatorName: '周库管',
+      occurredAt: '2026-04-26 10:00',
+      note: '为商品行预占链身'
+    })
+
+    expect(reserveResult.item.quantity).toBe(5)
+    expect(reserveResult.item.availableQuantity).toBe(3)
+    expect(reserveResult.item.status).toBe('in_stock')
+    expect(reserveResult.movement.type).toBe('reserve')
+    expect(reserveResult.movement.fromStatus).toBe('in_stock')
+    expect(reserveResult.movement.toStatus).toBe('in_stock')
+
+    const outboundResult = applyInventoryMovement(reserveResult.item, {
+      type: 'outbound',
+      quantity: 3,
+      operatorName: '周库管',
+      occurredAt: '2026-04-26 11:00',
+      note: '领用出库'
+    })
+
+    expect(outboundResult.item.quantity).toBe(2)
+    expect(outboundResult.item.availableQuantity).toBe(2)
+    expect(outboundResult.item.status).toBe('in_stock')
+    expect(outboundResult.movement.type).toBe('outbound')
+  })
+
+  it('rejects invalid movement quantities', () => {
+    const stockItem = inventoryItemsMock.find((item) => item.id === 'inventory-design-sample-ring-001')
+    expect(stockItem).toBeDefined()
+
+    expect(() =>
+      applyInventoryMovement(stockItem!, {
+        type: 'reserve',
+        quantity: 2,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 10:00'
+      })
+    ).toThrow('占用数量不能大于可用数量')
+
+    expect(() =>
+      applyInventoryMovement(stockItem!, {
+        type: 'outbound',
+        quantity: 0,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 10:00'
+      })
+    ).toThrow('库存流转数量必须大于 0')
   })
 })

@@ -2,18 +2,20 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
-import { customersMock, inventoryItemsMock } from '@/mocks'
+import { customersMock, inventoryItemsMock, inventoryMovementsMock } from '@/mocks'
 import {
+  applyInventoryMovement,
   buildInventoryRows,
   buildInventorySummary,
   filterInventoryRows,
   inventoryConditionLabelMap,
+  inventoryMovementTypeLabelMap,
   inventorySourceTypeLabelMap,
   inventoryStatusLabelMap,
   type InventoryFilters,
   type InventoryRow
 } from '@/services/inventory/inventorySelectors'
-import type { InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus } from '@/types/inventory'
+import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
 
 const categoryLabelMap: Record<string, string> = {
   ring: '戒指',
@@ -59,21 +61,74 @@ const conditionOptions: Array<{ value: InventoryItemCondition | 'all'; label: st
 ]
 
 const formatWeight = (weight?: number) => (typeof weight === 'number' ? `${weight}g` : '待补充')
+const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
+
+type MovementDraft = {
+  inventoryItemId: string
+  type: InventoryMovementType
+  quantity: string
+  toLocation: string
+  operatorName: string
+  note: string
+}
+
+type InboundDraft = {
+  name: string
+  sourceType: InventoryItemSourceType
+  category: string
+  material: string
+  size: string
+  quantity: string
+  location: string
+  keeperName: string
+  remark: string
+}
+
+const createMovementDraft = (item?: InventoryItem): MovementDraft => ({
+  inventoryItemId: item?.id || '',
+  type: 'reserve',
+  quantity: '1',
+  toLocation: item?.warehouseLocation || '',
+  operatorName: '周库管',
+  note: ''
+})
+
+const initialInboundDraft: InboundDraft = {
+  name: '',
+  sourceType: 'stock_purchase',
+  category: 'other',
+  material: '',
+  size: '',
+  quantity: '1',
+  location: 'C-常备库存-01',
+  keeperName: '周库管',
+  remark: ''
+}
+
+const toPositiveInteger = (value: string) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0
+}
 
 export const InventoryListPage = () => {
   const appData = useAppData()
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(() => structuredClone(inventoryItemsMock))
+  const [movements, setMovements] = useState<InventoryMovement[]>(() => structuredClone(inventoryMovementsMock))
   const [filters, setFilters] = useState<InventoryFilters>(initialFilters)
+  const [movementDraft, setMovementDraft] = useState<MovementDraft>(() => createMovementDraft(inventoryItemsMock[0]))
+  const [inboundDraft, setInboundDraft] = useState<InboundDraft>(initialInboundDraft)
+  const [formMessage, setFormMessage] = useState('')
 
   const rows = useMemo(
     () =>
       buildInventoryRows({
-        inventoryItems: inventoryItemsMock,
+        inventoryItems,
         products: appData.products,
         purchases: appData.purchases,
         orderLines: appData.orderLines,
         customers: customersMock
       }),
-    [appData.orderLines, appData.products, appData.purchases]
+    [appData.orderLines, appData.products, appData.purchases, inventoryItems]
   )
   const visibleRows = useMemo(() => filterInventoryRows(rows, filters), [filters, rows])
   const summary = useMemo(() => buildInventorySummary(rows), [rows])
@@ -83,6 +138,99 @@ export const InventoryListPage = () => {
       ...current,
       [key]: value
     }))
+  }
+
+  const updateMovementDraft = <K extends keyof MovementDraft>(key: K, value: MovementDraft[K]) => {
+    setMovementDraft((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  const updateInboundDraft = <K extends keyof InboundDraft>(key: K, value: InboundDraft[K]) => {
+    setInboundDraft((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  const submitMovement = () => {
+    const currentItem = inventoryItems.find((item) => item.id === movementDraft.inventoryItemId)
+    const quantity = toPositiveInteger(movementDraft.quantity)
+    if (!currentItem) {
+      setFormMessage('请先选择库存商品。')
+      return
+    }
+
+    try {
+      const result = applyInventoryMovement(currentItem, {
+        type: movementDraft.type,
+        quantity,
+        operatorName: movementDraft.operatorName.trim() || '周库管',
+        occurredAt: formatCurrentTime(),
+        toLocation: movementDraft.toLocation,
+        note: movementDraft.note
+      })
+      setInventoryItems((current) => current.map((item) => (item.id === currentItem.id ? result.item : item)))
+      setMovements((current) => [result.movement, ...current])
+      setMovementDraft(createMovementDraft(result.item))
+      setFormMessage(`已登记${inventoryMovementTypeLabelMap[movementDraft.type]}：${currentItem.inventoryCode}`)
+    } catch (error) {
+      setFormMessage(error instanceof Error ? error.message : '库存流转失败，请检查数量。')
+    }
+  }
+
+  const submitInbound = () => {
+    const quantity = toPositiveInteger(inboundDraft.quantity)
+    if (!inboundDraft.name.trim()) {
+      setFormMessage('请填写入库商品名称。')
+      return
+    }
+    if (quantity <= 0) {
+      setFormMessage('入库数量必须大于 0。')
+      return
+    }
+
+    const currentTime = formatCurrentTime()
+    const id = `inventory-new-${Date.now()}`
+    const sourcePrefix = inboundDraft.sourceType === 'design_sample' ? 'DS' : inboundDraft.sourceType === 'customer_return' ? 'RT' : inboundDraft.sourceType === 'stock_purchase' ? 'ST' : 'OT'
+    const item: InventoryItem = {
+      id,
+      inventoryCode: `INV-${sourcePrefix}-${Date.now().toString().slice(-6)}`,
+      name: inboundDraft.name.trim(),
+      category: inboundDraft.category as InventoryItem['category'],
+      sourceType: inboundDraft.sourceType,
+      sourceLabel: inventorySourceTypeLabelMap[inboundDraft.sourceType],
+      material: inboundDraft.material.trim() || undefined,
+      size: inboundDraft.size.trim() || undefined,
+      quantity,
+      availableQuantity: quantity,
+      warehouseLocation: inboundDraft.location.trim() || '待分配库位',
+      ownerDepartment: inboundDraft.sourceType === 'design_sample' ? 'design' : inboundDraft.sourceType === 'customer_return' ? 'customer_service' : 'warehouse',
+      condition: inboundDraft.sourceType === 'design_sample' ? 'sample' : inboundDraft.sourceType === 'customer_return' ? 'returned' : 'new',
+      status: 'in_stock',
+      receivedAt: currentTime,
+      keeperName: inboundDraft.keeperName.trim() || '周库管',
+      remark: inboundDraft.remark.trim() || undefined
+    }
+    const movement: InventoryMovement = {
+      id: `movement-${id}-inbound`,
+      inventoryItemId: id,
+      inventoryCode: item.inventoryCode,
+      type: 'inbound',
+      quantity,
+      operatorName: item.keeperName,
+      occurredAt: currentTime,
+      toStatus: 'in_stock',
+      toLocation: item.warehouseLocation,
+      note: inboundDraft.remark || '新增入库登记。'
+    }
+
+    setInventoryItems((current) => [item, ...current])
+    setMovements((current) => [movement, ...current])
+    setMovementDraft(createMovementDraft(item))
+    setInboundDraft(initialInboundDraft)
+    setFormMessage(`已新增入库：${item.inventoryCode}`)
   }
 
   return (
@@ -168,8 +316,109 @@ export const InventoryListPage = () => {
         </div>
       </SectionCard>
 
+      <div className="two-column-grid">
+        <SectionCard title="入库登记" description="用于设计留样、客户退货、常备采购或其他库存的前端 mock 入库。">
+          <div className="filter-grid">
+            <label>
+              <span>商品名称</span>
+              <input value={inboundDraft.name} onChange={(event) => updateInboundDraft('name', event.target.value)} placeholder="例如 设计留样戒指" />
+            </label>
+            <label>
+              <span>入库来源</span>
+              <select value={inboundDraft.sourceType} onChange={(event) => updateInboundDraft('sourceType', event.target.value as InventoryItemSourceType)}>
+                {sourceOptions
+                  .filter((option): option is { value: InventoryItemSourceType; label: string } => option.value !== 'all')
+                  .map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              <span>材质</span>
+              <input value={inboundDraft.material} onChange={(event) => updateInboundDraft('material', event.target.value)} placeholder="18K金 / 银版 / 锆石" />
+            </label>
+            <label>
+              <span>规格</span>
+              <input value={inboundDraft.size} onChange={(event) => updateInboundDraft('size', event.target.value)} placeholder="16号 / 42cm" />
+            </label>
+            <label>
+              <span>数量</span>
+              <input type="number" min="1" value={inboundDraft.quantity} onChange={(event) => updateInboundDraft('quantity', event.target.value)} />
+            </label>
+            <label>
+              <span>库位</span>
+              <input value={inboundDraft.location} onChange={(event) => updateInboundDraft('location', event.target.value)} />
+            </label>
+            <label>
+              <span>库管</span>
+              <input value={inboundDraft.keeperName} onChange={(event) => updateInboundDraft('keeperName', event.target.value)} />
+            </label>
+            <label>
+              <span>备注</span>
+              <input value={inboundDraft.remark} onChange={(event) => updateInboundDraft('remark', event.target.value)} placeholder="入库说明" />
+            </label>
+          </div>
+          <button type="button" className="button primary" onClick={submitInbound}>
+            登记入库
+          </button>
+        </SectionCard>
+
+        <SectionCard title="库存流转" description="占用、释放、出库、报废和库位调整只更新库存台账，不推进商品行状态。">
+          <div className="filter-grid">
+            <label>
+              <span>库存商品</span>
+              <select value={movementDraft.inventoryItemId} onChange={(event) => updateMovementDraft('inventoryItemId', event.target.value)}>
+                {inventoryItems.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.inventoryCode} / {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>操作类型</span>
+              <select value={movementDraft.type} onChange={(event) => updateMovementDraft('type', event.target.value as InventoryMovementType)}>
+                {Object.entries(inventoryMovementTypeLabelMap)
+                  .filter(([value]) => value !== 'inbound')
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              <span>数量</span>
+              <input type="number" min="1" value={movementDraft.quantity} onChange={(event) => updateMovementDraft('quantity', event.target.value)} />
+            </label>
+            <label>
+              <span>目标库位</span>
+              <input value={movementDraft.toLocation} onChange={(event) => updateMovementDraft('toLocation', event.target.value)} placeholder="调整库位时填写" />
+            </label>
+            <label>
+              <span>操作人</span>
+              <input value={movementDraft.operatorName} onChange={(event) => updateMovementDraft('operatorName', event.target.value)} />
+            </label>
+            <label>
+              <span>备注</span>
+              <input value={movementDraft.note} onChange={(event) => updateMovementDraft('note', event.target.value)} placeholder="占用原因 / 出库说明" />
+            </label>
+          </div>
+          <button type="button" className="button primary" onClick={submitMovement}>
+            登记流转
+          </button>
+          {formMessage ? <p className="text-muted">{formMessage}</p> : null}
+        </SectionCard>
+      </div>
+
       <SectionCard title="库存台账" description="库管视角只管理库存资产，不推进商品行生产、财务或售后状态。">
         {visibleRows.length > 0 ? <InventoryTable rows={visibleRows} /> : <EmptyState title="暂无库存记录" description="当前筛选条件下没有库存商品，请放宽筛选或切回全部来源。" />}
+      </SectionCard>
+
+      <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整。">
+        <MovementTable movements={movements} />
       </SectionCard>
     </PageContainer>
   )
@@ -247,5 +496,45 @@ const InventoryLinks = ({ row }: { row: InventoryRow }) => (
         查看商品行中心
       </Link>
     ) : null}
+  </div>
+)
+
+const MovementTable = ({ movements }: { movements: InventoryMovement[] }) => (
+  <div className="table-wrap">
+    <table className="data-table">
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>库存编号</th>
+          <th>类型</th>
+          <th>数量</th>
+          <th>状态 / 库位</th>
+          <th>操作人</th>
+          <th>备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        {movements.map((movement) => (
+          <tr key={movement.id}>
+            <td>{movement.occurredAt}</td>
+            <td>{movement.inventoryCode}</td>
+            <td>
+              <StatusTag value={inventoryMovementTypeLabelMap[movement.type]} />
+            </td>
+            <td>{movement.quantity}</td>
+            <td>
+              <span className="muted-block">
+                {movement.fromStatus ? inventoryStatusLabelMap[movement.fromStatus] : '无'} → {movement.toStatus ? inventoryStatusLabelMap[movement.toStatus] : '无'}
+              </span>
+              <span className="muted-block">
+                {movement.fromLocation || '无库位'} → {movement.toLocation || '无库位'}
+              </span>
+            </td>
+            <td>{movement.operatorName}</td>
+            <td>{movement.note || '无'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   </div>
 )
