@@ -1168,7 +1168,7 @@ describe('router smoke', () => {
     expect(earringRow).not.toBeNull()
 
     await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '下发生产' }))
-    expect(screen.getByText('待工厂接收')).toBeInTheDocument()
+    expect(screen.getAllByText('待工厂接收').length).toBeGreaterThan(0)
 
     await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '标记生产中' }))
     expect(screen.getAllByText('生产中').length).toBeGreaterThan(0)
@@ -1219,6 +1219,64 @@ describe('router smoke', () => {
     await user.click(within(updatedNecklaceRow as HTMLElement).getByRole('button', { name: '标记建模完成' }))
     expect(screen.getAllByText('已完成').length).toBeGreaterThan(0)
     expect(screen.getByText('定制项链')).toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
+  it('renders factory center without customer or finance fields', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/factory')
+
+    expect(screen.getByRole('heading', { name: '工厂协同中心' })).toBeInTheDocument()
+    expect(screen.getByText('当前工厂：苏州金工厂。本页只显示分配给当前工厂的商品行生产任务，不展示客户联系方式、地址、销售价格、定金、尾款、利润或财务备注。')).toBeInTheDocument()
+    expect(screen.getByText('山形胸针试产')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到生产中' }))
+    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
+
+    expect(screen.queryByText('张三')).not.toBeInTheDocument()
+    expect(screen.queryByText('TB-9938201')).not.toBeInTheDocument()
+    expect(screen.queryByText('8500')).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
+  it('updates factory production return through current order-line state', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/factory')
+
+    const pendingRow = screen.getByText('山形胸针试产').closest('tr')
+    expect(pendingRow).not.toBeNull()
+
+    await user.click(within(pendingRow as HTMLElement).getByRole('button', { name: '接收任务' }))
+    expect(screen.getAllByText('工厂已接收').length).toBeGreaterThan(0)
+
+    const acceptedRow = screen.getByText('山形胸针试产').closest('tr')
+    expect(acceptedRow).not.toBeNull()
+    await user.click(within(acceptedRow as HTMLElement).getByRole('button', { name: '标记开始生产' }))
+    expect(screen.getAllByText('工厂生产中').length).toBeGreaterThan(0)
+
+    const producingRow = screen.getByText('山形胸针试产').closest('tr')
+    expect(producingRow).not.toBeNull()
+    await user.click(within(producingRow as HTMLElement).getByRole('button', { name: '标记生产完成' }))
+    expect(screen.getAllByText('待回传').length).toBeGreaterThan(0)
+
+    const returnRow = screen.getByText('山形胸针试产').closest('tr')
+    expect(returnRow).not.toBeNull()
+    await user.clear(within(returnRow as HTMLElement).getByLabelText('总重'))
+    await user.type(within(returnRow as HTMLElement).getByLabelText('总重'), '5.2')
+    await user.clear(within(returnRow as HTMLElement).getByLabelText('净金重'))
+    await user.type(within(returnRow as HTMLElement).getByLabelText('净金重'), '4.8')
+    await user.clear(within(returnRow as HTMLElement).getByLabelText('实际材质'))
+    await user.type(within(returnRow as HTMLElement).getByLabelText('实际材质'), '18K金')
+    await user.type(within(returnRow as HTMLElement).getByLabelText('基础工费'), '280')
+    await user.type(within(returnRow as HTMLElement).getByLabelText('附加工费'), '60')
+    await user.type(within(returnRow as HTMLElement).getByLabelText('成品图文件'), 'pin-finished.jpg')
+    await user.type(within(returnRow as HTMLElement).getByLabelText('结算单文件'), 'pin-settlement.pdf')
+    await user.type(within(returnRow as HTMLElement).getByLabelText('工厂备注-ol-zhang-factory-pending-001'), '生产数据已回传')
+    await user.click(within(returnRow as HTMLElement).getByRole('button', { name: '提交回传' }))
+
+    expect(screen.getAllByText('工厂已回传').length).toBeGreaterThan(0)
+    expect(screen.getByText('山形胸针试产')).toBeInTheDocument()
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 

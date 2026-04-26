@@ -27,6 +27,10 @@ const getSidebarShortLabel = (label: string) => {
     return '设计'
   }
 
+  if (label === '工厂协同') {
+    return '工厂'
+  }
+
   if (label === '产品管理') {
     return '产品'
   }

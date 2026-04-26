@@ -111,6 +111,10 @@ export const ringOrderLine: OrderLine = {
     qualityResult: '',
     factoryNote: '工厂生产中，等待首轮回传。'
   },
+  productionData: {
+    actualMaterial: '18K金',
+    factoryNote: '已开工，等待重量与出货单回传。'
+  },
   quote: buildQuoteResult({
     selectedSpec: ringSpec,
     selectedMaterial: '18K金',
@@ -202,6 +206,20 @@ export const pendantOrderLine: OrderLine = {
     returnedWeight: '2.3g',
     qualityResult: '通过',
     factoryNote: '质检通过，待发货。'
+  },
+  productionData: {
+    shippedAt: '2026-04-25 15:20',
+    completedAt: '2026-04-25 14:40',
+    totalWeight: 2.3,
+    netMetalWeight: 2.1,
+    actualMaterial: '足银',
+    baseLaborCost: 180,
+    extraLaborCost: 40,
+    extraLaborCostNote: '珐琅补色',
+    totalLaborCost: 220,
+    factoryNote: '质检通过，随货附出货单。',
+    finishedImageUrls: ['pendant-finished-photo.jpg'],
+    settlementFileUrls: ['pendant-settlement.pdf']
   },
   quote: buildQuoteResult({
     selectedSpec: pendantSpec,
@@ -494,7 +512,72 @@ export const broochBlockedOrderLine: OrderLine = {
   finalDisplayQuote: 1580
 }
 
-export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine, earringReviewOrderLine, broochBlockedOrderLine]
+export const factoryPendingOrderLine: OrderLine = {
+  id: 'ol-zhang-factory-pending-001',
+  lineNo: 7,
+  lineCode: 'OL-202604-001-07',
+  productionTaskNo: 'PIN-SH-007',
+  purchaseId,
+  transactionId: purchaseId,
+  customerId: 'customer-zhang-001',
+  name: '山形胸针试产',
+  category: 'other',
+  styleName: '山形胸针试产版',
+  versionNo: 'v1',
+  skuCode: 'PIN-SH-007',
+  quantity: 1,
+  lineStatus: 'pending_factory_production',
+  designStatus: 'completed',
+  modelingStatus: 'not_required',
+  productionStatus: 'dispatched',
+  factoryStatus: 'pending_acceptance',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-wang',
+  merchandiserId: 'merchandiser-li',
+  factoryId: 'factory-suzhou-gold-001',
+  productionSentAt: '2026-04-25 10:00',
+  factoryPlannedDueDate: '2026-05-02',
+  status: 'pending_outsource',
+  currentOwner: '苏州金工厂',
+  priority: 'high',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: false,
+  requiresWax: false,
+  isReferencedProduct: false,
+  selectedSpecValue: '胸针 20mm',
+  selectedMaterial: '18K金',
+  selectedProcess: '手工抛光',
+  actualRequirements: {
+    material: '18K金',
+    process: '手工抛光',
+    sizeNote: '胸针主体 20mm',
+    engraveText: 'ZS',
+    specialNotes: ['边缘保留山形纹理'],
+    remark: '跟单已下发，等待工厂接收。'
+  },
+  designFiles: [
+    {
+      id: 'design-file-pin-001',
+      name: '胸针试产确认稿.pdf',
+      url: 'data:text/plain;charset=utf-8,pin-design'
+    }
+  ],
+  productionInfo: {
+    factoryStatus: 'not_started',
+    factoryNote: '已下发，等待工厂接收。'
+  },
+  productionData: {
+    actualMaterial: '18K金',
+    factoryNote: '待接收。'
+  },
+  expectedDate: '2026-05-02',
+  promisedDate: '2026-05-04',
+  itemSku: 'PIN-SH-007',
+  finalDisplayQuote: 1880
+}
+
+export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine, earringReviewOrderLine, broochBlockedOrderLine, factoryPendingOrderLine]
 
 export const orderLineLegacyStatusMock: Record<string, string> = {
   'oi-ring-001': '生产中',
@@ -502,7 +585,8 @@ export const orderLineLegacyStatusMock: Record<string, string> = {
   'ol-zhang-necklace-001': '待设计',
   'ol-zhang-wax-001': '待建模',
   'ol-zhang-earring-review-001': '待跟单审核',
-  'ol-zhang-brooch-blocked-001': '异常/逾期'
+  'ol-zhang-brooch-blocked-001': '异常/逾期',
+  'ol-zhang-factory-pending-001': '待工厂接收'
 }
 
 export const orderLineCompatibilityExtrasMock: Record<
