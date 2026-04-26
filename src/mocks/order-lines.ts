@@ -115,6 +115,13 @@ export const ringOrderLine: OrderLine = {
     actualMaterial: '18K金',
     factoryNote: '已开工，等待重量与出货单回传。'
   },
+  lineSalesAmount: 2080,
+  allocatedDepositAmount: 1220,
+  allocatedFinalPaymentAmount: 860,
+  materialCost: 760,
+  laborCost: 0,
+  factorySettlementAmount: 0,
+  financeNote: '生产中，等待工厂回传后核算。',
   quote: buildQuoteResult({
     selectedSpec: ringSpec,
     selectedMaterial: '18K金',
@@ -221,6 +228,16 @@ export const pendantOrderLine: OrderLine = {
     finishedImageUrls: ['pendant-finished-photo.jpg'],
     settlementFileUrls: ['pendant-settlement.pdf']
   },
+  lineSalesAmount: 1280,
+  allocatedDepositAmount: 750,
+  allocatedFinalPaymentAmount: 530,
+  materialCost: 320,
+  laborCost: 180,
+  extraLaborCost: 40,
+  factorySettlementAmount: 540,
+  estimatedGrossProfit: 740,
+  estimatedGrossProfitRate: 57.8,
+  financeNote: '待确认工厂结算。',
   quote: buildQuoteResult({
     selectedSpec: pendantSpec,
     selectedMaterial: '足银',
@@ -571,6 +588,10 @@ export const factoryPendingOrderLine: OrderLine = {
     actualMaterial: '18K金',
     factoryNote: '待接收。'
   },
+  lineSalesAmount: 1880,
+  allocatedDepositAmount: 1100,
+  allocatedFinalPaymentAmount: 780,
+  financeNote: '待工厂回传后核算。',
   expectedDate: '2026-05-02',
   promisedDate: '2026-05-04',
   itemSku: 'PIN-SH-007',

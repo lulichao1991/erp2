@@ -31,6 +31,10 @@ const getSidebarShortLabel = (label: string) => {
     return '工厂'
   }
 
+  if (label === '财务中心') {
+    return '财务'
+  }
+
   if (label === '产品管理') {
     return '产品'
   }

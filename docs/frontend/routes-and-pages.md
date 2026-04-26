@@ -58,6 +58,7 @@
 - 生产跟进
 - 设计建模
 - 工厂协同（仅工厂角色可见）
+- 财务中心
 - 产品管理
 - 生产计划（仅工厂角色可见）
 
@@ -69,6 +70,7 @@
 - `/production-follow-up` 是跟单生产推进入口，视图数据只来自当前 `OrderLine` 和所属 `Purchase`
 - `/design-modeling` 是设计 / 建模工作台，视图数据只来自当前 `OrderLine`
 - `/factory` 是工厂协同中心，只展示分配给当前 mock 工厂的 `OrderLine` 生产信息
+- `/finance` 是财务中心，围绕 `Purchase.finance` 和 `OrderLine` 成本 / 工厂回传数据做确认
 
 ### `/customers`
 客户中心。
@@ -207,6 +209,22 @@
 - 本页只基于 `OrderLine.factoryId / productionStatus / factoryStatus / productionData`
 - 不展示客户姓名、联系方式、收货地址、销售价格、定金、尾款、利润或财务备注
 - 当前为前端 mock 角色与 mock 数据，不接真实后端鉴权或真实上传
+
+---
+
+### `/finance`
+财务中心。
+
+用途：
+- 查看购买记录收款汇总、定金和尾款状态
+- 查看工厂回传的重量、材质、工费和结算资料
+- 确认尾款、确认工厂结算金额
+- 标记财务异常、填写财务备注、锁定财务数据
+
+说明：
+- 本页围绕 `Purchase.finance` 与 `OrderLine.financeStatus / productionData`
+- 财务可以查看金额和成本，但不负责推进设计、建模或生产状态
+- 当前不做真实导出、后端收款流水或复杂财务审批
 
 ---
 

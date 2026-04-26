@@ -41,12 +41,17 @@ export type PurchaseFinanceTransaction = {
   note?: string
 }
 
+export type PurchasePaymentStatus = 'pending' | 'confirmed' | 'not_required' | 'abnormal'
+
 export type PurchaseFinanceInfo = {
   dealPrice?: number
   depositAmount?: number
   balanceAmount?: number
+  depositStatus?: PurchasePaymentStatus
+  finalPaymentStatus?: PurchasePaymentStatus
   invoiced?: boolean
   remark?: string
+  financeNote?: string
   transactions: PurchaseFinanceTransaction[]
 }
 

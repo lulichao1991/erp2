@@ -222,6 +222,21 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 回传后商品行进入 `factory_returned`，`financeStatus` 进入 `pending`
 - 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
 
+### 4.11 `/finance` 财务中心
+
+状态：已完成
+
+当前能力：
+- 基于 `Purchase.finance` 展示应收、定金、尾款和收款确认状态
+- 基于 `OrderLine.productionData / financeStatus` 展示工厂回传、结算金额、成本和毛利摘要
+- 支持确认定金、确认尾款、确认工厂结算、标记财务异常、填写财务备注和锁定财务数据
+
+验收口径：
+- 财务可查看金额、成本和工厂回传数据
+- 财务确认后商品行进入 `ready_to_ship`，`financeStatus` 进入 `confirmed`
+- 财务不负责推进设计、建模或生产执行字段
+- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
+
 ### 4.8 商品行操作日志
 
 状态：已完成

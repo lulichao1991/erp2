@@ -246,6 +246,23 @@ export type OrderLine = {
   outsourceInfo?: OrderLineOutsourceInfo
   productionInfo?: OrderLineProductionInfo
   productionData?: OrderLineProductionData
+  lineSalesAmount?: number
+  allocatedDepositAmount?: number
+  allocatedFinalPaymentAmount?: number
+  materialCost?: number
+  mainStoneCost?: number
+  sideStoneCost?: number
+  laborCost?: number
+  extraLaborCost?: number
+  logisticsCost?: number
+  afterSalesCost?: number
+  factorySettlementAmount?: number
+  estimatedGrossProfit?: number
+  estimatedGrossProfitRate?: number
+  financeConfirmedAt?: string
+  financeAbnormalReason?: string
+  financeNote?: string
+  financeLocked?: boolean
   quote?: QuoteResult
   expectedDate?: string
   promisedDate?: string
