@@ -9,6 +9,7 @@ import {
   buildInventoryRows,
   buildInventorySummary,
   filterInventoryRows,
+  getInventoryReservedQuantity,
   inventoryConditionLabelMap,
   inventoryMovementTypeLabelMap,
   inventorySourceTypeLabelMap,
@@ -386,6 +387,10 @@ export const InventoryListPage = () => {
           <span className="stat-card-value">{summary.availableQuantity}</span>
         </div>
         <div className="stat-card compact-stat">
+          <span className="stat-card-label">已占用件数</span>
+          <span className="stat-card-value">{summary.reservedQuantity}</span>
+        </div>
+        <div className="stat-card compact-stat">
           <span className="stat-card-label">设计留样</span>
           <span className="stat-card-value">{summary.designSampleCount}</span>
         </div>
@@ -712,6 +717,7 @@ const InventoryTable = ({ rows, selectedId, onSelect }: { rows: InventoryRow[]; 
             <td>
               <strong>{row.item.quantity} 件</strong>
               <span className="muted-block">可用 {row.item.availableQuantity} 件</span>
+              <span className="muted-block">已占用 {getInventoryReservedQuantity(row.item)} 件</span>
               <span className="muted-block">
                 {[row.item.material, row.item.size, formatWeight(row.item.weight)].filter(Boolean).join(' / ')}
               </span>
@@ -768,7 +774,7 @@ const InventoryDetail = ({ row, movements, orderLines }: { row: InventoryRow; mo
       <div>
         <span className="info-label">数量</span>
         <strong>
-          {row.item.availableQuantity} / {row.item.quantity} 可用
+          总数 {row.item.quantity} / 可用 {row.item.availableQuantity} / 已占用 {getInventoryReservedQuantity(row.item)}
         </strong>
       </div>
       <div>

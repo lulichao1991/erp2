@@ -1389,6 +1389,8 @@ describe('router smoke', () => {
     expect(screen.getAllByText('山形素圈戒指设计留样').length).toBeGreaterThan(0)
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
+    expect(screen.getByText('已占用件数')).toBeInTheDocument()
+    expect(screen.getAllByText('已占用 1 件').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.getAllByRole('link', { name: '查看产品模板' }).length).toBeGreaterThan(0)
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()

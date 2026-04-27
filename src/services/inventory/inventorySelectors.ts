@@ -64,6 +64,7 @@ export type InventorySummary = {
   skuCount: number
   totalQuantity: number
   availableQuantity: number
+  reservedQuantity: number
   designSampleCount: number
   customerReturnCount: number
   needsReviewCount: number
@@ -104,6 +105,8 @@ export const isLowStockInventoryRow = (row: InventoryRow) =>
   row.item.status === 'in_stock' &&
   row.item.availableQuantity > 0 &&
   row.item.availableQuantity <= 1
+
+export const getInventoryReservedQuantity = (item: InventoryItem) => Math.max(0, item.quantity - item.availableQuantity)
 
 export const buildInventoryRows = ({
   inventoryItems,
@@ -221,6 +224,7 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   skuCount: rows.length,
   totalQuantity: rows.reduce((sum, row) => sum + row.item.quantity, 0),
   availableQuantity: rows.reduce((sum, row) => sum + row.item.availableQuantity, 0),
+  reservedQuantity: rows.reduce((sum, row) => sum + getInventoryReservedQuantity(row.item), 0),
   designSampleCount: rows.filter((row) => row.item.sourceType === 'design_sample').length,
   customerReturnCount: rows.filter((row) => row.item.sourceType === 'customer_return').length,
   needsReviewCount: rows.filter((row) => row.item.condition === 'repair_needed' || row.item.condition === 'defective').length,
