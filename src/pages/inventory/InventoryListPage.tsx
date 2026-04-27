@@ -806,6 +806,11 @@ const InventoryLinks = ({ row }: { row: InventoryRow }) => (
         查看商品行中心
       </Link>
     ) : null}
+    {row.item.customerId ? (
+      <Link to={`/customers/${row.item.customerId}`} className="button ghost small" onClick={(event) => event.stopPropagation()}>
+        查看客户详情
+      </Link>
+    ) : null}
   </div>
 )
 

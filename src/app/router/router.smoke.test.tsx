@@ -1414,6 +1414,7 @@ describe('router smoke', () => {
     await user.click(within(returnRow as HTMLElement).getByRole('button', { name: '查看详情' }))
     expect(screen.getByText('来源追溯')).toBeInTheDocument()
     expect(screen.getAllByText('产品：山形素圈戒指 / 商品行：OL-202604-001-01 / 购买记录：PUR-202604-001 / 客户：张三').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: '查看客户详情' }).some((link) => link.getAttribute('href') === '/customers/customer-zhang-001')).toBe(true)
     expect(screen.getAllByText('客户退货入库，进入待检库位。').length).toBeGreaterThan(0)
 
     await user.selectOptions(screen.getByLabelText('处置后成色'), 'returned')
