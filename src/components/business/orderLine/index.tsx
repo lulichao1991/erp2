@@ -30,7 +30,8 @@ import type {
   OrderLineLog,
   OrderLineOutsourceStatus,
   OrderLinePriority,
-  OrderLineProductionStatus
+  OrderLineProductionStatus,
+  OrderLineUploadedFile
 } from '@/types/order-line'
 import type { ProductCategory } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
@@ -72,6 +73,8 @@ export type OrderLineDetailsDraft = {
   selectedSpecialOptionsText: string
   sizeNote: string
   engraveText: string
+  engraveImageFiles: OrderLineUploadedFile[]
+  engravePltFiles: OrderLineUploadedFile[]
   customerRemark: string
   productionRemark: string
   priority: OrderLinePriority
@@ -303,6 +306,13 @@ const splitTextList = (value: string) =>
 
 const TextList = ({ values, empty = '—' }: { values?: string[]; empty?: string }) => (values && values.length > 0 ? values.join(' / ') : empty)
 
+const buildUploadedFiles = (files: FileList | null, prefix: string): OrderLineUploadedFile[] =>
+  Array.from(files ?? []).map((file, index) => ({
+    id: `${prefix}-${Date.now()}-${index}`,
+    name: file.name,
+    url: `mock-upload:${encodeURIComponent(file.name)}`
+  }))
+
 const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProductCompareValue => ({
   sourceLabel: `${line.lineCode || line.id} ${line.name}`,
   specValue: line.selectedSpecValue || line.sourceProduct?.sourceSpecValue,
@@ -360,6 +370,8 @@ export const buildOrderLineDetailsDraft = (line: OrderLine): OrderLineDetailsDra
   selectedSpecialOptionsText: (line.selectedSpecialOptions || line.actualRequirements?.specialNotes || []).join(' / '),
   sizeNote: line.actualRequirements?.sizeNote || '',
   engraveText: line.actualRequirements?.engraveText || '',
+  engraveImageFiles: line.actualRequirements?.engraveImageFiles ?? [],
+  engravePltFiles: line.actualRequirements?.engravePltFiles ?? [],
   customerRemark: line.actualRequirements?.remark || '',
   productionRemark: line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '',
   priority: line.priority || 'normal',
@@ -411,6 +423,8 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
       specNote: draft.specNote.trim() || undefined,
       sizeNote: draft.sizeNote.trim() || undefined,
       engraveText: draft.engraveText.trim() || undefined,
+      engraveImageFiles: draft.engraveImageFiles.length > 0 ? draft.engraveImageFiles : undefined,
+      engravePltFiles: draft.engravePltFiles.length > 0 ? draft.engravePltFiles : undefined,
       specialNotes: selectedSpecialOptions.length > 0 ? selectedSpecialOptions : undefined,
       remark: draft.customerRemark.trim() || undefined
     },
@@ -946,6 +960,13 @@ const OrderLineDetailsSection = ({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<OrderLineDetailsDraft>(() => buildOrderLineDetailsDraft(line))
   const [message, setMessage] = useState('')
+  const draftSpecialOptions = splitTextList(draft.selectedSpecialOptionsText)
+  const draftNeedsEngraving = hasEngravingRequirement({
+    engraveText: draft.engraveText,
+    selectedSpecialOptions: draftSpecialOptions,
+    engraveImageFiles: draft.engraveImageFiles,
+    engravePltFiles: draft.engravePltFiles
+  })
   const needsEngraving = hasEngravingRequirement({
     engraveText: line.actualRequirements?.engraveText,
     selectedSpecialOptions: line.selectedSpecialOptions,
@@ -983,6 +1004,14 @@ const OrderLineDetailsSection = ({
     onUpdateLineDetails(line.id, draft)
     setEditing(false)
     setMessage('已保存销售基础信息 / 实际需求')
+  }
+
+  const handleEngraveImageUpload = (files: FileList | null) => {
+    updateDraft('engraveImageFiles', buildUploadedFiles(files, `${line.id}-engrave-image`))
+  }
+
+  const handleEngravePltUpload = (files: FileList | null) => {
+    updateDraft('engravePltFiles', buildUploadedFiles(files, `${line.id}-engrave-plt`))
   }
 
   return (
@@ -1061,6 +1090,20 @@ const OrderLineDetailsSection = ({
               <span className="field-label">刻字 / 印记</span>
               <input className="input" value={draft.engraveText} onChange={(event) => updateDraft('engraveText', event.target.value)} />
             </label>
+            {draftNeedsEngraving ? (
+              <>
+                <label className="field-control">
+                  <span className="field-label">刻字参考图</span>
+                  <input aria-label="刻字参考图" className="input" type="file" accept="image/*,.pdf" multiple onChange={(event) => handleEngraveImageUpload(event.target.files)} />
+                  <span className="text-caption">{draft.engraveImageFiles.length > 0 ? draft.engraveImageFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
+                </label>
+                <label className="field-control">
+                  <span className="field-label">刻字 PLT 文件</span>
+                  <input aria-label="刻字 PLT 文件" className="input" type="file" accept=".plt" multiple onChange={(event) => handleEngravePltUpload(event.target.files)} />
+                  <span className="text-caption">{draft.engravePltFiles.length > 0 ? draft.engravePltFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
+                </label>
+              </>
+            ) : null}
             <label className="field-control">
               <span className="field-label">当前负责人</span>
               <input className="input" value={draft.currentOwner} onChange={(event) => updateDraft('currentOwner', event.target.value)} />

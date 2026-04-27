@@ -1101,12 +1101,12 @@ export const OrderLineDraftCard = ({
           <>
             <label className="field-control">
               <span className="field-label">刻字参考图</span>
-              <input aria-label="刻字参考图" className="input" type="file" accept="image/*,.pdf" onChange={(event) => handleEngraveImageUpload(event.target.files)} />
+              <input aria-label="刻字参考图" className="input" type="file" accept="image/*,.pdf" multiple onChange={(event) => handleEngraveImageUpload(event.target.files)} />
               <span className="text-caption">{line.engraveImageFiles.length > 0 ? line.engraveImageFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
             </label>
             <label className="field-control">
               <span className="field-label">刻字 PLT 文件</span>
-              <input aria-label="刻字 PLT 文件" className="input" type="file" accept=".plt" onChange={(event) => handleEngravePltUpload(event.target.files)} />
+              <input aria-label="刻字 PLT 文件" className="input" type="file" accept=".plt" multiple onChange={(event) => handleEngravePltUpload(event.target.files)} />
               <span className="text-caption">{line.engravePltFiles.length > 0 ? line.engravePltFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
             </label>
           </>

@@ -338,6 +338,11 @@ describe('router smoke', () => {
     await user.type(screen.getByLabelText('工艺'), '微镶')
     await user.clear(screen.getByLabelText('刻字 / 印记'))
     await user.type(screen.getByLabelText('刻字 / 印记'), 'RING-TEST')
+    await user.upload(screen.getByLabelText('刻字参考图'), [
+      new File(['front'], 'ring-engrave-front.jpg', { type: 'image/jpeg' }),
+      new File(['side'], 'ring-engrave-side.jpg', { type: 'image/jpeg' })
+    ])
+    await user.upload(screen.getByLabelText('刻字 PLT 文件'), new File(['plt'], 'ring-engrave-detail.plt', { type: 'application/octet-stream' }))
     await user.clear(screen.getByLabelText('客服备注'))
     await user.type(screen.getByLabelText('客服备注'), '客户改为 18K 微镶')
     await user.clear(screen.getByLabelText('当前负责人'))
@@ -353,6 +358,9 @@ describe('router smoke', () => {
     expect(screen.getAllByText('18K金').length).toBeGreaterThan(0)
     expect(screen.getAllByText('微镶').length).toBeGreaterThan(0)
     expect(screen.getByText('RING-TEST')).toBeInTheDocument()
+    expect(screen.getByText(/ring-engrave-front.jpg/)).toBeInTheDocument()
+    expect(screen.getByText(/ring-engrave-side.jpg/)).toBeInTheDocument()
+    expect(screen.getByText('ring-engrave-detail.plt')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('赵客服')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('2026-05-08')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText((content) => content.includes('材质 18K金') && content.includes('工艺 微镶'))).toBeInTheDocument()
