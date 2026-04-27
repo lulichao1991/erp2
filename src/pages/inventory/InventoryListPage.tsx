@@ -70,6 +70,7 @@ const quickViewOptions: Array<{ value: InventoryQuickView; label: string; descri
   { value: 'customer_returns', label: '客户退货', description: '退货入库与待检商品' },
   { value: 'needs_review', label: '待检 / 瑕疵', description: '需要库管复核' },
   { value: 'reserved', label: '已占用', description: '已被预占的库存' },
+  { value: 'low_stock', label: '低库存', description: '常备库存需补货' },
   { value: 'unavailable', label: '不可用', description: '无可用数量或已出库/报废' }
 ]
 
@@ -399,6 +400,10 @@ export const InventoryListPage = () => {
         <div className="stat-card compact-stat">
           <span className="stat-card-label">已占用</span>
           <span className="stat-card-value">{summary.reservedCount}</span>
+        </div>
+        <div className="stat-card compact-stat">
+          <span className="stat-card-label">低库存</span>
+          <span className="stat-card-value">{summary.lowStockCount}</span>
         </div>
         <div className="stat-card compact-stat">
           <span className="stat-card-label">不可用</span>

@@ -4,7 +4,7 @@ import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 
-export type InventoryQuickView = 'all' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'unavailable'
+export type InventoryQuickView = 'all' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'low_stock' | 'unavailable'
 
 export const inventorySourceTypeLabelMap: Record<InventoryItemSourceType, string> = {
   design_sample: '设计留样',
@@ -68,6 +68,7 @@ export type InventorySummary = {
   customerReturnCount: number
   needsReviewCount: number
   reservedCount: number
+  lowStockCount: number
   unavailableCount: number
 }
 
@@ -97,6 +98,12 @@ export type InventoryReviewInput = {
 }
 
 const includesKeyword = (value: string | undefined, keyword: string) => value?.toLowerCase().includes(keyword) ?? false
+
+export const isLowStockInventoryRow = (row: InventoryRow) =>
+  ['stock_purchase', 'consignment', 'other'].includes(row.item.sourceType) &&
+  row.item.status === 'in_stock' &&
+  row.item.availableQuantity > 0 &&
+  row.item.availableQuantity <= 1
 
 export const buildInventoryRows = ({
   inventoryItems,
@@ -165,6 +172,10 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
       return false
     }
 
+    if (filters.quickView === 'low_stock' && !isLowStockInventoryRow(row)) {
+      return false
+    }
+
     if (filters.quickView === 'unavailable' && row.item.availableQuantity > 0 && !['outbound', 'scrapped'].includes(row.item.status)) {
       return false
     }
@@ -214,6 +225,7 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   customerReturnCount: rows.filter((row) => row.item.sourceType === 'customer_return').length,
   needsReviewCount: rows.filter((row) => row.item.condition === 'repair_needed' || row.item.condition === 'defective').length,
   reservedCount: rows.filter((row) => row.item.status === 'reserved').length,
+  lowStockCount: rows.filter(isLowStockInventoryRow).length,
   unavailableCount: rows.filter((row) => row.item.availableQuantity <= 0 || row.item.status === 'outbound' || row.item.status === 'scrapped').length
 })
 

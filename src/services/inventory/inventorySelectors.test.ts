@@ -32,6 +32,7 @@ describe('inventorySelectors', () => {
     expect(summary.designSampleCount).toBe(1)
     expect(summary.customerReturnCount).toBe(1)
     expect(summary.needsReviewCount).toBe(1)
+    expect(summary.lowStockCount).toBe(1)
   })
 
   it('filters inventory by source, status, condition, location and keyword', () => {
@@ -51,6 +52,7 @@ describe('inventorySelectors', () => {
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'customer_returns', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'needs_review', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'reserved', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'low_stock', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-OT-202604-004'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
   })
 
