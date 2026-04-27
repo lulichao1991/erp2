@@ -69,10 +69,13 @@ const conditionOptions: Array<{ value: InventoryItemCondition | 'all'; label: st
 
 const quickViewOptions: Array<{ value: InventoryQuickView; label: string; description: string }> = [
   { value: 'all', label: '全部库存', description: '所有库存资产' },
+  { value: 'available', label: '可领用库存', description: '当前可被领用的库存' },
   { value: 'design_samples', label: '设计留样', description: '不售卖的设计样品' },
   { value: 'customer_returns', label: '客户退货', description: '退货入库与待检商品' },
   { value: 'needs_review', label: '待检 / 瑕疵', description: '需要库管复核' },
   { value: 'reserved', label: '已占用', description: '已被预占的库存' },
+  { value: 'pending_outbound', label: '待出库', description: '已关联商品行的占用库存' },
+  { value: 'pending_stocktake', label: '待盘点', description: '待检、瑕疵或占用异常库存' },
   { value: 'low_stock', label: '低库存', description: '常备库存需补货' },
   { value: 'unavailable', label: '不可用', description: '无可用数量或已出库/报废' }
 ]

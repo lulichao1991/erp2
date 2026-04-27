@@ -4,7 +4,7 @@ import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 
-export type InventoryQuickView = 'all' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'low_stock' | 'unavailable'
+export type InventoryQuickView = 'all' | 'available' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'pending_outbound' | 'pending_stocktake' | 'low_stock' | 'unavailable'
 
 export const inventorySourceTypeLabelMap: Record<InventoryItemSourceType, string> = {
   design_sample: '设计留样',
@@ -128,6 +128,12 @@ export const isLowStockInventoryRow = (row: InventoryRow) =>
 
 export const getInventoryReservedQuantity = (item: InventoryItem) => Math.max(0, item.quantity - item.availableQuantity)
 
+export const isAvailableInventoryRow = (row: InventoryRow) => row.item.availableQuantity > 0 && !['outbound', 'scrapped'].includes(row.item.status)
+
+export const isPendingOutboundInventoryRow = (row: InventoryRow) => getInventoryReservedQuantity(row.item) > 0 && Boolean(row.item.orderLineId)
+
+export const isPendingStocktakeInventoryRow = (row: InventoryRow) => row.item.status === 'reserved' || ['repair_needed', 'defective'].includes(row.item.condition)
+
 export const buildInventoryRows = ({
   inventoryItems,
   products,
@@ -179,6 +185,10 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
   const location = filters.location.trim().toLowerCase()
 
   return rows.filter((row) => {
+    if (filters.quickView === 'available' && !isAvailableInventoryRow(row)) {
+      return false
+    }
+
     if (filters.quickView === 'design_samples' && row.item.sourceType !== 'design_sample') {
       return false
     }
@@ -192,6 +202,14 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
     }
 
     if (filters.quickView === 'reserved' && row.item.status !== 'reserved') {
+      return false
+    }
+
+    if (filters.quickView === 'pending_outbound' && !isPendingOutboundInventoryRow(row)) {
+      return false
+    }
+
+    if (filters.quickView === 'pending_stocktake' && !isPendingStocktakeInventoryRow(row)) {
       return false
     }
 

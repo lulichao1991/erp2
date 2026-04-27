@@ -1383,8 +1383,11 @@ describe('router smoke', () => {
     expect(screen.getByText('库存流转')).toBeInTheDocument()
     expect(screen.getByText('库存流转记录')).toBeInTheDocument()
     expect(screen.getByText('库存详情与来源追溯')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '可领用库存' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '客户退货' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待检 / 瑕疵' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '待出库' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '待盘点' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '低库存' })).toBeInTheDocument()
     expect(screen.getAllByText('山形素圈戒指设计留样').length).toBeGreaterThan(0)
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
@@ -1412,6 +1415,22 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '低库存' }))
     expect(screen.getByText('小颗辅石混包')).toBeInTheDocument()
     expect(screen.queryByText('客户退回山形戒指')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '客户退货' }))
+    expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '待出库' }))
+    expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('通用 18K 项链链身')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '待盘点' }))
+    expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
+    expect(screen.queryByText('通用 18K 项链链身')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '可领用库存' }))
+    expect(screen.getAllByText('山形素圈戒指设计留样').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('通用 18K 项链链身').length).toBeGreaterThan(0)
+    expect(screen.queryByText('客户退回山形戒指')).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: '客户退货' }))
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
 
