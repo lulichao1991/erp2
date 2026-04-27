@@ -1269,29 +1269,30 @@ button.stat-card {
 
 .workbench-task-detail {
   display: grid;
-  gap: 12px;
-  padding: 0 14px 14px;
+  gap: 10px;
+  padding: 0 14px 12px;
 }
 
 .workbench-detail-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
 }
 
 .workbench-detail-block {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: 1px solid var(--color-border-default);
-  border-radius: 12px;
-  background: var(--color-bg-subtle);
+  border-radius: 10px;
+  background: var(--color-bg-card);
 }
 
 .workbench-detail-block.wide {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 .workbench-detail-block h3 {
@@ -1302,6 +1303,28 @@ button.stat-card {
 
 .workbench-detail-block p {
   margin: 0;
+}
+
+.workbench-detail-block .text-caption {
+  display: block;
+}
+
+.workbench-detail-block .field-grid,
+.workbench-detail-block .field-grid.three {
+  gap: 8px;
+}
+
+.workbench-detail-block .field-control {
+  gap: 4px;
+}
+
+.workbench-detail-block .input,
+.workbench-detail-block .textarea {
+  padding: 7px 9px;
+}
+
+.workbench-detail-block .textarea {
+  min-height: 64px;
 }
 
 .factory-return-panel {
@@ -1318,7 +1341,7 @@ button.stat-card {
 
 .factory-return-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
 }
 
@@ -1327,15 +1350,19 @@ button.stat-card {
 }
 
 .factory-return-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 92px;
-  justify-content: center;
-  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  min-height: 0;
+  align-items: center;
+  padding: 10px 12px;
   border: 1px dashed var(--color-border-strong);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--color-bg-subtle);
+}
+
+.factory-return-summary .muted-block {
+  grid-column: 1 / -1;
 }
 
 .factory-return-summary .button {
