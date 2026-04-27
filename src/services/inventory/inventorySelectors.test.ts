@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, buildInventoryRows, buildInventorySummary, filterInventoryRows } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryReservedQuantity } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -29,6 +29,7 @@ describe('inventorySelectors', () => {
     expect(summary.skuCount).toBe(inventoryItemsMock.length)
     expect(summary.totalQuantity).toBe(8)
     expect(summary.availableQuantity).toBe(7)
+    expect(summary.reservedQuantity).toBe(1)
     expect(summary.designSampleCount).toBe(1)
     expect(summary.customerReturnCount).toBe(1)
     expect(summary.needsReviewCount).toBe(1)
@@ -54,6 +55,14 @@ describe('inventorySelectors', () => {
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'reserved', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'low_stock', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-OT-202604-004'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+  })
+
+  it('calculates reserved quantity from total and available quantity', () => {
+    const reservedItem = inventoryItemsMock.find((item) => item.status === 'reserved')
+    expect(reservedItem).toBeDefined()
+
+    expect(getInventoryReservedQuantity(reservedItem!)).toBe(1)
+    expect(getInventoryReservedQuantity({ ...reservedItem!, availableQuantity: 2, quantity: 1 })).toBe(0)
   })
 
   it('applies inventory movements without changing linked order lines', () => {
