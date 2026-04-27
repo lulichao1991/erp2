@@ -98,6 +98,10 @@ export type InventoryOrderLineMovementSummary = {
   latestOccurredAt: string
 }
 
+export type InventoryAvailabilityStatus = 'available' | 'reserved' | 'unavailable'
+
+export type InventoryReviewStatus = 'clear' | 'needs_review' | 'stocktake_recommended'
+
 export type InventoryReviewInput = {
   condition: InventoryItemCondition
   status: InventoryItemStatus
@@ -128,11 +132,71 @@ export const isLowStockInventoryRow = (row: InventoryRow) =>
 
 export const getInventoryReservedQuantity = (item: InventoryItem) => Math.max(0, item.quantity - item.availableQuantity)
 
-export const isAvailableInventoryRow = (row: InventoryRow) => row.item.availableQuantity > 0 && !['outbound', 'scrapped'].includes(row.item.status)
+export const getInventoryAvailabilityStatus = (item: InventoryItem): InventoryAvailabilityStatus => {
+  if (item.availableQuantity > 0 && !['outbound', 'scrapped'].includes(item.status)) {
+    return 'available'
+  }
+
+  if (getInventoryReservedQuantity(item) > 0 && !['outbound', 'scrapped'].includes(item.status)) {
+    return 'reserved'
+  }
+
+  return 'unavailable'
+}
+
+export const getInventoryReviewStatus = (item: InventoryItem): InventoryReviewStatus => {
+  if (['repair_needed', 'defective'].includes(item.condition)) {
+    return 'needs_review'
+  }
+
+  if (item.status === 'reserved') {
+    return 'stocktake_recommended'
+  }
+
+  return 'clear'
+}
+
+export const getInventoryWorkbenchBadges = (row: InventoryRow) => {
+  const badges: string[] = []
+  const availability = getInventoryAvailabilityStatus(row.item)
+  const reviewStatus = getInventoryReviewStatus(row.item)
+
+  if (availability === 'available') {
+    badges.push('可领用')
+  }
+
+  if (availability === 'reserved') {
+    badges.push('已占用')
+  }
+
+  if (availability === 'unavailable') {
+    badges.push('不可用')
+  }
+
+  if (reviewStatus === 'needs_review') {
+    badges.push('待质检')
+  }
+
+  if (reviewStatus === 'stocktake_recommended') {
+    badges.push('建议盘点')
+  }
+
+  if (isLowStockInventoryRow(row)) {
+    badges.push('低库存')
+  }
+
+  if (isPendingOutboundInventoryRow(row)) {
+    badges.push('待出库')
+  }
+
+  return badges
+}
+
+export const isAvailableInventoryRow = (row: InventoryRow) => getInventoryAvailabilityStatus(row.item) === 'available'
 
 export const isPendingOutboundInventoryRow = (row: InventoryRow) => getInventoryReservedQuantity(row.item) > 0 && Boolean(row.item.orderLineId)
 
-export const isPendingStocktakeInventoryRow = (row: InventoryRow) => row.item.status === 'reserved' || ['repair_needed', 'defective'].includes(row.item.condition)
+export const isPendingStocktakeInventoryRow = (row: InventoryRow) => getInventoryReviewStatus(row.item) !== 'clear'
 
 export const buildInventoryRows = ({
   inventoryItems,
@@ -265,10 +329,10 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   reservedQuantity: rows.reduce((sum, row) => sum + getInventoryReservedQuantity(row.item), 0),
   designSampleCount: rows.filter((row) => row.item.sourceType === 'design_sample').length,
   customerReturnCount: rows.filter((row) => row.item.sourceType === 'customer_return').length,
-  needsReviewCount: rows.filter((row) => row.item.condition === 'repair_needed' || row.item.condition === 'defective').length,
+  needsReviewCount: rows.filter((row) => getInventoryReviewStatus(row.item) === 'needs_review').length,
   reservedCount: rows.filter((row) => row.item.status === 'reserved').length,
   lowStockCount: rows.filter(isLowStockInventoryRow).length,
-  unavailableCount: rows.filter((row) => row.item.availableQuantity <= 0 || row.item.status === 'outbound' || row.item.status === 'scrapped').length
+  unavailableCount: rows.filter((row) => getInventoryAvailabilityStatus(row.item) === 'unavailable').length
 })
 
 export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovement[], orderLines: OrderLine[]): InventoryOrderLineMovementSummary[] => {
