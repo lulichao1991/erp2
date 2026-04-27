@@ -12,6 +12,7 @@ import {
   buildInventorySummary,
   filterInventoryRows,
   getInventoryReservedQuantity,
+  getInventoryWorkbenchBadges,
   inventoryConditionLabelMap,
   inventoryMovementTypeLabelMap,
   inventorySourceTypeLabelMap,
@@ -832,6 +833,9 @@ const InventoryTable = ({ rows, selectedId, onSelect }: { rows: InventoryRow[]; 
                 <StatusTag value={inventoryStatusLabelMap[row.item.status]} />
                 <StatusTag value={inventoryConditionLabelMap[row.item.condition]} />
                 <StatusTag value={inventorySourceTypeLabelMap[row.item.sourceType]} />
+                {getInventoryWorkbenchBadges(row).map((badge) => (
+                  <StatusTag key={badge} value={badge} />
+                ))}
               </div>
             </td>
             <td>

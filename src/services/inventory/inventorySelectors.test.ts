@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryReservedQuantity } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryAvailabilityStatus, getInventoryReservedQuantity, getInventoryReviewStatus, getInventoryWorkbenchBadges } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -66,6 +66,26 @@ describe('inventorySelectors', () => {
 
     expect(getInventoryReservedQuantity(reservedItem!)).toBe(1)
     expect(getInventoryReservedQuantity({ ...reservedItem!, availableQuantity: 2, quantity: 1 })).toBe(0)
+  })
+
+  it('classifies inventory availability, review status and workbench badges', () => {
+    const rows = buildRows()
+    const returnRow = rows.find((row) => row.item.id === 'inventory-return-ring-001')
+    const stockRow = rows.find((row) => row.item.id === 'inventory-stock-chain-001')
+    const stoneRow = rows.find((row) => row.item.id === 'inventory-other-stone-001')
+    expect(returnRow).toBeDefined()
+    expect(stockRow).toBeDefined()
+    expect(stoneRow).toBeDefined()
+
+    expect(getInventoryAvailabilityStatus(returnRow!.item)).toBe('reserved')
+    expect(getInventoryReviewStatus(returnRow!.item)).toBe('needs_review')
+    expect(getInventoryWorkbenchBadges(returnRow!)).toEqual(expect.arrayContaining(['已占用', '待质检', '待出库']))
+
+    expect(getInventoryAvailabilityStatus(stockRow!.item)).toBe('available')
+    expect(getInventoryReviewStatus(stockRow!.item)).toBe('clear')
+    expect(getInventoryWorkbenchBadges(stockRow!)).toContain('可领用')
+
+    expect(getInventoryWorkbenchBadges(stoneRow!)).toEqual(expect.arrayContaining(['可领用', '低库存']))
   })
 
   it('applies inventory movements without changing linked order lines', () => {
