@@ -16,6 +16,13 @@ const renderRoute = (entry: string) =>
     </MemoryRouter>
   )
 
+const expandWorkbenchCard = async (user: ReturnType<typeof userEvent.setup>, card: HTMLElement) => {
+  const expandButton = within(card).queryByRole('button', { name: /展开/ })
+  if (expandButton) {
+    await user.click(expandButton)
+  }
+}
+
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -1148,6 +1155,9 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     const { container } = renderRoute('/production-follow-up')
 
+    const reviewCard = screen.getByText('复古耳钉').closest('.workbench-task-card')
+    expect(reviewCard).not.toBeNull()
+    await user.click(within(reviewCard as HTMLElement).getByRole('button', { name: /展开/ }))
     await user.clear(screen.getByLabelText('工厂-ol-zhang-earring-review-001'))
     await user.type(screen.getByLabelText('工厂-ol-zhang-earring-review-001'), 'factory-demo-001')
     await user.type(screen.getByLabelText('计划交期-ol-zhang-earring-review-001'), '2026-05-06')
@@ -1158,8 +1168,9 @@ describe('router smoke', () => {
     expect(screen.getAllByText('待下发生产').length).toBeGreaterThan(0)
     expect(screen.getByText('复古耳钉')).toBeInTheDocument()
 
-    const earringRow = screen.getByText('复古耳钉').closest('tr')
+    const earringRow = screen.getByText('复古耳钉').closest('.workbench-task-card')
     expect(earringRow).not.toBeNull()
+    await expandWorkbenchCard(user, earringRow as HTMLElement)
 
     await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '下发生产' }))
     expect(screen.getAllByText('待工厂接收').length).toBeGreaterThan(0)
@@ -1181,7 +1192,10 @@ describe('router smoke', () => {
     expect(screen.getByText('手链蜡版确认')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '切换到待修改' }))
-    expect(screen.getByDisplayValue('客户要求吊牌山形弧线更柔和。')).toBeInTheDocument()
+    const revisionCard = screen.getByText('定制项链').closest('.workbench-task-card')
+    expect(revisionCard).not.toBeNull()
+    await expandWorkbenchCard(user, revisionCard as HTMLElement)
+    expect(within(revisionCard as HTMLElement).getByDisplayValue('客户要求吊牌山形弧线更柔和。')).toBeInTheDocument()
 
     expect(screen.queryByText('张三')).not.toBeInTheDocument()
     expect(screen.queryByText('8500')).not.toBeInTheDocument()
@@ -1193,8 +1207,9 @@ describe('router smoke', () => {
     const { container } = renderRoute('/design-modeling')
 
     await user.click(screen.getByRole('button', { name: '切换到待设计' }))
-    const necklaceRow = screen.getByText('定制项链').closest('tr')
+    const necklaceRow = screen.getByText('定制项链').closest('.workbench-task-card')
     expect(necklaceRow).not.toBeNull()
+    await expandWorkbenchCard(user, necklaceRow as HTMLElement)
 
     await user.clear(within(necklaceRow as HTMLElement).getByLabelText('设计备注-ol-zhang-necklace-001'))
     await user.type(within(necklaceRow as HTMLElement).getByLabelText('设计备注-ol-zhang-necklace-001'), '第二版设计已确认')
@@ -1202,7 +1217,7 @@ describe('router smoke', () => {
 
     expect(screen.getAllByText('待建模').length).toBeGreaterThan(0)
     expect(screen.getByText('定制项链')).toBeInTheDocument()
-    const updatedNecklaceRow = screen.getByText('定制项链').closest('tr')
+    const updatedNecklaceRow = screen.getByText('定制项链').closest('.workbench-task-card')
     expect(updatedNecklaceRow).not.toBeNull()
 
     await user.type(within(updatedNecklaceRow as HTMLElement).getByLabelText('出蜡文件-ol-zhang-necklace-001'), '项链出蜡文件.3dm')
@@ -1237,23 +1252,26 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     const { container } = renderRoute('/factory')
 
-    const pendingRow = screen.getByText('山形胸针试产').closest('tr')
+    const pendingRow = screen.getByText('山形胸针试产').closest('.workbench-task-card')
     expect(pendingRow).not.toBeNull()
+    await user.click(within(pendingRow as HTMLElement).getByRole('button', { name: /展开/ }))
 
     await user.click(within(pendingRow as HTMLElement).getByRole('button', { name: '接收任务' }))
     expect(screen.getAllByText('工厂已接收').length).toBeGreaterThan(0)
 
-    const acceptedRow = screen.getByText('山形胸针试产').closest('tr')
+    const acceptedRow = screen.getByText('山形胸针试产').closest('.workbench-task-card')
     expect(acceptedRow).not.toBeNull()
+    await expandWorkbenchCard(user, acceptedRow as HTMLElement)
     await user.click(within(acceptedRow as HTMLElement).getByRole('button', { name: '标记开始生产' }))
     expect(screen.getAllByText('工厂生产中').length).toBeGreaterThan(0)
 
-    const producingRow = screen.getByText('山形胸针试产').closest('tr')
+    const producingRow = screen.getByText('山形胸针试产').closest('.workbench-task-card')
     expect(producingRow).not.toBeNull()
+    await expandWorkbenchCard(user, producingRow as HTMLElement)
     await user.click(within(producingRow as HTMLElement).getByRole('button', { name: '标记生产完成' }))
     expect(screen.getAllByText('待回传').length).toBeGreaterThan(0)
 
-    const returnRow = screen.getByText('山形胸针试产').closest('tr')
+    const returnRow = screen.getByText('山形胸针试产').closest('.workbench-task-card')
     expect(returnRow).not.toBeNull()
     const expandReturnButton = within(returnRow as HTMLElement).queryByRole('button', { name: '展开回传详情' })
     if (expandReturnButton) {
@@ -1300,8 +1318,9 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '确认尾款' }))
     expect(screen.getByText('尾款：已确认')).toBeInTheDocument()
 
-    const pendantRow = screen.getByText('山形吊坠').closest('tr')
+    const pendantRow = screen.getByText('山形吊坠').closest('.workbench-task-card')
     expect(pendantRow).not.toBeNull()
+    await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: /展开/ }))
     await user.clear(within(pendantRow as HTMLElement).getByLabelText('工厂结算金额-oi-pendant-001'))
     await user.type(within(pendantRow as HTMLElement).getByLabelText('工厂结算金额-oi-pendant-001'), '560')
     await user.type(within(pendantRow as HTMLElement).getByLabelText('财务备注-oi-pendant-001'), '工厂结算确认')

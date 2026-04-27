@@ -1174,6 +1174,14 @@ button.stat-card {
   align-items: stretch;
 }
 
+.workbench-actions.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-default);
+}
+
 .workbench-actions .button {
   width: 100%;
   justify-content: center;
@@ -1181,6 +1189,119 @@ button.stat-card {
   min-height: 30px;
   padding-inline: 10px;
   text-align: center;
+}
+
+.workbench-actions.inline .button {
+  width: auto;
+}
+
+.workbench-task-list {
+  display: grid;
+  gap: 10px;
+}
+
+.workbench-task-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.workbench-task-card.expanded {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.workbench-task-summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.45fr) minmax(240px, 1fr) minmax(220px, auto) auto;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  align-items: center;
+}
+
+.workbench-task-summary:hover {
+  background: var(--color-bg-subtle);
+}
+
+.workbench-task-main,
+.workbench-task-meta,
+.workbench-task-tags {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.workbench-task-main {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.workbench-task-main strong,
+.workbench-task-main span,
+.workbench-task-meta span {
+  overflow-wrap: anywhere;
+}
+
+.workbench-task-meta {
+  color: var(--color-text-secondary);
+  font: var(--font-caption);
+}
+
+.workbench-task-tags {
+  justify-content: flex-end;
+}
+
+.workbench-task-toggle {
+  justify-self: end;
+  color: var(--color-primary-600);
+  font: 600 12px/18px 'Inter', 'SF Pro', system-ui, sans-serif;
+}
+
+.workbench-task-detail {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.workbench-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workbench-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  background: var(--color-bg-subtle);
+}
+
+.workbench-detail-block.wide {
+  grid-column: span 2;
+}
+
+.workbench-detail-block h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font: 600 13px/18px 'Inter', 'SF Pro', system-ui, sans-serif;
+}
+
+.workbench-detail-block p {
+  margin: 0;
 }
 
 .factory-return-panel {
@@ -2311,6 +2432,8 @@ button.stat-card {
   .summary-grid.three,
   .summary-grid.two,
   .management-two-column,
+  .workbench-task-summary,
+  .workbench-detail-grid,
   .info-grid.three,
   .info-grid.two,
   .order-summary-inline-meta,
@@ -2407,6 +2530,8 @@ button.stat-card {
   .summary-grid.three,
   .summary-grid.two,
   .management-two-column,
+  .workbench-task-summary,
+  .workbench-detail-grid,
   .info-grid.three,
   .info-grid.two,
   .order-summary-inline-meta,
@@ -2422,6 +2547,10 @@ button.stat-card {
   }
 
   .order-item-summary-item.full-width {
+    grid-column: span 1;
+  }
+
+  .workbench-detail-block.wide {
     grid-column: span 1;
   }
 

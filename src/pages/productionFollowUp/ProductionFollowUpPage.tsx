@@ -39,6 +39,7 @@ export const ProductionFollowUpPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<ProductionFollowUpTab>('review')
   const [rowDrafts, setRowDrafts] = useState<Record<string, RowDraft>>({})
+  const [expandedLineId, setExpandedLineId] = useState<string>('')
 
   const rows = useMemo(() => buildProductionFollowUpRows(appData.orderLines, appData.purchases), [appData.orderLines, appData.purchases])
   const visibleRows = useMemo(() => filterProductionFollowUpRowsByTab(rows, activeTab), [activeTab, rows])
@@ -181,6 +182,8 @@ export const ProductionFollowUpPage = () => {
               onMarkBlocked={markBlocked}
               onReturnToCustomerService={returnToCustomerService}
               onReturnToDesignOrModeling={returnToDesignOrModeling}
+              expandedLineId={expandedLineId}
+              onToggleLine={(lineId) => setExpandedLineId((current) => (current === lineId ? '' : lineId))}
               canEdit={canDispatchProduction}
             />
           ) : (
@@ -203,6 +206,8 @@ const ProductionFollowUpTable = ({
   onMarkBlocked,
   onReturnToCustomerService,
   onReturnToDesignOrModeling,
+  expandedLineId,
+  onToggleLine,
   canEdit
 }: {
   rows: ProductionFollowUpRow[]
@@ -215,108 +220,101 @@ const ProductionFollowUpTable = ({
   onMarkBlocked: (line: OrderLine) => void
   onReturnToCustomerService: (line: OrderLine) => void
   onReturnToDesignOrModeling: (line: OrderLine) => void
+  expandedLineId: string
+  onToggleLine: (lineId: string) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell">
-    <table className="table">
-      <thead>
-        <tr>
-          <th>生产任务</th>
-          <th>购买记录</th>
-          <th>商品 / 规格</th>
-          <th>需求</th>
-          <th>工厂计划</th>
-          <th>状态</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const line = row.line
-          const draft = getDraft(line)
+  <div className="workbench-task-list">
+    {rows.map((row) => {
+      const line = row.line
+      const draft = getDraft(line)
+      const isExpanded = expandedLineId === line.id
 
-          return (
-            <tr key={line.id}>
-              <td>
-                <strong>{line.productionTaskNo || line.lineCode || line.id}</strong>
-                <div className="text-caption">{line.lineCode}</div>
-              </td>
-              <td>
-                <Link to={row.purchase ? `/purchases/${row.purchase.id}` : '/purchases'} className="production-plan-table-link">
-                  {row.purchaseNo}
-                </Link>
-                <div className="text-caption">跟单：{line.merchandiserId || '未分配'}</div>
-              </td>
-              <td>
-                <strong>{line.name}</strong>
-                <div className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ') || '待维护 SKU'}</div>
-                <div className="text-caption">{getLineSpecSummary(line)}</div>
-              </td>
-              <td>
-                <div>{getProductionNeedSummary(line)}</div>
-                <div className="text-caption">{line.actualRequirements?.remark || line.actualRequirements?.specialNotes?.join(' / ') || '无特殊备注'}</div>
-              </td>
-              <td>
-                <div className="field-grid two">
-                  <label className="field-control">
-                    <span className="field-label">工厂</span>
-                    <input
-                      className="input"
-                      aria-label={`工厂-${line.id}`}
-                      value={draft.factoryId}
-                      onChange={(event) => onDraftChange(line.id, { factoryId: event.target.value })}
-                    />
-                  </label>
-                  <label className="field-control">
-                    <span className="field-label">计划交期</span>
-                    <input
-                      className="input"
-                      aria-label={`计划交期-${line.id}`}
-                      type="date"
-                      value={draft.factoryPlannedDueDate}
-                      onChange={(event) => onDraftChange(line.id, { factoryPlannedDueDate: event.target.value })}
-                    />
-                  </label>
-                </div>
-                <button type="button" className="button ghost small spacer-top" onClick={() => onSaveFactoryPlan(line)} disabled={!canEdit}>
-                  保存工厂计划
+      return (
+        <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
+          <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
+            <span className="workbench-task-main">
+              <strong>{line.productionTaskNo || line.lineCode || line.id}</strong>
+              <span>{line.name}</span>
+              <span className="text-caption">{[row.purchaseNo, line.skuCode, getLineSpecSummary(line)].filter(Boolean).join(' / ')}</span>
+            </span>
+            <span className="workbench-task-meta">
+              <span>跟单 {line.merchandiserId || '未分配'}</span>
+              <span>工厂 {draft.factoryId || '未分配'}</span>
+              <span>交期 {draft.factoryPlannedDueDate || '待确认'}</span>
+            </span>
+            <span className="workbench-task-tags">
+              <StatusTag value={row.lineStatusLabel} />
+              <StatusTag value={row.productionStatusLabel} />
+              <StatusTag value={row.factoryStatusLabel} />
+              {row.isOverdue ? <RiskTag value="已逾期" /> : null}
+              {row.isRisk && !row.isOverdue ? <RiskTag value="异常/阻塞" /> : null}
+            </span>
+            <span className="workbench-task-toggle">{isExpanded ? '收起' : '展开'}</span>
+          </button>
+
+          {isExpanded ? (
+            <div className="workbench-task-detail">
+              <div className="workbench-detail-grid">
+                <section className="workbench-detail-block">
+                  <h3>购买记录</h3>
+                  <Link to={row.purchase ? `/purchases/${row.purchase.id}` : '/purchases'} className="production-plan-table-link">
+                    {row.purchaseNo}
+                  </Link>
+                  <span className="text-caption">商品行：{line.lineCode}</span>
+                </section>
+                <section className="workbench-detail-block">
+                  <h3>生产需求</h3>
+                  <p>{getProductionNeedSummary(line)}</p>
+                  <span className="text-caption">{line.actualRequirements?.remark || line.actualRequirements?.specialNotes?.join(' / ') || '无特殊备注'}</span>
+                </section>
+                <section className="workbench-detail-block wide">
+                  <h3>工厂计划</h3>
+                  <div className="field-grid two">
+                    <label className="field-control">
+                      <span className="field-label">工厂</span>
+                      <input className="input" aria-label={`工厂-${line.id}`} value={draft.factoryId} onChange={(event) => onDraftChange(line.id, { factoryId: event.target.value })} />
+                    </label>
+                    <label className="field-control">
+                      <span className="field-label">计划交期</span>
+                      <input
+                        className="input"
+                        aria-label={`计划交期-${line.id}`}
+                        type="date"
+                        value={draft.factoryPlannedDueDate}
+                        onChange={(event) => onDraftChange(line.id, { factoryPlannedDueDate: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <button type="button" className="button ghost small spacer-top" onClick={() => onSaveFactoryPlan(line)} disabled={!canEdit}>
+                    保存工厂计划
+                  </button>
+                </section>
+              </div>
+              <div className="workbench-actions inline">
+                <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit}>
+                  标记资料已齐
                 </button>
-              </td>
-              <td>
-                <div className="stack">
-                  <StatusTag value={row.lineStatusLabel} />
-                  <StatusTag value={row.productionStatusLabel} />
-                  <StatusTag value={row.factoryStatusLabel} />
-                  {row.isOverdue ? <RiskTag value="已逾期" /> : null}
-                  {row.isRisk && !row.isOverdue ? <RiskTag value="异常/阻塞" /> : null}
-                </div>
-              </td>
-              <td>
-                <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit}>
-                    标记资料已齐
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit}>
-                    下发生产
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit}>
-                    标记生产中
-                  </button>
-                  <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit}>
-                    标记阻塞
-                  </button>
-                  <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
-                    退回客服补资料
-                  </button>
-                  <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
-                    退回设计/建模修改
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit}>
+                  下发生产
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit}>
+                  标记生产中
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit}>
+                  标记阻塞
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
+                  退回客服补资料
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
+                  退回设计/建模修改
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </article>
+      )
+    })}
   </div>
 )

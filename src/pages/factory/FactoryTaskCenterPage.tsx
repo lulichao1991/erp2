@@ -63,6 +63,7 @@ export const FactoryTaskCenterPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<FactoryTaskTab>('pending_acceptance')
   const [drafts, setDrafts] = useState<Record<string, FactoryReturnDraft>>({})
+  const [expandedLineId, setExpandedLineId] = useState<string>('')
   const [expandedReturnLineId, setExpandedReturnLineId] = useState<string>('')
 
   const rows = useMemo(() => buildFactoryTaskRows(appData.orderLines, currentFactoryId), [appData.orderLines])
@@ -131,6 +132,7 @@ export const FactoryTaskCenterPage = () => {
       }
     })
     setActiveTab('pending_return')
+    setExpandedLineId(line.id)
     setExpandedReturnLineId(line.id)
   }
 
@@ -243,6 +245,8 @@ export const FactoryTaskCenterPage = () => {
               onAbnormal={markAbnormal}
               onSubmitReturn={submitReturn}
               expandedReturnLineId={expandedReturnLineId}
+              expandedLineId={expandedLineId}
+              onToggleLine={(lineId) => setExpandedLineId((current) => (current === lineId ? '' : lineId))}
               onToggleReturnDetails={(lineId) => setExpandedReturnLineId((current) => (current === lineId ? '' : lineId))}
               canEdit={canSubmitFactoryReturn}
             />
@@ -265,6 +269,8 @@ const FactoryTaskTable = ({
   onAbnormal,
   onSubmitReturn,
   expandedReturnLineId,
+  expandedLineId,
+  onToggleLine,
   onToggleReturnDetails,
   canEdit
 }: {
@@ -277,118 +283,119 @@ const FactoryTaskTable = ({
   onAbnormal: (line: OrderLine) => void
   onSubmitReturn: (line: OrderLine) => void
   expandedReturnLineId: string
+  expandedLineId: string
+  onToggleLine: (lineId: string) => void
   onToggleReturnDetails: (lineId: string) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell workbench-table-shell">
-    <table className="table role-workbench-table factory-table">
-      <thead>
-        <tr>
-          <th>生产任务</th>
-          <th>生产资料</th>
-          <th>文件</th>
-          <th>状态</th>
-          <th>工厂回传</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const line = row.line
-          const draft = getDraft(line)
-          const canShowReturnForm = line.productionStatus === 'completed' || line.factoryStatus === 'returned'
-          const isReturnExpanded = expandedReturnLineId === line.id
+  <div className="workbench-task-list">
+    {rows.map((row) => {
+      const line = row.line
+      const draft = getDraft(line)
+      const canShowReturnForm = line.productionStatus === 'completed' || line.factoryStatus === 'returned'
+      const isReturnExpanded = expandedReturnLineId === line.id
+      const isExpanded = expandedLineId === line.id
 
-          return (
-            <tr key={line.id}>
-              <td>
-                <strong>{line.productionTaskNo || line.lineCode}</strong>
-                <div>{line.name}</div>
-                <div className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ')}</div>
-                <div className="text-caption">交期：{line.factoryPlannedDueDate || '待确认'}</div>
-                {line.isUrgent ? <StatusTag value="加急" /> : null}
-              </td>
-              <td>
-                <div>{getRequirementSummary(line)}</div>
-                <div className="text-caption">{line.actualRequirements?.engraveText ? `印记：${line.actualRequirements.engraveText}` : '无印记'}</div>
-                <div className="text-caption">{line.actualRequirements?.specialNotes?.join(' / ') || line.actualRequirements?.remark || '无特殊生产备注'}</div>
-              </td>
-              <td>
-                <div className="text-caption">设计文件：{line.designFiles?.map((file) => file.name).join('、') || '无'}</div>
-                <div className="text-caption">建模文件：{line.modelingFiles?.map((file) => file.name).join('、') || '无'}</div>
-                <div className="text-caption">出蜡文件：{line.waxFiles?.map((file) => file.name).join('、') || '无'}</div>
-              </td>
-              <td>
-                <div className="stack">
-                  <StatusTag value={row.productionStatusLabel} />
-                  <StatusTag value={row.factoryStatusLabel} />
-                </div>
-              </td>
-              <td>
-                {canShowReturnForm && isReturnExpanded ? (
-                  <div className="factory-return-panel">
-                    <div className="factory-return-panel-header">
-                      <strong>回传详情</strong>
-                      <button type="button" className="button ghost small" onClick={() => onToggleReturnDetails(line.id)}>
-                        收起
-                      </button>
+      return (
+        <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
+          <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
+            <span className="workbench-task-main">
+              <strong>{line.productionTaskNo || line.lineCode}</strong>
+              <span>{line.name}</span>
+              <span className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ') || getRequirementSummary(line)}</span>
+            </span>
+            <span className="workbench-task-meta">
+              <span>交期 {line.factoryPlannedDueDate || '待确认'}</span>
+              <span>文件 {(line.designFiles?.length ?? 0) + (line.modelingFiles?.length ?? 0) + (line.waxFiles?.length ?? 0)}</span>
+            </span>
+            <span className="workbench-task-tags">
+              <StatusTag value={row.productionStatusLabel} />
+              <StatusTag value={row.factoryStatusLabel} />
+              {line.isUrgent ? <StatusTag value="加急" /> : null}
+            </span>
+            <span className="workbench-task-toggle">{isExpanded ? '收起' : '展开'}</span>
+          </button>
+
+          {isExpanded ? (
+            <div className="workbench-task-detail">
+              <div className="workbench-detail-grid">
+                <section className="workbench-detail-block">
+                  <h3>生产资料</h3>
+                  <p>{getRequirementSummary(line)}</p>
+                  <span className="text-caption">{line.actualRequirements?.engraveText ? `印记：${line.actualRequirements.engraveText}` : '无印记'}</span>
+                  <span className="text-caption">{line.actualRequirements?.specialNotes?.join(' / ') || line.actualRequirements?.remark || '无特殊生产备注'}</span>
+                </section>
+                <section className="workbench-detail-block">
+                  <h3>文件</h3>
+                  <span className="text-caption">设计文件：{line.designFiles?.map((file) => file.name).join('、') || '无'}</span>
+                  <span className="text-caption">建模文件：{line.modelingFiles?.map((file) => file.name).join('、') || '无'}</span>
+                  <span className="text-caption">出蜡文件：{line.waxFiles?.map((file) => file.name).join('、') || '无'}</span>
+                </section>
+                <section className="workbench-detail-block wide">
+                  <h3>工厂回传</h3>
+                  {canShowReturnForm && isReturnExpanded ? (
+                    <div className="factory-return-panel">
+                      <div className="factory-return-panel-header">
+                        <strong>回传详情</strong>
+                        <button type="button" className="button ghost small" onClick={() => onToggleReturnDetails(line.id)}>
+                          收起回传详情
+                        </button>
+                      </div>
+                      <div className="factory-return-grid">
+                        <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
+                        <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
+                        <FactoryInput label="实际材质" value={draft.actualMaterial} onChange={(value) => onDraftChange(line, { actualMaterial: value })} />
+                        <FactoryInput label="主石种类" value={draft.mainStoneType} onChange={(value) => onDraftChange(line, { mainStoneType: value })} />
+                        <FactoryInput label="主石数量" value={draft.mainStoneQuantity} onChange={(value) => onDraftChange(line, { mainStoneQuantity: value })} />
+                        <FactoryInput label="辅石种类" value={draft.sideStoneType} onChange={(value) => onDraftChange(line, { sideStoneType: value })} />
+                        <FactoryInput label="辅石颗数" value={draft.sideStoneCount} onChange={(value) => onDraftChange(line, { sideStoneCount: value })} />
+                        <FactoryInput label="基础工费" value={draft.baseLaborCost} onChange={(value) => onDraftChange(line, { baseLaborCost: value })} />
+                        <FactoryInput label="附加工费" value={draft.extraLaborCost} onChange={(value) => onDraftChange(line, { extraLaborCost: value })} />
+                        <FactoryInput label="成品图文件" value={draft.finishedImageName} onChange={(value) => onDraftChange(line, { finishedImageName: value })} />
+                        <FactoryInput label="结算单文件" value={draft.settlementFileName} onChange={(value) => onDraftChange(line, { settlementFileName: value })} />
+                      </div>
+                      <label className="field-control">
+                        <span className="field-label">工厂备注</span>
+                        <textarea className="textarea" aria-label={`工厂备注-${line.id}`} value={draft.factoryNote} onChange={(event) => onDraftChange(line, { factoryNote: event.target.value })} />
+                      </label>
                     </div>
-                    <div className="factory-return-grid">
-                      <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
-                      <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
-                      <FactoryInput label="实际材质" value={draft.actualMaterial} onChange={(value) => onDraftChange(line, { actualMaterial: value })} />
-                      <FactoryInput label="主石种类" value={draft.mainStoneType} onChange={(value) => onDraftChange(line, { mainStoneType: value })} />
-                      <FactoryInput label="主石数量" value={draft.mainStoneQuantity} onChange={(value) => onDraftChange(line, { mainStoneQuantity: value })} />
-                      <FactoryInput label="辅石种类" value={draft.sideStoneType} onChange={(value) => onDraftChange(line, { sideStoneType: value })} />
-                      <FactoryInput label="辅石颗数" value={draft.sideStoneCount} onChange={(value) => onDraftChange(line, { sideStoneCount: value })} />
-                      <FactoryInput label="基础工费" value={draft.baseLaborCost} onChange={(value) => onDraftChange(line, { baseLaborCost: value })} />
-                      <FactoryInput label="附加工费" value={draft.extraLaborCost} onChange={(value) => onDraftChange(line, { extraLaborCost: value })} />
-                      <FactoryInput label="成品图文件" value={draft.finishedImageName} onChange={(value) => onDraftChange(line, { finishedImageName: value })} />
-                      <FactoryInput label="结算单文件" value={draft.settlementFileName} onChange={(value) => onDraftChange(line, { settlementFileName: value })} />
+                  ) : (
+                    <div className="factory-return-summary">
+                      <strong>{canShowReturnForm ? '可填写回传详情' : '待生产完成后回传'}</strong>
+                      <span className="muted-block">
+                        {canShowReturnForm ? '展开后填写重量、工费、附件和工厂备注。' : '先接收任务并标记开始生产，完成后再填写重量、工费和附件。'}
+                      </span>
+                      {canShowReturnForm ? (
+                        <button type="button" className="button secondary small" onClick={() => onToggleReturnDetails(line.id)}>
+                          展开回传详情
+                        </button>
+                      ) : null}
                     </div>
-                    <label className="field-control">
-                      <span className="field-label">工厂备注</span>
-                      <textarea className="textarea" aria-label={`工厂备注-${line.id}`} value={draft.factoryNote} onChange={(event) => onDraftChange(line, { factoryNote: event.target.value })} />
-                    </label>
-                  </div>
-                ) : (
-                  <div className="factory-return-summary">
-                    <strong>{canShowReturnForm ? '可填写回传详情' : '待生产完成后回传'}</strong>
-                    <span className="muted-block">
-                      {canShowReturnForm ? '展开后填写重量、工费、附件和工厂备注。' : '先接收任务并标记开始生产，完成后再填写重量、工费和附件。'}
-                    </span>
-                    {canShowReturnForm ? (
-                      <button type="button" className="button secondary small" onClick={() => onToggleReturnDetails(line.id)}>
-                        展开回传详情
-                      </button>
-                    ) : null}
-                  </div>
-                )}
-              </td>
-              <td>
-                <div className="workbench-actions">
-                  <button type="button" className="button secondary small" onClick={() => onAccept(line)} disabled={!canEdit}>
-                    接收任务
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onStart(line)} disabled={!canEdit}>
-                    标记开始生产
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onComplete(line)} disabled={!canEdit}>
-                    标记生产完成
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit || !canShowReturnForm}>
-                    提交回传
-                  </button>
-                  <button type="button" className="button ghost small" onClick={() => onAbnormal(line)} disabled={!canEdit}>
-                    标记异常
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                  )}
+                </section>
+              </div>
+              <div className="workbench-actions inline">
+                <button type="button" className="button secondary small" onClick={() => onAccept(line)} disabled={!canEdit}>
+                  接收任务
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onStart(line)} disabled={!canEdit}>
+                  标记开始生产
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onComplete(line)} disabled={!canEdit}>
+                  标记生产完成
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit || !canShowReturnForm}>
+                  提交回传
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onAbnormal(line)} disabled={!canEdit}>
+                  标记异常
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </article>
+      )
+    })}
   </div>
 )
 
