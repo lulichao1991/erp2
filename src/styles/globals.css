@@ -1188,6 +1188,13 @@ button.stat-card {
   gap: 10px;
 }
 
+.factory-return-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .factory-return-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1201,13 +1208,110 @@ button.stat-card {
 .factory-return-summary {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 74px;
+  gap: 8px;
+  min-height: 92px;
   justify-content: center;
   padding: 12px 14px;
   border: 1px dashed var(--color-border-strong);
   border-radius: 12px;
   background: var(--color-bg-subtle);
+}
+
+.factory-return-summary .button {
+  align-self: flex-start;
+}
+
+.management-dashboard {
+  gap: 14px;
+}
+
+.management-panel {
+  box-shadow: var(--shadow-card);
+}
+
+.management-panel .section-card-header {
+  margin-bottom: 10px;
+}
+
+.management-metric-grid,
+.management-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.management-metric-item,
+.management-status-item,
+.management-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+  background: var(--color-bg-subtle);
+}
+
+.management-metric-item strong,
+.management-status-item strong,
+.management-list-row strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.management-metric-item .tag {
+  margin-left: auto;
+}
+
+.management-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.management-list {
+  display: grid;
+  gap: 8px;
+}
+
+.management-factory-table .table th,
+.management-factory-table .table td,
+.compact-table th,
+.compact-table td {
+  padding: 9px 12px;
+}
+
+.order-line-filter-card {
+  padding-block: 12px;
+}
+
+.order-line-filter-card .section-card-header {
+  margin-bottom: 8px;
+}
+
+.order-line-filter-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.order-line-filter-strip .button {
+  flex: 0 0 auto;
+}
+
+.order-line-filter-primary {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(180px, 240px);
+  gap: 12px;
+  align-items: end;
+  margin-top: 8px;
+}
+
+.order-line-filter-advanced {
+  margin-top: 12px;
 }
 
 .card-grid {
@@ -2206,6 +2310,7 @@ button.stat-card {
   .summary-grid.four,
   .summary-grid.three,
   .summary-grid.two,
+  .management-two-column,
   .info-grid.three,
   .info-grid.two,
   .order-summary-inline-meta,
@@ -2264,6 +2369,10 @@ button.stat-card {
   .production-plan-filter-keyword {
     grid-column: span 1;
   }
+
+  .order-line-filter-primary {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 960px) {
@@ -2297,6 +2406,7 @@ button.stat-card {
   .summary-grid.four,
   .summary-grid.three,
   .summary-grid.two,
+  .management-two-column,
   .info-grid.three,
   .info-grid.two,
   .order-summary-inline-meta,

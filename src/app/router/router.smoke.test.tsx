@@ -160,13 +160,8 @@ describe('router smoke', () => {
     expect(screen.getByRole('button', { name: '待设计' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待建模' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待财务确认' })).toBeInTheDocument()
-    expect(screen.getByLabelText('品类筛选')).toBeInTheDocument()
-    expect(screen.getByLabelText('是否加急筛选')).toBeInTheDocument()
-    expect(screen.getByLabelText('是否售后中')).toBeInTheDocument()
-    expect(screen.getByLabelText('是否超期')).toBeInTheDocument()
-    expect(screen.getByLabelText('工厂筛选')).toBeInTheDocument()
-    expect(screen.getByLabelText('购买记录筛选')).toBeInTheDocument()
-    expect(screen.getByLabelText('客户筛选')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '展开筛选' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('品类筛选')).not.toBeInTheDocument()
     expect(screen.getByRole('option', { name: '待建模' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '待财务确认' })).toBeInTheDocument()
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
@@ -180,6 +175,7 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
+    await user.click(screen.getByRole('button', { name: '展开筛选' }))
     await user.selectOptions(screen.getByLabelText('品类筛选'), 'pendant')
     expect(screen.queryByText('山形戒指')).not.toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
@@ -225,6 +221,7 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
+    await user.click(screen.getByRole('button', { name: '展开筛选' }))
     await user.type(screen.getByLabelText('工厂筛选'), '苏州金工厂')
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.queryByText('山形吊坠')).not.toBeInTheDocument()
@@ -1258,6 +1255,10 @@ describe('router smoke', () => {
 
     const returnRow = screen.getByText('山形胸针试产').closest('tr')
     expect(returnRow).not.toBeNull()
+    const expandReturnButton = within(returnRow as HTMLElement).queryByRole('button', { name: '展开回传详情' })
+    if (expandReturnButton) {
+      await user.click(expandReturnButton)
+    }
     await user.clear(within(returnRow as HTMLElement).getByLabelText('总重'))
     await user.type(within(returnRow as HTMLElement).getByLabelText('总重'), '5.2')
     await user.clear(within(returnRow as HTMLElement).getByLabelText('净金重'))

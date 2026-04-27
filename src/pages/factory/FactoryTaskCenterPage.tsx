@@ -63,6 +63,7 @@ export const FactoryTaskCenterPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<FactoryTaskTab>('pending_acceptance')
   const [drafts, setDrafts] = useState<Record<string, FactoryReturnDraft>>({})
+  const [expandedReturnLineId, setExpandedReturnLineId] = useState<string>('')
 
   const rows = useMemo(() => buildFactoryTaskRows(appData.orderLines, currentFactoryId), [appData.orderLines])
   const visibleRows = useMemo(() => filterFactoryTaskRowsByTab(rows, activeTab), [activeTab, rows])
@@ -130,6 +131,7 @@ export const FactoryTaskCenterPage = () => {
       }
     })
     setActiveTab('pending_return')
+    setExpandedReturnLineId(line.id)
   }
 
   const markAbnormal = (line: OrderLine) => {
@@ -198,6 +200,7 @@ export const FactoryTaskCenterPage = () => {
       }
     })
     setActiveTab('returned')
+    setExpandedReturnLineId('')
   }
 
   return (
@@ -239,6 +242,8 @@ export const FactoryTaskCenterPage = () => {
               onComplete={completeProduction}
               onAbnormal={markAbnormal}
               onSubmitReturn={submitReturn}
+              expandedReturnLineId={expandedReturnLineId}
+              onToggleReturnDetails={(lineId) => setExpandedReturnLineId((current) => (current === lineId ? '' : lineId))}
               canEdit={canSubmitFactoryReturn}
             />
           ) : (
@@ -259,6 +264,8 @@ const FactoryTaskTable = ({
   onComplete,
   onAbnormal,
   onSubmitReturn,
+  expandedReturnLineId,
+  onToggleReturnDetails,
   canEdit
 }: {
   rows: FactoryTaskRow[]
@@ -269,6 +276,8 @@ const FactoryTaskTable = ({
   onComplete: (line: OrderLine) => void
   onAbnormal: (line: OrderLine) => void
   onSubmitReturn: (line: OrderLine) => void
+  expandedReturnLineId: string
+  onToggleReturnDetails: (lineId: string) => void
   canEdit: boolean
 }) => (
   <div className="table-shell workbench-table-shell">
@@ -288,6 +297,7 @@ const FactoryTaskTable = ({
           const line = row.line
           const draft = getDraft(line)
           const canShowReturnForm = line.productionStatus === 'completed' || line.factoryStatus === 'returned'
+          const isReturnExpanded = expandedReturnLineId === line.id
 
           return (
             <tr key={line.id}>
@@ -315,8 +325,14 @@ const FactoryTaskTable = ({
                 </div>
               </td>
               <td>
-                {canShowReturnForm ? (
+                {canShowReturnForm && isReturnExpanded ? (
                   <div className="factory-return-panel">
+                    <div className="factory-return-panel-header">
+                      <strong>回传详情</strong>
+                      <button type="button" className="button ghost small" onClick={() => onToggleReturnDetails(line.id)}>
+                        收起
+                      </button>
+                    </div>
                     <div className="factory-return-grid">
                       <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
                       <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
@@ -337,8 +353,15 @@ const FactoryTaskTable = ({
                   </div>
                 ) : (
                   <div className="factory-return-summary">
-                    <strong>待生产完成后回传</strong>
-                    <span className="muted-block">先接收任务并标记开始生产，完成后再填写重量、工费和附件。</span>
+                    <strong>{canShowReturnForm ? '可填写回传详情' : '待生产完成后回传'}</strong>
+                    <span className="muted-block">
+                      {canShowReturnForm ? '展开后填写重量、工费、附件和工厂备注。' : '先接收任务并标记开始生产，完成后再填写重量、工费和附件。'}
+                    </span>
+                    {canShowReturnForm ? (
+                      <button type="button" className="button secondary small" onClick={() => onToggleReturnDetails(line.id)}>
+                        展开回传详情
+                      </button>
+                    ) : null}
                   </div>
                 )}
               </td>
@@ -353,7 +376,7 @@ const FactoryTaskTable = ({
                   <button type="button" className="button secondary small" onClick={() => onComplete(line)} disabled={!canEdit}>
                     标记生产完成
                   </button>
-                  <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit}>
+                  <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit || !canShowReturnForm}>
                     提交回传
                   </button>
                   <button type="button" className="button ghost small" onClick={() => onAbnormal(line)} disabled={!canEdit}>
