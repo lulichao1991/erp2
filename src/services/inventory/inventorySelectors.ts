@@ -98,6 +98,16 @@ export type InventoryReviewInput = {
   note?: string
 }
 
+export type InventoryStocktakeInput = {
+  countedQuantity: number
+  countedAvailableQuantity: number
+  operatorName: string
+  occurredAt: string
+  toLocation?: string
+  reason?: string
+  note?: string
+}
+
 const includesKeyword = (value: string | undefined, keyword: string) => value?.toLowerCase().includes(keyword) ?? false
 
 export const isLowStockInventoryRow = (row: InventoryRow) =>
@@ -363,6 +373,53 @@ export const applyInventoryReview = (item: InventoryItem, input: InventoryReview
     toLocation: nextItem.warehouseLocation,
     relatedOrderLineId: item.orderLineId,
     note: input.note?.trim() || '库存质检处置。'
+  }
+
+  return {
+    item: nextItem,
+    movement
+  }
+}
+
+export const applyInventoryStocktake = (item: InventoryItem, input: InventoryStocktakeInput): InventoryMovementResult => {
+  const countedQuantity = Math.floor(input.countedQuantity)
+  const countedAvailableQuantity = Math.floor(input.countedAvailableQuantity)
+
+  if (countedQuantity < 0 || countedAvailableQuantity < 0) {
+    throw new Error('盘点数量不能为负数')
+  }
+
+  if (countedAvailableQuantity > countedQuantity) {
+    throw new Error('实盘可用数不能大于实盘总数')
+  }
+
+  const nextItem: InventoryItem = {
+    ...item,
+    quantity: countedQuantity,
+    availableQuantity: countedAvailableQuantity,
+    warehouseLocation: input.toLocation?.trim() || item.warehouseLocation,
+    remark: input.note?.trim() || item.remark
+  }
+  const quantityDiff = countedQuantity - item.quantity
+  const availableDiff = countedAvailableQuantity - item.availableQuantity
+  const reason = input.reason?.trim()
+  const note = input.note?.trim()
+  const stocktakeNote = [`盘点调整：总数 ${item.quantity}→${countedQuantity}，可用 ${item.availableQuantity}→${countedAvailableQuantity}`, reason ? `原因：${reason}` : null, note].filter(Boolean).join('；')
+
+  const movement: InventoryMovement = {
+    id: `movement-${item.id}-stocktake-${input.occurredAt.replace(/[^0-9]/g, '')}`,
+    inventoryItemId: item.id,
+    inventoryCode: item.inventoryCode,
+    type: 'adjust',
+    quantity: Math.abs(quantityDiff) || Math.abs(availableDiff),
+    operatorName: input.operatorName,
+    occurredAt: input.occurredAt,
+    fromStatus: item.status,
+    toStatus: nextItem.status,
+    fromLocation: item.warehouseLocation,
+    toLocation: nextItem.warehouseLocation,
+    relatedOrderLineId: item.orderLineId,
+    note: stocktakeNote
   }
 
   return {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryReservedQuantity } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryReservedQuantity } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -160,5 +160,53 @@ describe('inventorySelectors', () => {
         occurredAt: '2026-04-26 12:00'
       })
     ).toThrow('可用数量不能大于库存数量')
+  })
+
+  it('applies stocktaking as an inventory adjustment movement', () => {
+    const stockItem = inventoryItemsMock.find((item) => item.id === 'inventory-stock-chain-001')
+    expect(stockItem).toBeDefined()
+
+    const result = applyInventoryStocktake(stockItem!, {
+      countedQuantity: 4,
+      countedAvailableQuantity: 3,
+      operatorName: '周库管',
+      occurredAt: '2026-04-26 15:00',
+      toLocation: 'C-常备库存-02',
+      reason: '盘亏 1 件',
+      note: '月度盘点'
+    })
+
+    expect(result.item.quantity).toBe(4)
+    expect(result.item.availableQuantity).toBe(3)
+    expect(result.item.warehouseLocation).toBe('C-常备库存-02')
+    expect(result.item.orderLineId).toBe(stockItem?.orderLineId)
+    expect(result.movement.type).toBe('adjust')
+    expect(result.movement.quantity).toBe(1)
+    expect(result.movement.note).toContain('盘点调整：总数 5→4，可用 5→3')
+    expect(result.movement.note).toContain('原因：盘亏 1 件')
+    expect(result.movement.note).toContain('月度盘点')
+  })
+
+  it('rejects invalid stocktaking quantities', () => {
+    const stockItem = inventoryItemsMock.find((item) => item.id === 'inventory-stock-chain-001')
+    expect(stockItem).toBeDefined()
+
+    expect(() =>
+      applyInventoryStocktake(stockItem!, {
+        countedQuantity: 1,
+        countedAvailableQuantity: 2,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 15:00'
+      })
+    ).toThrow('实盘可用数不能大于实盘总数')
+
+    expect(() =>
+      applyInventoryStocktake(stockItem!, {
+        countedQuantity: -1,
+        countedAvailableQuantity: 0,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 15:00'
+      })
+    ).toThrow('盘点数量不能为负数')
   })
 })

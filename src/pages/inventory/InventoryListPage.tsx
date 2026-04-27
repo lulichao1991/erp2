@@ -6,6 +6,7 @@ import { customersMock, inventoryItemsMock, inventoryMovementsMock } from '@/moc
 import {
   applyInventoryMovement,
   applyInventoryReview,
+  applyInventoryStocktake,
   buildInventoryRows,
   buildInventorySummary,
   filterInventoryRows,
@@ -109,6 +110,15 @@ type ReviewDraft = {
   note: string
 }
 
+type StocktakeDraft = {
+  countedQuantity: string
+  countedAvailableQuantity: string
+  location: string
+  operatorName: string
+  reason: string
+  note: string
+}
+
 type MovementFilters = {
   type: InventoryMovementType | 'all'
   relatedOrderLineId: string
@@ -138,6 +148,15 @@ const createReviewDraft = (item?: InventoryItem): ReviewDraft => ({
   availableQuantity: String(item?.availableQuantity ?? 0),
   location: item?.warehouseLocation || '',
   operatorName: '周库管',
+  note: ''
+})
+
+const createStocktakeDraft = (item?: InventoryItem): StocktakeDraft => ({
+  countedQuantity: String(item?.quantity ?? 0),
+  countedAvailableQuantity: String(item?.availableQuantity ?? 0),
+  location: item?.warehouseLocation || '',
+  operatorName: '周库管',
+  reason: '',
   note: ''
 })
 
@@ -171,6 +190,7 @@ export const InventoryListPage = () => {
   const [filters, setFilters] = useState<InventoryFilters>(initialFilters)
   const [movementDraft, setMovementDraft] = useState<MovementDraft>(() => createMovementDraft(inventoryItemsMock[0]))
   const [reviewDraft, setReviewDraft] = useState<ReviewDraft>(() => createReviewDraft(inventoryItemsMock[0]))
+  const [stocktakeDraft, setStocktakeDraft] = useState<StocktakeDraft>(() => createStocktakeDraft(inventoryItemsMock[0]))
   const [inboundDraft, setInboundDraft] = useState<InboundDraft>(initialInboundDraft)
   const [movementFilters, setMovementFilters] = useState<MovementFilters>(initialMovementFilters)
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState(inventoryItemsMock[0]?.id ?? '')
@@ -238,6 +258,13 @@ export const InventoryListPage = () => {
     }))
   }
 
+  const updateStocktakeDraft = <K extends keyof StocktakeDraft>(key: K, value: StocktakeDraft[K]) => {
+    setStocktakeDraft((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
   const updateMovementFilter = <K extends keyof MovementFilters>(key: K, value: MovementFilters[K]) => {
     setMovementFilters((current) => ({
       ...current,
@@ -248,6 +275,7 @@ export const InventoryListPage = () => {
   useEffect(() => {
     if (selectedRow) {
       setReviewDraft(createReviewDraft(selectedRow.item))
+      setStocktakeDraft(createStocktakeDraft(selectedRow.item))
     }
   }, [selectedRow])
 
@@ -358,6 +386,35 @@ export const InventoryListPage = () => {
     setMovementDraft(createMovementDraft(item))
     setInboundDraft(initialInboundDraft)
     setFormMessage(`已新增入库：${item.inventoryCode}`)
+  }
+
+  const submitStocktake = () => {
+    const currentItem = selectedRow?.item
+    if (!currentItem) {
+      setFormMessage('请先选择需要盘点的库存。')
+      return
+    }
+
+    try {
+      const result = applyInventoryStocktake(currentItem, {
+        countedQuantity: toPositiveInteger(stocktakeDraft.countedQuantity),
+        countedAvailableQuantity: toPositiveInteger(stocktakeDraft.countedAvailableQuantity),
+        operatorName: stocktakeDraft.operatorName.trim() || '周库管',
+        occurredAt: formatCurrentTime(),
+        toLocation: stocktakeDraft.location,
+        reason: stocktakeDraft.reason,
+        note: stocktakeDraft.note
+      })
+      setInventoryItems((current) => current.map((item) => (item.id === currentItem.id ? result.item : item)))
+      setMovements((current) => [result.movement, ...current])
+      setSelectedInventoryItemId(result.item.id)
+      setMovementDraft(createMovementDraft(result.item))
+      setReviewDraft(createReviewDraft(result.item))
+      setStocktakeDraft(createStocktakeDraft(result.item))
+      setFormMessage(`已完成库存盘点：${currentItem.inventoryCode}`)
+    } catch (error) {
+      setFormMessage(error instanceof Error ? error.message : '库存盘点失败，请检查数量。')
+    }
   }
 
   return (
@@ -648,6 +705,48 @@ export const InventoryListPage = () => {
           </div>
         ) : (
           <EmptyState title="未选择库存" description="请选择一条库存记录后再做质检处置。" />
+        )}
+      </SectionCard>
+
+      <SectionCard title="库存盘点" description="按实盘总数和实盘可用数调整库存台账，并生成调整流水；不推进商品行状态。">
+        {selectedRow ? (
+          <div className="filter-grid">
+            <label>
+              <span>当前库存</span>
+              <input value={`${selectedRow.item.inventoryCode} / ${selectedRow.item.name}`} readOnly />
+            </label>
+            <label>
+              <span>实盘总数</span>
+              <input type="number" min="0" value={stocktakeDraft.countedQuantity} onChange={(event) => updateStocktakeDraft('countedQuantity', event.target.value)} />
+            </label>
+            <label>
+              <span>实盘可用数</span>
+              <input type="number" min="0" value={stocktakeDraft.countedAvailableQuantity} onChange={(event) => updateStocktakeDraft('countedAvailableQuantity', event.target.value)} />
+            </label>
+            <label>
+              <span>盘点后库位</span>
+              <input value={stocktakeDraft.location} onChange={(event) => updateStocktakeDraft('location', event.target.value)} />
+            </label>
+            <label>
+              <span>盘点人</span>
+              <input value={stocktakeDraft.operatorName} onChange={(event) => updateStocktakeDraft('operatorName', event.target.value)} />
+            </label>
+            <label>
+              <span>差异原因</span>
+              <input value={stocktakeDraft.reason} onChange={(event) => updateStocktakeDraft('reason', event.target.value)} placeholder="例如 盘盈 / 盘亏 / 库位调整" />
+            </label>
+            <label>
+              <span>盘点备注</span>
+              <input value={stocktakeDraft.note} onChange={(event) => updateStocktakeDraft('note', event.target.value)} placeholder="盘点说明" />
+            </label>
+            <div className="field-actions">
+              <button type="button" className="button primary" onClick={submitStocktake}>
+                保存盘点
+              </button>
+            </div>
+          </div>
+        ) : (
+          <EmptyState title="未选择库存" description="请选择一条库存记录后再做库存盘点。" />
         )}
       </SectionCard>
 
