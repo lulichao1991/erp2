@@ -1460,6 +1460,11 @@ describe('router smoke', () => {
     expect(screen.getByText(/已登记占用/)).toBeInTheDocument()
     expect(screen.getAllByText('为后续拍摄预占').length).toBeGreaterThan(0)
     expect(screen.getAllByText('OL-202604-001-01 / 山形戒指').length).toBeGreaterThan(0)
+
+    await user.selectOptions(screen.getByLabelText('关联商品行筛选'), 'oi-ring-001')
+    await user.type(screen.getByLabelText('流转记录搜索'), '拍摄')
+    expect(screen.getAllByText('为后续拍摄预占').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('OL-202604-001-01 / 山形戒指').length).toBeGreaterThan(0)
   })
 
   it('renders production plan list route without requiring factory role', () => {

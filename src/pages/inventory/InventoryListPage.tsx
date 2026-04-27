@@ -107,6 +107,12 @@ type ReviewDraft = {
   note: string
 }
 
+type MovementFilters = {
+  type: InventoryMovementType | 'all'
+  relatedOrderLineId: string
+  keyword: string
+}
+
 const createMovementDraft = (item?: InventoryItem): MovementDraft => ({
   inventoryItemId: item?.id || '',
   type: 'reserve',
@@ -145,6 +151,12 @@ const initialInboundDraft: InboundDraft = {
   remark: ''
 }
 
+const initialMovementFilters: MovementFilters = {
+  type: 'all',
+  relatedOrderLineId: '',
+  keyword: ''
+}
+
 const toPositiveInteger = (value: string) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0
@@ -158,6 +170,7 @@ export const InventoryListPage = () => {
   const [movementDraft, setMovementDraft] = useState<MovementDraft>(() => createMovementDraft(inventoryItemsMock[0]))
   const [reviewDraft, setReviewDraft] = useState<ReviewDraft>(() => createReviewDraft(inventoryItemsMock[0]))
   const [inboundDraft, setInboundDraft] = useState<InboundDraft>(initialInboundDraft)
+  const [movementFilters, setMovementFilters] = useState<MovementFilters>(initialMovementFilters)
   const [selectedInventoryItemId, setSelectedInventoryItemId] = useState(inventoryItemsMock[0]?.id ?? '')
   const [formMessage, setFormMessage] = useState('')
 
@@ -176,6 +189,24 @@ export const InventoryListPage = () => {
   const summary = useMemo(() => buildInventorySummary(rows), [rows])
   const selectedRow = useMemo(() => rows.find((row) => row.item.id === selectedInventoryItemId) ?? visibleRows[0] ?? rows[0], [rows, selectedInventoryItemId, visibleRows])
   const selectedMovements = useMemo(() => movements.filter((movement) => movement.inventoryItemId === selectedRow?.item.id), [movements, selectedRow])
+  const filteredMovements = useMemo(() => {
+    const keyword = movementFilters.keyword.trim().toLowerCase()
+
+    return movements.filter((movement) => {
+      if (movementFilters.type !== 'all' && movement.type !== movementFilters.type) {
+        return false
+      }
+      if (movementFilters.relatedOrderLineId && movement.relatedOrderLineId !== movementFilters.relatedOrderLineId) {
+        return false
+      }
+      if (!keyword) {
+        return true
+      }
+
+      const relatedOrderLine = getOrderLineDisplay(appData.orderLines, movement.relatedOrderLineId)
+      return [movement.inventoryCode, movement.operatorName, movement.note, movement.fromLocation, movement.toLocation, relatedOrderLine].some((value) => value?.toLowerCase().includes(keyword))
+    })
+  }, [appData.orderLines, movementFilters, movements])
 
   const updateFilter = <K extends keyof InventoryFilters>(key: K, value: InventoryFilters[K]) => {
     setFilters((current) => ({
@@ -200,6 +231,13 @@ export const InventoryListPage = () => {
 
   const updateReviewDraft = <K extends keyof ReviewDraft>(key: K, value: ReviewDraft[K]) => {
     setReviewDraft((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  const updateMovementFilter = <K extends keyof MovementFilters>(key: K, value: MovementFilters[K]) => {
+    setMovementFilters((current) => ({
       ...current,
       [key]: value
     }))
@@ -603,8 +641,36 @@ export const InventoryListPage = () => {
         )}
       </SectionCard>
 
-      <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整。">
-        <MovementTable movements={movements} orderLines={appData.orderLines} />
+      <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整；筛选只影响台账查看，不改变库存或商品行状态。">
+        <div className="filter-grid">
+          <label>
+            <span>流转类型筛选</span>
+            <select value={movementFilters.type} onChange={(event) => updateMovementFilter('type', event.target.value as MovementFilters['type'])}>
+              <option value="all">全部类型</option>
+              {Object.entries(inventoryMovementTypeLabelMap).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>关联商品行筛选</span>
+            <select value={movementFilters.relatedOrderLineId} onChange={(event) => updateMovementFilter('relatedOrderLineId', event.target.value)}>
+              <option value="">全部商品行关联</option>
+              {appData.orderLines.map((line) => (
+                <option key={line.id} value={line.id}>
+                  {formatOrderLineOption(line)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>流转记录搜索</span>
+            <input value={movementFilters.keyword} onChange={(event) => updateMovementFilter('keyword', event.target.value)} placeholder="库存编号、备注、操作人或库位" />
+          </label>
+        </div>
+        {filteredMovements.length > 0 ? <MovementTable movements={filteredMovements} orderLines={appData.orderLines} /> : <EmptyState title="暂无流转记录" description="当前筛选条件下没有库存流转记录。" />}
       </SectionCard>
     </PageContainer>
   )
