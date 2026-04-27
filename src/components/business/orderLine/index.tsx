@@ -22,7 +22,7 @@ import {
   modelingWorkflowStatusLabelMap,
   financeWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
-import { getCustomerServiceNextLineStatus } from '@/services/orderLine/orderLineCustomerService'
+import { getCustomerServiceNextLineStatus, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
 import { getOrderLineCompleteness, getOrderLineRisks, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type {
   OrderLine,
@@ -946,6 +946,12 @@ const OrderLineDetailsSection = ({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<OrderLineDetailsDraft>(() => buildOrderLineDetailsDraft(line))
   const [message, setMessage] = useState('')
+  const needsEngraving = hasEngravingRequirement({
+    engraveText: line.actualRequirements?.engraveText,
+    selectedSpecialOptions: line.selectedSpecialOptions,
+    engraveImageFiles: line.actualRequirements?.engraveImageFiles,
+    engravePltFiles: line.actualRequirements?.engravePltFiles
+  })
 
   useEffect(() => {
     setDraft(buildOrderLineDetailsDraft(line))
@@ -1128,6 +1134,12 @@ const OrderLineDetailsSection = ({
           <InfoField label="特殊需求" value={<TextList values={line.selectedSpecialOptions || line.actualRequirements?.specialNotes} />} />
           <InfoField label="尺寸备注" value={line.actualRequirements?.sizeNote || '—'} />
           <InfoField label="刻字 / 印记" value={line.actualRequirements?.engraveText || '—'} />
+          {needsEngraving ? (
+            <>
+              <InfoField label="刻字参考图" value={<TextList values={line.actualRequirements?.engraveImageFiles?.map((file) => file.name)} />} />
+              <InfoField label="刻字 PLT 文件" value={<TextList values={line.actualRequirements?.engravePltFiles?.map((file) => file.name)} />} />
+            </>
+          ) : null}
           <InfoField label="客服备注" value={line.actualRequirements?.remark || '—'} />
           <InfoField label="生产备注" value={line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '—'} />
           <InfoField label="是否加急" value={line.isUrgent || line.priority === 'urgent' ? '加急' : line.priority === 'vip' ? 'VIP' : line.priority === 'high' ? '高优先' : '否'} />

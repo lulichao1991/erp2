@@ -105,6 +105,8 @@ export type OrderLineActualRequirements = {
   specNote?: string
   sizeNote?: string
   engraveText?: string
+  engraveImageFiles?: OrderLineUploadedFile[]
+  engravePltFiles?: OrderLineUploadedFile[]
   specialNotes?: string[]
   remark?: string
 }

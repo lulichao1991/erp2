@@ -10,10 +10,10 @@ import {
   getOrderLineLineStatusLabel,
   factoryWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
-import { getCustomerServiceNextLineStatus, getOrderLineCompleteness } from '@/services/orderLine/orderLineCustomerService'
+import { getCustomerServiceNextLineStatus, getOrderLineCompleteness, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
 import { getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type { Customer } from '@/types/customer'
-import type { OrderLine, OrderLineLineStatus } from '@/types/order-line'
+import type { OrderLine, OrderLineLineStatus, OrderLineUploadedFile } from '@/types/order-line'
 import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import type { QuoteResult } from '@/types/quote'
@@ -63,6 +63,8 @@ export type OrderLineDraft = {
   process: string
   sizeNote: string
   engraveText: string
+  engraveImageFiles: OrderLineUploadedFile[]
+  engravePltFiles: OrderLineUploadedFile[]
   specialRequirement: string
   needsDesign: boolean
   needsModeling: boolean
@@ -154,6 +156,8 @@ const createOrderLineDraft = (): OrderLineDraft => ({
   process: '',
   sizeNote: '',
   engraveText: '',
+  engraveImageFiles: [],
+  engravePltFiles: [],
   specialRequirement: '',
   needsDesign: true,
   needsModeling: false,
@@ -269,8 +273,23 @@ const buildDraftCompletenessInput = (line: OrderLineDraft) => ({
   material: line.material,
   size: line.spec || line.sizeNote,
   craftRequirements: line.process,
-  productionTaskNo: line.productionTaskNo
+  productionTaskNo: line.productionTaskNo,
+  needsEngraving: hasEngravingRequirement({
+    engraveText: line.engraveText,
+    selectedSpecialOptions: line.selectedSpecialOptions,
+    engraveImageFiles: line.engraveImageFiles,
+    engravePltFiles: line.engravePltFiles
+  }),
+  engraveImageFiles: line.engraveImageFiles,
+  engravePltFiles: line.engravePltFiles
 })
+
+const buildDraftUploadedFiles = (files: FileList | null, prefix: string): OrderLineUploadedFile[] =>
+  Array.from(files ?? []).map((file, index) => ({
+    id: `${prefix}-${Date.now()}-${index}`,
+    name: file.name,
+    url: `mock-upload:${encodeURIComponent(file.name)}`
+  }))
 
 const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
   const product = getDraftProduct(line)
@@ -920,10 +939,22 @@ export const OrderLineDraftCard = ({
   const quote = buildOrderLineDraftQuote(line)
   const referableProducts = getReferableProducts()
   const completeness = getOrderLineCompleteness(buildDraftCompletenessInput(line))
+  const needsEngraving = hasEngravingRequirement({
+    engraveText: line.engraveText,
+    selectedSpecialOptions: line.selectedSpecialOptions,
+    engraveImageFiles: line.engraveImageFiles,
+    engravePltFiles: line.engravePltFiles
+  })
   const nextConfirmStatus = getCustomerServiceNextLineStatus({
     requiresDesign: line.needsDesign,
     requiresModeling: line.needsModeling
   })
+  const handleEngraveImageUpload = (files: FileList | null) => {
+    onChange({ engraveImageFiles: buildDraftUploadedFiles(files, `${line.id}-engrave-image`) })
+  }
+  const handleEngravePltUpload = (files: FileList | null) => {
+    onChange({ engravePltFiles: buildDraftUploadedFiles(files, `${line.id}-engrave-plt`) })
+  }
   const handleCustomerConfirm = () => {
     if (!completeness.complete) {
       return
@@ -1066,6 +1097,20 @@ export const OrderLineDraftCard = ({
           <span className="field-label">印记内容</span>
           <input className="input" value={line.engraveText} onChange={(event) => onChange({ engraveText: event.target.value })} />
         </label>
+        {needsEngraving ? (
+          <>
+            <label className="field-control">
+              <span className="field-label">刻字参考图</span>
+              <input aria-label="刻字参考图" className="input" type="file" accept="image/*,.pdf" onChange={(event) => handleEngraveImageUpload(event.target.files)} />
+              <span className="text-caption">{line.engraveImageFiles.length > 0 ? line.engraveImageFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
+            </label>
+            <label className="field-control">
+              <span className="field-label">刻字 PLT 文件</span>
+              <input aria-label="刻字 PLT 文件" className="input" type="file" accept=".plt" onChange={(event) => handleEngravePltUpload(event.target.files)} />
+              <span className="text-caption">{line.engravePltFiles.length > 0 ? line.engravePltFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
+            </label>
+          </>
+        ) : null}
         <label className="field-control">
           <span className="field-label">负责人</span>
           <input className="input" value={line.ownerName} onChange={(event) => onChange({ ownerName: event.target.value })} />

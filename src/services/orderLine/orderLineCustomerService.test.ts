@@ -29,11 +29,30 @@ describe('orderLineCustomerService', () => {
     expect(getOrderLineCompleteness(buildOrderLineCompletenessInput(line!))).toEqual(
       expect.objectContaining({
         complete: true,
-        completed: 6,
-        total: 6,
+        completed: 8,
+        total: 8,
         summary: '资料完整'
       })
     )
+  })
+
+  it('requires engraving reference image and PLT files when engraving is needed', () => {
+    const result = getOrderLineCompleteness({
+      productName: '定制戒指',
+      category: 'ring',
+      material: '18K金',
+      size: '16号',
+      craftRequirements: '微镶',
+      productionTaskNo: 'RING-SH-016',
+      needsEngraving: true,
+      engraveImageFiles: [],
+      engravePltFiles: []
+    })
+
+    expect(result.complete).toBe(false)
+    expect(result.completed).toBe(6)
+    expect(result.total).toBe(8)
+    expect(result.missingLabels).toEqual(['刻字参考图', '刻字 PLT 文件'])
   })
 
   it('routes confirmed customer-service lines by design and modeling needs', () => {

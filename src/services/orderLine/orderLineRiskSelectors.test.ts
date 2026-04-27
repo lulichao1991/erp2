@@ -33,6 +33,23 @@ describe('orderLineRiskSelectors', () => {
     expect(completeness.missingLabels).toEqual(['材质', '工艺要求', '货号'])
   })
 
+  it('includes engraving files in completeness risks when engraving is required', () => {
+    const line = {
+      ...orderLinesMock[0],
+      actualRequirements: {
+        ...orderLinesMock[0].actualRequirements,
+        engraveText: 'ZS',
+        engraveImageFiles: [],
+        engravePltFiles: []
+      }
+    }
+
+    const completeness = getOrderLineCompleteness(line)
+
+    expect(completeness.complete).toBe(false)
+    expect(completeness.missingLabels).toEqual(expect.arrayContaining(['刻字参考图', '刻字 PLT 文件']))
+  })
+
   it('detects production overdue and blocked risks', () => {
     const blockedLine = orderLinesMock.find((line) => line.id === 'ol-zhang-brooch-blocked-001')!
 
