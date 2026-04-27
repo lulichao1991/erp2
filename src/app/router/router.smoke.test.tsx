@@ -1441,6 +1441,24 @@ describe('router smoke', () => {
     expect(screen.getByText(/已完成质检处置/)).toBeInTheDocument()
     expect(screen.getAllByText('B-退货可用-01').length).toBeGreaterThan(0)
     expect(screen.getAllByText('质检通过，可再次使用').length).toBeGreaterThan(0)
+
+    const countedQuantity = screen.getByLabelText('实盘总数')
+    const countedAvailableQuantity = screen.getByLabelText('实盘可用数')
+    await user.clear(countedQuantity)
+    await user.type(countedQuantity, '1')
+    await user.clear(countedAvailableQuantity)
+    await user.type(countedAvailableQuantity, '2')
+    await user.click(screen.getByRole('button', { name: '保存盘点' }))
+    expect(screen.getByText('实盘可用数不能大于实盘总数')).toBeInTheDocument()
+
+    await user.clear(countedAvailableQuantity)
+    await user.type(countedAvailableQuantity, '0')
+    await user.type(screen.getByLabelText('差异原因'), '复盘后可用数调整')
+    await user.type(screen.getByLabelText('盘点备注'), '月末盘点')
+    await user.click(screen.getByRole('button', { name: '保存盘点' }))
+    expect(screen.getByText(/已完成库存盘点/)).toBeInTheDocument()
+    expect(screen.getAllByText(/盘点调整：总数 1→1，可用 1→0/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/原因：复盘后可用数调整/).length).toBeGreaterThan(0)
   })
 
   it('records inventory inbound and movement actions locally', async () => {
