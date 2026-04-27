@@ -545,7 +545,7 @@ export const InventoryListPage = () => {
         </div>
       </SectionCard>
 
-      <div className="two-column-grid">
+      <div className="two-column-grid inventory-form-grid">
         <SectionCard title="入库登记" description="用于设计留样、客户退货、常备采购或其他库存的前端 mock 入库。">
           <div className="filter-grid">
             <label>

@@ -227,8 +227,8 @@ const FinanceTable = ({
   onLock: (line: OrderLine) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell">
-    <table className="table">
+  <div className="table-shell workbench-table-shell">
+    <table className="table role-workbench-table finance-table">
       <thead>
         <tr>
           <th>商品行</th>
@@ -293,7 +293,7 @@ const FinanceTable = ({
                 </label>
               </td>
               <td>
-                <div className="row wrap">
+                <div className="workbench-actions">
                   <button type="button" className="button secondary small" onClick={() => onConfirmSettlement(row)} disabled={!canEdit}>
                     确认工厂结算
                   </button>

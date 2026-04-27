@@ -235,8 +235,8 @@ const DesignModelingTable = ({
   onRecordWax: (line: OrderLine) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell">
-    <table className="table">
+  <div className="table-shell workbench-table-shell">
+    <table className="table role-workbench-table design-modeling-table">
       <thead>
         <tr>
           <th>商品行</th>
@@ -308,7 +308,7 @@ const DesignModelingTable = ({
                 </label>
               </td>
               <td>
-                <div className="row wrap">
+                <div className="workbench-actions">
                   <button type="button" className="button secondary small" onClick={() => onClaimDesign(line)} disabled={!canEdit}>
                     领取设计任务
                   </button>

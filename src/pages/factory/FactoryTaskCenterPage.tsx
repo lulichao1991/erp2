@@ -273,8 +273,8 @@ const FactoryTaskTable = ({
   onSubmitReturn: (line: OrderLine) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell">
-    <table className="table">
+  <div className="table-shell workbench-table-shell">
+    <table className="table role-workbench-table factory-table">
       <thead>
         <tr>
           <th>生产任务</th>
@@ -316,7 +316,7 @@ const FactoryTaskTable = ({
                 </div>
               </td>
               <td>
-                <div className="grid two-column-grid">
+                <div className="grid two-column-grid dense-field-grid">
                   <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
                   <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
                   <FactoryInput label="实际材质" value={draft.actualMaterial} onChange={(value) => onDraftChange(line, { actualMaterial: value })} />
@@ -335,7 +335,7 @@ const FactoryTaskTable = ({
                 </label>
               </td>
               <td>
-                <div className="row wrap">
+                <div className="workbench-actions">
                   <button type="button" className="button secondary small" onClick={() => onAccept(line)} disabled={!canEdit}>
                     接收任务
                   </button>
