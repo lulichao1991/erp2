@@ -14,6 +14,10 @@ const getSidebarShortLabel = (label: string) => {
     return '任务'
   }
 
+  if (label === '客户中心') {
+    return '客户'
+  }
+
   if (label === '生产计划') {
     return '生产'
   }
@@ -32,6 +36,10 @@ const getSidebarShortLabel = (label: string) => {
 
   if (label === '财务中心') {
     return '财务'
+  }
+
+  if (label === '仓库商品') {
+    return '仓库'
   }
 
   if (label === '管理看板') {
@@ -68,7 +76,7 @@ export const AppSidebar = () => {
             end={item.path === '/'}
             className={({ isActive }) => `sidebar-nav-link${isActive ? ' active' : ''}`}
           >
-            <span>{item.icon}</span>
+            <span className="sidebar-nav-icon" aria-hidden="true" />
             <span>{getSidebarShortLabel(item.label)}</span>
           </NavLink>
         ))}

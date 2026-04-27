@@ -156,7 +156,6 @@ describe('router smoke', () => {
     renderRoute('/order-lines')
 
     expect(screen.getByRole('heading', { name: '商品行中心' })).toBeInTheDocument()
-    expect(screen.getByText('一行代表一件商品，支持独立推进设计、生产、发货与售后。')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '全部商品行' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待设计' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待建模' })).toBeInTheDocument()
@@ -567,7 +566,6 @@ describe('router smoke', () => {
     renderRoute('/purchases/o-202604-001')
 
     expect(screen.getByRole('heading', { name: '购买记录详情' })).toBeInTheDocument()
-    expect(screen.getByText('购买记录详情是归组页，用来查看一次购买的公共信息和本次购买下的所有商品行。')).toBeInTheDocument()
     expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
     expect(screen.getByText('客户与收货信息')).toBeInTheDocument()
     expect(screen.getByText('付款总览')).toBeInTheDocument()
@@ -1021,7 +1019,6 @@ describe('router smoke', () => {
     renderRoute('/customers')
 
     expect(screen.getByRole('heading', { name: '客户中心' })).toBeInTheDocument()
-    expect(screen.getByText('客户中心第一版只读展示客户历史购买记录、商品行和售后摘要。')).toBeInTheDocument()
     expect(screen.getByText('当前购买记录')).toBeInTheDocument()
     expect(screen.getByText('当前商品行')).toBeInTheDocument()
     expect(screen.getByText('当前售后')).toBeInTheDocument()
@@ -1035,7 +1032,6 @@ describe('router smoke', () => {
     renderRoute('/customers/customer-zhang-001')
 
     expect(screen.getByRole('heading', { name: '客户详情' })).toBeInTheDocument()
-    expect(screen.getByText('客户详情只做历史归集；购买执行仍进入购买记录和商品行中心。')).toBeInTheDocument()
     expect(screen.getByText('客户基础信息')).toBeInTheDocument()
     expect(screen.getByText('当前购买记录数')).toBeInTheDocument()
     expect(screen.getByText('外部导入统计参考')).toBeInTheDocument()
@@ -1228,7 +1224,6 @@ describe('router smoke', () => {
     const { container } = renderRoute('/factory')
 
     expect(screen.getByRole('heading', { name: '工厂协同中心' })).toBeInTheDocument()
-    expect(screen.getByText('当前工厂：苏州金工厂。本页只显示分配给当前工厂的商品行生产任务，不展示客户联系方式、地址、销售价格、定金、尾款、利润或财务备注。')).toBeInTheDocument()
     expect(screen.getByText('山形胸针试产')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '切换到生产中' }))
@@ -1286,7 +1281,6 @@ describe('router smoke', () => {
     const { container } = renderRoute('/finance')
 
     expect(screen.getByRole('heading', { name: '财务中心' })).toBeInTheDocument()
-    expect(screen.getByText('财务中心围绕 Purchase 金额汇总和 OrderLine 工厂回传数据做确认、异常标记和锁定，不推进设计、建模或生产状态。')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
     expect(screen.getByText('待确认尾款')).toBeInTheDocument()
@@ -1322,7 +1316,6 @@ describe('router smoke', () => {
     const { container } = renderRoute('/management')
 
     expect(screen.getByRole('heading', { name: '管理看板' })).toBeInTheDocument()
-    expect(screen.getByText('管理看板基于 Purchase 与 OrderLine 的 current workflow 汇总业务、生产、财务、角色负载和工厂表现，不参与具体录入。')).toBeInTheDocument()
     expect(screen.getByText('业务总览')).toBeInTheDocument()
     expect(screen.getByText('商品行状态分布')).toBeInTheDocument()
     expect(screen.getByText('生产风险')).toBeInTheDocument()
@@ -1377,7 +1370,6 @@ describe('router smoke', () => {
     const { container } = renderRoute('/inventory')
 
     expect(screen.getByRole('heading', { name: '仓库商品管理' })).toBeInTheDocument()
-    expect(screen.getByText('仓库商品管理是库存资产台账，记录设计留样、客户退货、常备采购和其他库存；它可以关联 Product / Purchase / OrderLine，但不替代产品模板或商品行执行流。')).toBeInTheDocument()
     expect(screen.getByText('库存台账')).toBeInTheDocument()
     expect(screen.getByText('入库登记')).toBeInTheDocument()
     expect(screen.getByText('库存流转')).toBeInTheDocument()

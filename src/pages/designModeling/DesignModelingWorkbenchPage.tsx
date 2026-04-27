@@ -165,7 +165,6 @@ export const DesignModelingWorkbenchPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">设计建模中心只展示需要设计、建模、出蜡或修改的 OrderLine，不展示客户联系方式和财务金额。</p>
 
       <div className="stack">
         <div className="stats-grid compact-stats">

@@ -435,7 +435,6 @@ export const InventoryListPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">仓库商品管理是库存资产台账，记录设计留样、客户退货、常备采购和其他库存；它可以关联 Product / Purchase / OrderLine，但不替代产品模板或商品行执行流。</p>
 
       <div className="stats-grid compact-stats">
         <div className="stat-card compact-stat">

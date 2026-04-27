@@ -112,7 +112,7 @@ img {
 .sidebar-nav-link {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
   padding: 7px 7px;
   border-radius: 9px;
   color: rgba(238, 244, 255, 0.84);
@@ -120,10 +120,24 @@ img {
   font: 600 12px/17px 'Inter', 'SF Pro', system-ui, sans-serif;
 }
 
+.sidebar-nav-icon {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0.78;
+}
+
 .sidebar-nav-link:hover,
 .sidebar-nav-link.active {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+
+.sidebar-nav-link.active .sidebar-nav-icon {
+  background: currentColor;
+  opacity: 1;
 }
 
 .sidebar-footer {
@@ -1144,7 +1158,7 @@ button.stat-card {
 }
 
 .factory-table th:nth-child(5) {
-  width: 320px;
+  width: 360px;
 }
 
 .design-modeling-table th:nth-child(6),
@@ -1167,6 +1181,33 @@ button.stat-card {
   min-height: 30px;
   padding-inline: 10px;
   text-align: center;
+}
+
+.factory-return-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.factory-return-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.factory-return-grid .field-label {
+  white-space: nowrap;
+}
+
+.factory-return-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 74px;
+  justify-content: center;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 12px;
+  background: var(--color-bg-subtle);
 }
 
 .card-grid {

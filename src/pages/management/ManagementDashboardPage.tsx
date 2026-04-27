@@ -26,7 +26,6 @@ export const ManagementDashboardPage = () => {
           </div>
         }
       />
-      <p className="text-muted">管理看板基于 Purchase 与 OrderLine 的 current workflow 汇总业务、生产、财务、角色负载和工厂表现，不参与具体录入。</p>
 
       <div className="stack spacer-top">
         <SummaryCard title="业务总览">

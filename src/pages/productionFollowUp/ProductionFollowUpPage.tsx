@@ -151,7 +151,6 @@ export const ProductionFollowUpPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">跟单视图只围绕 OrderLine 推进生产审核、下发、生产中、待回传和异常处理。</p>
 
       <div className="stack">
         <div className="stats-grid compact-stats">

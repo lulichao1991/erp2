@@ -6,7 +6,6 @@ import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildFactoryTaskRows,
   currentFactoryId,
-  currentFactoryName,
   factoryTaskTabs,
   filterFactoryTaskRowsByTab,
   type FactoryTaskRow,
@@ -212,7 +211,6 @@ export const FactoryTaskCenterPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">当前工厂：{currentFactoryName}。本页只显示分配给当前工厂的商品行生产任务，不展示客户联系方式、地址、销售价格、定金、尾款、利润或财务备注。</p>
 
       <div className="stack">
         <div className="stats-grid compact-stats">
@@ -289,6 +287,7 @@ const FactoryTaskTable = ({
         {rows.map((row) => {
           const line = row.line
           const draft = getDraft(line)
+          const canShowReturnForm = line.productionStatus === 'completed' || line.factoryStatus === 'returned'
 
           return (
             <tr key={line.id}>
@@ -316,23 +315,32 @@ const FactoryTaskTable = ({
                 </div>
               </td>
               <td>
-                <div className="grid two-column-grid dense-field-grid">
-                  <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
-                  <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
-                  <FactoryInput label="实际材质" value={draft.actualMaterial} onChange={(value) => onDraftChange(line, { actualMaterial: value })} />
-                  <FactoryInput label="主石种类" value={draft.mainStoneType} onChange={(value) => onDraftChange(line, { mainStoneType: value })} />
-                  <FactoryInput label="主石数量" value={draft.mainStoneQuantity} onChange={(value) => onDraftChange(line, { mainStoneQuantity: value })} />
-                  <FactoryInput label="辅石种类" value={draft.sideStoneType} onChange={(value) => onDraftChange(line, { sideStoneType: value })} />
-                  <FactoryInput label="辅石颗数" value={draft.sideStoneCount} onChange={(value) => onDraftChange(line, { sideStoneCount: value })} />
-                  <FactoryInput label="基础工费" value={draft.baseLaborCost} onChange={(value) => onDraftChange(line, { baseLaborCost: value })} />
-                  <FactoryInput label="附加工费" value={draft.extraLaborCost} onChange={(value) => onDraftChange(line, { extraLaborCost: value })} />
-                  <FactoryInput label="成品图文件" value={draft.finishedImageName} onChange={(value) => onDraftChange(line, { finishedImageName: value })} />
-                  <FactoryInput label="结算单文件" value={draft.settlementFileName} onChange={(value) => onDraftChange(line, { settlementFileName: value })} />
-                </div>
-                <label className="field-control spacer-top">
-                  <span className="field-label">工厂备注</span>
-                  <textarea className="textarea" aria-label={`工厂备注-${line.id}`} value={draft.factoryNote} onChange={(event) => onDraftChange(line, { factoryNote: event.target.value })} />
-                </label>
+                {canShowReturnForm ? (
+                  <div className="factory-return-panel">
+                    <div className="factory-return-grid">
+                      <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
+                      <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
+                      <FactoryInput label="实际材质" value={draft.actualMaterial} onChange={(value) => onDraftChange(line, { actualMaterial: value })} />
+                      <FactoryInput label="主石种类" value={draft.mainStoneType} onChange={(value) => onDraftChange(line, { mainStoneType: value })} />
+                      <FactoryInput label="主石数量" value={draft.mainStoneQuantity} onChange={(value) => onDraftChange(line, { mainStoneQuantity: value })} />
+                      <FactoryInput label="辅石种类" value={draft.sideStoneType} onChange={(value) => onDraftChange(line, { sideStoneType: value })} />
+                      <FactoryInput label="辅石颗数" value={draft.sideStoneCount} onChange={(value) => onDraftChange(line, { sideStoneCount: value })} />
+                      <FactoryInput label="基础工费" value={draft.baseLaborCost} onChange={(value) => onDraftChange(line, { baseLaborCost: value })} />
+                      <FactoryInput label="附加工费" value={draft.extraLaborCost} onChange={(value) => onDraftChange(line, { extraLaborCost: value })} />
+                      <FactoryInput label="成品图文件" value={draft.finishedImageName} onChange={(value) => onDraftChange(line, { finishedImageName: value })} />
+                      <FactoryInput label="结算单文件" value={draft.settlementFileName} onChange={(value) => onDraftChange(line, { settlementFileName: value })} />
+                    </div>
+                    <label className="field-control">
+                      <span className="field-label">工厂备注</span>
+                      <textarea className="textarea" aria-label={`工厂备注-${line.id}`} value={draft.factoryNote} onChange={(event) => onDraftChange(line, { factoryNote: event.target.value })} />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="factory-return-summary">
+                    <strong>待生产完成后回传</strong>
+                    <span className="muted-block">先接收任务并标记开始生产，完成后再填写重量、工费和附件。</span>
+                  </div>
+                )}
               </td>
               <td>
                 <div className="workbench-actions">

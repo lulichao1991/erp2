@@ -145,7 +145,6 @@ export const FinanceCenterPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">财务中心围绕 Purchase 金额汇总和 OrderLine 工厂回传数据做确认、异常标记和锁定，不推进设计、建模或生产状态。</p>
 
       <SectionCard title="购买记录收款摘要" className="compact-card">
         <div className="stats-grid compact-stats">
