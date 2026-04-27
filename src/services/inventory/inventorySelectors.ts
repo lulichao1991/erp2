@@ -88,6 +88,16 @@ export type InventoryMovementResult = {
   movement: InventoryMovement
 }
 
+export type InventoryOrderLineMovementSummary = {
+  orderLineId: string
+  orderLineDisplay: string
+  reserveQuantity: number
+  releaseQuantity: number
+  outboundQuantity: number
+  movementCount: number
+  latestOccurredAt: string
+}
+
 export type InventoryReviewInput = {
   condition: InventoryItemCondition
   status: InventoryItemStatus
@@ -242,6 +252,38 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   lowStockCount: rows.filter(isLowStockInventoryRow).length,
   unavailableCount: rows.filter((row) => row.item.availableQuantity <= 0 || row.item.status === 'outbound' || row.item.status === 'scrapped').length
 })
+
+export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovement[], orderLines: OrderLine[]): InventoryOrderLineMovementSummary[] => {
+  const summaries = new Map<string, InventoryOrderLineMovementSummary>()
+
+  movements.forEach((movement) => {
+    if (!movement.relatedOrderLineId) {
+      return
+    }
+
+    const orderLine = orderLines.find((line) => line.id === movement.relatedOrderLineId)
+    const summary = summaries.get(movement.relatedOrderLineId) ?? {
+      orderLineId: movement.relatedOrderLineId,
+      orderLineDisplay: [orderLine?.lineCode || orderLine?.productionTaskNo || movement.relatedOrderLineId, orderLine?.name].filter(Boolean).join(' / '),
+      reserveQuantity: 0,
+      releaseQuantity: 0,
+      outboundQuantity: 0,
+      movementCount: 0,
+      latestOccurredAt: movement.occurredAt
+    }
+
+    summaries.set(movement.relatedOrderLineId, {
+      ...summary,
+      reserveQuantity: summary.reserveQuantity + (movement.type === 'reserve' ? movement.quantity : 0),
+      releaseQuantity: summary.releaseQuantity + (movement.type === 'release' ? movement.quantity : 0),
+      outboundQuantity: summary.outboundQuantity + (movement.type === 'outbound' ? movement.quantity : 0),
+      movementCount: summary.movementCount + 1,
+      latestOccurredAt: movement.occurredAt > summary.latestOccurredAt ? movement.occurredAt : summary.latestOccurredAt
+    })
+  })
+
+  return Array.from(summaries.values())
+}
 
 export const applyInventoryMovement = (item: InventoryItem, input: InventoryMovementInput): InventoryMovementResult => {
   const quantity = Math.max(0, Math.floor(input.quantity))

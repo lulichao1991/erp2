@@ -7,6 +7,7 @@ import {
   applyInventoryMovement,
   applyInventoryReview,
   applyInventoryStocktake,
+  buildInventoryOrderLineMovementSummary,
   buildInventoryRows,
   buildInventorySummary,
   filterInventoryRows,
@@ -892,12 +893,61 @@ const InventoryDetail = ({ row, movements, orderLines }: { row: InventoryRow; mo
       <InventoryLinks row={row} />
     </div>
 
+    <OrderLineMovementSummary movements={movements} orderLines={orderLines} />
+
     <div>
       <strong>该库存流转记录</strong>
       {movements.length > 0 ? <MovementTable movements={movements} orderLines={orderLines} /> : <EmptyState title="暂无流转记录" description="当前库存还没有单独的流转记录。" />}
     </div>
   </div>
 )
+
+const OrderLineMovementSummary = ({ movements, orderLines }: { movements: InventoryMovement[]; orderLines: OrderLine[] }) => {
+  const summaries = buildInventoryOrderLineMovementSummary(movements, orderLines)
+
+  if (summaries.length === 0) {
+    return (
+      <div className="subtle-panel">
+        <strong>商品行占用 / 出库追溯</strong>
+        <p className="text-muted">当前库存还没有关联商品行的占用、释放或出库记录。</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="subtle-panel">
+      <strong>商品行占用 / 出库追溯</strong>
+      <p className="text-muted">这里只做库存追溯，不改写商品行状态。</p>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>关联商品行</th>
+              <th>占用</th>
+              <th>释放</th>
+              <th>出库</th>
+              <th>最近流转</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summaries.map((summary) => (
+              <tr key={summary.orderLineId}>
+                <td>
+                  <strong>{summary.orderLineDisplay}</strong>
+                  <span className="muted-block">{summary.movementCount} 条关联流水</span>
+                </td>
+                <td>{summary.reserveQuantity} 件</td>
+                <td>{summary.releaseQuantity} 件</td>
+                <td>{summary.outboundQuantity} 件</td>
+                <td>{summary.latestOccurredAt}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 
 const InventoryLinks = ({ row }: { row: InventoryRow }) => (
   <div className="row wrap compact-row">
@@ -956,7 +1006,16 @@ const MovementTable = ({ movements, orderLines }: { movements: InventoryMovement
                 {movement.fromLocation || '无库位'} → {movement.toLocation || '无库位'}
               </span>
             </td>
-            <td>{movement.relatedOrderLineId ? getOrderLineDisplay(orderLines, movement.relatedOrderLineId) : '未关联'}</td>
+            <td>
+              {movement.relatedOrderLineId ? (
+                <>
+                  <strong>{getOrderLineDisplay(orderLines, movement.relatedOrderLineId)}</strong>
+                  <span className="muted-block">库存追溯，不推进状态</span>
+                </>
+              ) : (
+                '未关联'
+              )}
+            </td>
             <td>{movement.operatorName}</td>
             <td>{movement.note || '无'}</td>
           </tr>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryReservedQuantity } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryReservedQuantity } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -98,6 +98,40 @@ describe('inventorySelectors', () => {
     expect(outboundResult.item.availableQuantity).toBe(2)
     expect(outboundResult.item.status).toBe('in_stock')
     expect(outboundResult.movement.type).toBe('outbound')
+  })
+
+  it('summarizes inventory movements linked to order lines', () => {
+    const movements = [
+      {
+        id: 'movement-reserve',
+        inventoryItemId: 'inventory-stock-chain-001',
+        inventoryCode: 'INV-ST-202604-003',
+        type: 'reserve' as const,
+        quantity: 2,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 10:00',
+        relatedOrderLineId: 'oi-ring-001'
+      },
+      {
+        id: 'movement-outbound',
+        inventoryItemId: 'inventory-stock-chain-001',
+        inventoryCode: 'INV-ST-202604-003',
+        type: 'outbound' as const,
+        quantity: 1,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 11:00',
+        relatedOrderLineId: 'oi-ring-001'
+      }
+    ]
+
+    const [summary] = buildInventoryOrderLineMovementSummary(movements, orderLinesMock)
+
+    expect(summary.orderLineDisplay).toBe('OL-202604-001-01 / 山形戒指')
+    expect(summary.reserveQuantity).toBe(2)
+    expect(summary.releaseQuantity).toBe(0)
+    expect(summary.outboundQuantity).toBe(1)
+    expect(summary.movementCount).toBe(2)
+    expect(summary.latestOccurredAt).toBe('2026-04-26 11:00')
   })
 
   it('rejects invalid movement quantities', () => {
