@@ -50,9 +50,12 @@ describe('inventorySelectors', () => {
     const rows = buildRows()
 
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'design_samples', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'available', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-DS-202604-001', 'INV-ST-202604-003', 'INV-OT-202604-004'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'customer_returns', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'needs_review', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'reserved', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_outbound', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002'])
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_stocktake', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'low_stock', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-OT-202604-004'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
   })
