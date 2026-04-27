@@ -63,6 +63,7 @@ describe('inventorySelectors', () => {
       quantity: 2,
       operatorName: '周库管',
       occurredAt: '2026-04-26 10:00',
+      relatedOrderLineId: 'oi-ring-001',
       note: '为商品行预占链身'
     })
 
@@ -72,6 +73,7 @@ describe('inventorySelectors', () => {
     expect(reserveResult.movement.type).toBe('reserve')
     expect(reserveResult.movement.fromStatus).toBe('in_stock')
     expect(reserveResult.movement.toStatus).toBe('in_stock')
+    expect(reserveResult.movement.relatedOrderLineId).toBe('oi-ring-001')
 
     const outboundResult = applyInventoryMovement(reserveResult.item, {
       type: 'outbound',

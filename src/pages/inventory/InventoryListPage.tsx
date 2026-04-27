@@ -18,6 +18,7 @@ import {
   type InventoryRow
 } from '@/services/inventory/inventorySelectors'
 import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
+import type { OrderLine } from '@/types/order-line'
 
 const categoryLabelMap: Record<string, string> = {
   ring: '戒指',
@@ -80,6 +81,7 @@ type MovementDraft = {
   type: InventoryMovementType
   quantity: string
   toLocation: string
+  relatedOrderLineId: string
   operatorName: string
   note: string
 }
@@ -110,9 +112,17 @@ const createMovementDraft = (item?: InventoryItem): MovementDraft => ({
   type: 'reserve',
   quantity: '1',
   toLocation: item?.warehouseLocation || '',
+  relatedOrderLineId: '',
   operatorName: '周库管',
   note: ''
 })
+
+const formatOrderLineOption = (line: OrderLine) => [line.lineCode || line.productionTaskNo || line.id, line.name].filter(Boolean).join(' / ')
+
+const getOrderLineDisplay = (orderLines: OrderLine[], orderLineId?: string) => {
+  const line = orderLines.find((candidate) => candidate.id === orderLineId)
+  return line ? formatOrderLineOption(line) : orderLineId
+}
 
 const createReviewDraft = (item?: InventoryItem): ReviewDraft => ({
   condition: item?.condition || 'new',
@@ -216,6 +226,7 @@ export const InventoryListPage = () => {
         operatorName: movementDraft.operatorName.trim() || '周库管',
         occurredAt: formatCurrentTime(),
         toLocation: movementDraft.toLocation,
+        relatedOrderLineId: movementDraft.relatedOrderLineId || undefined,
         note: movementDraft.note
       })
       setInventoryItems((current) => current.map((item) => (item.id === currentItem.id ? result.item : item)))
@@ -500,6 +511,17 @@ export const InventoryListPage = () => {
               <input value={movementDraft.toLocation} onChange={(event) => updateMovementDraft('toLocation', event.target.value)} placeholder="调整库位时填写" />
             </label>
             <label>
+              <span>关联商品行</span>
+              <select value={movementDraft.relatedOrderLineId} onChange={(event) => updateMovementDraft('relatedOrderLineId', event.target.value)}>
+                <option value="">不关联商品行</option>
+                {appData.orderLines.map((line) => (
+                  <option key={line.id} value={line.id}>
+                    {formatOrderLineOption(line)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               <span>操作人</span>
               <input value={movementDraft.operatorName} onChange={(event) => updateMovementDraft('operatorName', event.target.value)} />
             </label>
@@ -520,7 +542,7 @@ export const InventoryListPage = () => {
       </SectionCard>
 
       <SectionCard title="库存详情与来源追溯" description="查看单件库存的来源、关联对象和该库存自己的流转记录。">
-        {selectedRow ? <InventoryDetail row={selectedRow} movements={selectedMovements} /> : <EmptyState title="未选择库存" description="请选择一条库存记录查看详情。" />}
+        {selectedRow ? <InventoryDetail row={selectedRow} movements={selectedMovements} orderLines={appData.orderLines} /> : <EmptyState title="未选择库存" description="请选择一条库存记录查看详情。" />}
       </SectionCard>
 
       <SectionCard title="库存质检处置" description="用于客户退货、瑕疵件和待检修库存的库管复核；只更新库存资产，不推进商品行状态。">
@@ -582,7 +604,7 @@ export const InventoryListPage = () => {
       </SectionCard>
 
       <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整。">
-        <MovementTable movements={movements} />
+        <MovementTable movements={movements} orderLines={appData.orderLines} />
       </SectionCard>
     </PageContainer>
   )
@@ -649,7 +671,7 @@ const InventoryTable = ({ rows, selectedId, onSelect }: { rows: InventoryRow[]; 
   </div>
 )
 
-const InventoryDetail = ({ row, movements }: { row: InventoryRow; movements: InventoryMovement[] }) => (
+const InventoryDetail = ({ row, movements, orderLines }: { row: InventoryRow; movements: InventoryMovement[]; orderLines: OrderLine[] }) => (
   <div className="stack">
     <div className="info-grid">
       <div>
@@ -696,7 +718,7 @@ const InventoryDetail = ({ row, movements }: { row: InventoryRow; movements: Inv
 
     <div>
       <strong>该库存流转记录</strong>
-      {movements.length > 0 ? <MovementTable movements={movements} /> : <EmptyState title="暂无流转记录" description="当前库存还没有单独的流转记录。" />}
+      {movements.length > 0 ? <MovementTable movements={movements} orderLines={orderLines} /> : <EmptyState title="暂无流转记录" description="当前库存还没有单独的流转记录。" />}
     </div>
   </div>
 )
@@ -721,7 +743,7 @@ const InventoryLinks = ({ row }: { row: InventoryRow }) => (
   </div>
 )
 
-const MovementTable = ({ movements }: { movements: InventoryMovement[] }) => (
+const MovementTable = ({ movements, orderLines }: { movements: InventoryMovement[]; orderLines: OrderLine[] }) => (
   <div className="table-wrap">
     <table className="data-table">
       <thead>
@@ -731,6 +753,7 @@ const MovementTable = ({ movements }: { movements: InventoryMovement[] }) => (
           <th>类型</th>
           <th>数量</th>
           <th>状态 / 库位</th>
+          <th>关联商品行</th>
           <th>操作人</th>
           <th>备注</th>
         </tr>
@@ -752,6 +775,7 @@ const MovementTable = ({ movements }: { movements: InventoryMovement[] }) => (
                 {movement.fromLocation || '无库位'} → {movement.toLocation || '无库位'}
               </span>
             </td>
+            <td>{movement.relatedOrderLineId ? getOrderLineDisplay(orderLines, movement.relatedOrderLineId) : '未关联'}</td>
             <td>{movement.operatorName}</td>
             <td>{movement.note || '无'}</td>
           </tr>

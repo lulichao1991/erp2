@@ -1453,11 +1453,13 @@ describe('router smoke', () => {
     await user.selectOptions(screen.getByLabelText('操作类型'), 'reserve')
     await user.clear(screen.getAllByLabelText('数量')[1] as HTMLElement)
     await user.type(screen.getAllByLabelText('数量')[1] as HTMLElement, '1')
+    await user.selectOptions(screen.getByLabelText('关联商品行'), 'oi-ring-001')
     await user.type(screen.getAllByLabelText('备注')[1] as HTMLElement, '为后续拍摄预占')
     await user.click(screen.getByRole('button', { name: '登记流转' }))
 
     expect(screen.getByText(/已登记占用/)).toBeInTheDocument()
     expect(screen.getAllByText('为后续拍摄预占').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('OL-202604-001-01 / 山形戒指').length).toBeGreaterThan(0)
   })
 
   it('renders production plan list route without requiring factory role', () => {
