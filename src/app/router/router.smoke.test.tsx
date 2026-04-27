@@ -1383,6 +1383,8 @@ describe('router smoke', () => {
     expect(screen.getByText('库存流转')).toBeInTheDocument()
     expect(screen.getByText('库存流转记录')).toBeInTheDocument()
     expect(screen.getByText('库存详情与来源追溯')).toBeInTheDocument()
+    expect(screen.getByText('库位汇总')).toBeInTheDocument()
+    expect(screen.getAllByText('B-退货待检-03').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: '可领用库存' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '客户退货' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待检 / 瑕疵' })).toBeInTheDocument()

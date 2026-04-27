@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryAvailabilityStatus, getInventoryReservedQuantity, getInventoryReviewStatus, getInventoryWorkbenchBadges } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryLocationSummaries, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryAvailabilityStatus, getInventoryReservedQuantity, getInventoryReviewStatus, getInventoryWorkbenchBadges } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -34,6 +34,26 @@ describe('inventorySelectors', () => {
     expect(summary.customerReturnCount).toBe(1)
     expect(summary.needsReviewCount).toBe(1)
     expect(summary.lowStockCount).toBe(1)
+  })
+
+  it('summarizes inventory quantities by warehouse location', () => {
+    const locationSummaries = buildInventoryLocationSummaries(buildRows())
+    const returnLocation = locationSummaries.find((summary) => summary.location === 'B-退货待检-03')
+    const stockLocation = locationSummaries.find((summary) => summary.location === 'C-常备链身-02')
+    expect(returnLocation).toMatchObject({
+      skuCount: 1,
+      totalQuantity: 1,
+      availableQuantity: 0,
+      reservedQuantity: 1,
+      needsReviewCount: 1
+    })
+    expect(stockLocation).toMatchObject({
+      skuCount: 1,
+      totalQuantity: 5,
+      availableQuantity: 5,
+      reservedQuantity: 0,
+      needsReviewCount: 0
+    })
   })
 
   it('filters inventory by source, status, condition, location and keyword', () => {

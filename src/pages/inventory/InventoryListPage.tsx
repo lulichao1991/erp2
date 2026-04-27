@@ -7,6 +7,7 @@ import {
   applyInventoryMovement,
   applyInventoryReview,
   applyInventoryStocktake,
+  buildInventoryLocationSummaries,
   buildInventoryOrderLineMovementSummary,
   buildInventoryRows,
   buildInventorySummary,
@@ -214,6 +215,7 @@ export const InventoryListPage = () => {
   )
   const visibleRows = useMemo(() => filterInventoryRows(rows, filters), [filters, rows])
   const summary = useMemo(() => buildInventorySummary(rows), [rows])
+  const locationSummaries = useMemo(() => buildInventoryLocationSummaries(rows), [rows])
   const selectedRow = useMemo(() => rows.find((row) => row.item.id === selectedInventoryItemId) ?? visibleRows[0] ?? rows[0], [rows, selectedInventoryItemId, visibleRows])
   const selectedMovements = useMemo(() => movements.filter((movement) => movement.inventoryItemId === selectedRow?.item.id), [movements, selectedRow])
   const filteredMovements = useMemo(() => {
@@ -494,6 +496,10 @@ export const InventoryListPage = () => {
             </button>
           ))}
         </div>
+      </SectionCard>
+
+      <SectionCard title="库位汇总" description="按库位汇总库存款数、总数、可用、占用和待检数量，方便库管快速扫库。">
+        <InventoryLocationSummaryTable summaries={locationSummaries} />
       </SectionCard>
 
       <SectionCard title="库存筛选" description="按来源、状态、成色、库位和关联对象快速定位库存。">
@@ -789,6 +795,37 @@ export const InventoryListPage = () => {
     </PageContainer>
   )
 }
+
+const InventoryLocationSummaryTable = ({ summaries }: { summaries: ReturnType<typeof buildInventoryLocationSummaries> }) => (
+  <div className="table-wrap">
+    <table className="data-table">
+      <thead>
+        <tr>
+          <th>库位</th>
+          <th>库存款数</th>
+          <th>总数</th>
+          <th>可用</th>
+          <th>已占用</th>
+          <th>待质检</th>
+        </tr>
+      </thead>
+      <tbody>
+        {summaries.map((summary) => (
+          <tr key={summary.location}>
+            <td>
+              <strong>{summary.location}</strong>
+            </td>
+            <td>{summary.skuCount}</td>
+            <td>{summary.totalQuantity}</td>
+            <td>{summary.availableQuantity}</td>
+            <td>{summary.reservedQuantity}</td>
+            <td>{summary.needsReviewCount}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)
 
 const InventoryTable = ({ rows, selectedId, onSelect }: { rows: InventoryRow[]; selectedId?: string; onSelect: (id: string) => void }) => (
   <div className="table-wrap">
