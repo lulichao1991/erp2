@@ -31,7 +31,7 @@ export const OrderLineListPage = () => {
   return (
     <PageContainer>
       <PageHeader
-        title="商品行中心"
+        title="销售中心"
         className="compact-page-header"
         actions={
           <Link to="/purchases/new" className="button primary">

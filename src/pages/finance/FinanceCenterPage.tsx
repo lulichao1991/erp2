@@ -142,7 +142,7 @@ export const FinanceCenterPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            查看商品行中心
+            查看销售中心
           </Link>
         }
       />
@@ -204,7 +204,7 @@ export const FinanceCenterPage = () => {
               canEdit={canConfirmFinance}
             />
           ) : (
-            <EmptyState title="暂无财务任务" description="当前视图下没有需要处理的商品行。" />
+            <EmptyState title="暂无财务任务" description="当前视图下没有需要处理的销售。" />
           )}
         </SectionCard>
       </div>

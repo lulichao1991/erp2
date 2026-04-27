@@ -290,7 +290,7 @@ const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
 }
 
 const buildDraftSourceProductCompareValue = (line: OrderLineDraft, tempLineNo: string): SourceProductCompareValue => ({
-  sourceLabel: `${line.lineCode || tempLineNo} ${line.styleName || line.productName || line.sourceProductName || '未命名商品行'}`,
+  sourceLabel: `${line.lineCode || tempLineNo} ${line.styleName || line.productName || line.sourceProductName || '未命名销售'}`,
   specValue: line.spec,
   material: line.material,
   process: line.process,
@@ -362,7 +362,7 @@ const validatePurchaseDraft = (
 
   const missingNameIndex = orderLines.findIndex((line) => !line.productName.trim())
   if (missingNameIndex >= 0) {
-    return `商品行 ${getTempLineNo(missingNameIndex)} 需要填写商品名称。`
+    return `销售 ${getTempLineNo(missingNameIndex)} 需要填写商品名称。`
   }
 
   const missingSpecIndex = orderLines.findIndex((line) => {
@@ -370,7 +370,7 @@ const validatePurchaseDraft = (
     return Boolean(line.sourceProductId && product?.isSpecRequired && !line.selectedSpecId)
   })
   if (missingSpecIndex >= 0) {
-    return `商品行 ${getTempLineNo(missingSpecIndex)} 引用产品时需要选择规格。`
+    return `销售 ${getTempLineNo(missingSpecIndex)} 引用产品时需要选择规格。`
   }
 
   return ''
@@ -479,12 +479,12 @@ export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purch
         <InfoField label="客户" value={customer?.name || '—'} />
         <InfoField label="渠道" value={purchase.sourceChannel} />
         <InfoField label="平台订单号" value={purchase.platformOrderNo || '—'} />
-        <InfoField label="商品行数量" value={`${purchase.orderLines.length} 条`} />
+        <InfoField label="销售数量" value={`${purchase.orderLines.length} 条`} />
         <InfoField label="聚合状态" value={<StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />} />
         <InfoField label="付款摘要" value={`${formatPrice(paymentSummary.receivedAmount)} / ${formatPrice(paymentSummary.receivableAmount)}`} />
         <InfoField label="付款状态" value={<StatusTag value={paymentSummary.paymentStatus} />} />
         <InfoField label="客服负责人" value={purchase.ownerName || '待分配'} />
-        <InfoField label="当前整体提示" value="本页只做购买记录归组；每条商品行独立推进执行。" />
+        <InfoField label="当前整体提示" value="本页只做购买记录归组；每条销售独立推进执行。" />
       </InfoGrid>
     </SectionCard>
   )
@@ -534,11 +534,11 @@ export const PurchaseOrderLineTable = ({
   afterSalesCases?: AfterSalesCase[]
 }) => (
   <SectionCard
-    title="本次商品行列表"
-    description="直接展示本次购买下的所有商品行，避免把多件商品折叠成一条摘要。"
+    title="本次销售列表"
+    description="直接展示本次购买下的所有销售，避免把多件商品折叠成一条摘要。"
     actions={
       <Link to="/order-lines" className="button secondary small">
-        返回商品行中心
+        返回销售中心
       </Link>
     }
   >
@@ -547,7 +547,7 @@ export const PurchaseOrderLineTable = ({
         <table className="table">
           <thead>
             <tr>
-              <th>商品行编号</th>
+              <th>销售编号</th>
               <th>商品名称</th>
               <th>状态</th>
               <th>当前负责人</th>
@@ -585,7 +585,7 @@ export const PurchaseOrderLineTable = ({
                 <tr key={line.id} role="button" tabIndex={0} onClick={handleRowClick} onKeyDown={handleRowKeyDown}>
                   <td>
                     <div>{line.lineCode || line.id}</div>
-                    <div className="text-caption">生产任务 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</div>
+                    <div className="text-caption">货号 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</div>
                   </td>
                   <td>
                     <div>{line.name}</div>
@@ -618,7 +618,7 @@ export const PurchaseOrderLineTable = ({
                   </td>
                   <td>
                     <button type="button" className="button ghost small" onClick={() => onOpenOrderLine(row)}>
-                      查看商品行
+                      查看销售
                     </button>
                   </td>
                 </tr>
@@ -628,7 +628,7 @@ export const PurchaseOrderLineTable = ({
         </table>
       </div>
     ) : (
-      <EmptyState title="暂无商品行" description="当前购买记录还没有关联商品行。" />
+      <EmptyState title="暂无销售" description="当前购买记录还没有关联销售。" />
     )}
   </SectionCard>
 )
@@ -674,7 +674,7 @@ export const usePurchaseDraftForm = () => {
 
   const removeOrderLine = (lineId: string) => {
     if (orderLineDrafts.length <= 1) {
-      setErrorMessage('至少需要保留 1 条商品行。')
+      setErrorMessage('至少需要保留 1 条销售。')
       setSuccessMessage('')
       return
     }
@@ -718,7 +718,7 @@ export const usePurchaseDraftForm = () => {
 
   const saveDraft = () => {
     if (orderLineDrafts.length === 0) {
-      setErrorMessage('至少需要保留 1 条商品行。')
+      setErrorMessage('至少需要保留 1 条销售。')
       setSuccessMessage('')
       return
     }
@@ -733,7 +733,7 @@ export const usePurchaseDraftForm = () => {
     const payload = buildDraftPayload(purchaseDraft, paymentSummary, orderLineDrafts)
     console.log('purchaseDraft', payload.purchaseDraft)
     console.log('orderLineDrafts', payload.orderLineDrafts)
-    setSuccessMessage(`已生成购买记录草稿：1 笔购买记录 + ${orderLineDrafts.length} 条商品行`)
+    setSuccessMessage(`已生成购买记录草稿：1 笔购买记录 + ${orderLineDrafts.length} 条销售`)
     setErrorMessage('')
   }
 
@@ -935,7 +935,7 @@ export const OrderLineDraftCard = ({
     <div className="subtle-panel">
       <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <div className="row wrap">
-          <strong>商品行 {line.lineCode || tempLineNo}</strong>
+          <strong>销售 {line.lineCode || tempLineNo}</strong>
           <StatusTag value={getOrderLineLineStatusLabel(line.lineStatus)} />
           <StatusTag value={completeness.complete ? '资料完整' : '资料缺失'} />
         </div>
@@ -944,10 +944,10 @@ export const OrderLineDraftCard = ({
             标记客服确认完成
           </button>
           <button type="button" className="button ghost small" onClick={onDuplicate}>
-            复制商品行
+            复制销售
           </button>
           <button type="button" className="button ghost small" onClick={onRemove} disabled={!canRemove}>
-            删除商品行
+            删除销售
           </button>
         </div>
       </div>
@@ -968,12 +968,12 @@ export const OrderLineDraftCard = ({
           </select>
         </label>
         <label className="field-control">
-          <span className="field-label">商品行编号</span>
+          <span className="field-label">销售编号</span>
           <input className="input" value={line.lineCode} onChange={(event) => onChange({ lineCode: event.target.value })} placeholder={tempLineNo} />
         </label>
         <label className="field-control">
-          <span className="field-label">生产任务编号</span>
-          <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder="默认同商品行编号 / 货号" />
+          <span className="field-label">货号</span>
+          <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder="默认同销售编号 / 货号" />
         </label>
         <label className="field-control">
           <span className="field-label">商品名称（必填）</span>
@@ -992,7 +992,7 @@ export const OrderLineDraftCard = ({
           <input className="input" value={line.versionNo} onChange={(event) => onChange({ versionNo: event.target.value })} />
         </label>
         <label className="field-control">
-          <span className="field-label">货号 / SKU</span>
+          <span className="field-label">产品货号</span>
           <input className="input" value={line.skuCode} onChange={(event) => onChange({ skuCode: event.target.value })} />
         </label>
       </div>
@@ -1090,7 +1090,7 @@ export const OrderLineDraftCard = ({
           </div>
         ) : null}
         <div className="field-control">
-          <span className="field-label">商品行设置</span>
+          <span className="field-label">销售设置</span>
           <label className="row" style={{ gap: 8 }}>
             <input type="checkbox" checked={line.needsDesign} onChange={(event) => onChange({ needsDesign: event.target.checked })} />
             <span>是否需要设计</span>
@@ -1146,17 +1146,17 @@ export const PurchaseDraftOrderLinesSection = ({
   return (
     <>
       <SectionCard
-        title="商品行区域"
+        title="销售区域"
         actions={
           <button type="button" className="button primary small" onClick={onAdd}>
-            添加商品行
+            添加销售
           </button>
         }
       >
         <div className="stack">
           <div className="subtle-panel">
-            <strong>本次购买共 {orderLines.length} 条商品行</strong>
-            <div className="text-caption">每张卡代表一件商品，保存草稿时会拆成独立商品行。</div>
+            <strong>本次购买共 {orderLines.length} 条销售</strong>
+            <div className="text-caption">每张卡代表一件商品，保存草稿时会拆成独立销售。</div>
           </div>
           {orderLines.map((line, index) => (
             <OrderLineDraftCard

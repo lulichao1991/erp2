@@ -34,7 +34,7 @@ export const PurchaseDetailPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            返回商品行中心
+            返回销售中心
           </Link>
         }
       />

@@ -232,7 +232,7 @@ export const buildInventoryRows = ({
     const customerName = customer?.name
     const linkedSummary = [
       productName ? `产品：${productName}` : null,
-      orderLineCode ? `商品行：${orderLineCode}` : null,
+      orderLineCode ? `销售：${orderLineCode}` : null,
       purchaseNo ? `购买记录：${purchaseNo}` : null,
       customerName ? `客户：${customerName}` : null
     ]

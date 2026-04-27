@@ -6,8 +6,8 @@ import { getTaskAssigneeRoleLabel } from '@/services/workflow/workflowMeta'
 import type { TaskAssigneeRole } from '@/types/task'
 
 const getSidebarShortLabel = (label: string) => {
-  if (label === '商品行中心') {
-    return '商品行'
+  if (label === '销售中心') {
+    return '销售'
   }
 
   if (label === '任务中心') {

@@ -84,7 +84,7 @@ export const TaskDetailPage = () => {
             </button>
             {orderLine ? (
               <button className="button secondary" onClick={() => navigate('/order-lines')}>
-                查看商品行
+                查看销售
               </button>
             ) : null}
             {purchaseId ? (
@@ -169,14 +169,14 @@ export const TaskDetailPage = () => {
           </div>
         </SectionCard>
         {purchaseId && !hideCommercialInfo ? (
-          <SectionCard title="商品行推进建议" description="任务完成不等于购买记录或商品行自动完成；当前只展示主线入口，不再写入旧订单阶段。">
+          <SectionCard title="销售推进建议" description="任务完成不等于购买记录或销售自动完成；当前只展示主线入口，不再写入旧订单阶段。">
             <div className="stack">
               <div className="text-muted">
-                阶段推进已迁移到商品行主线，后续接入基于 OrderLine.status 的推进能力。当前可以查看商品行或购买记录详情，由业务人员在主线页面继续跟进。
+                阶段推进已迁移到销售主线，后续接入基于 OrderLine.status 的推进能力。当前可以查看销售或购买记录详情，由业务人员在主线页面继续跟进。
               </div>
               <div className="row wrap">
                 <button type="button" className="button secondary" onClick={() => navigate('/order-lines')}>
-                  查看商品行
+                  查看销售
                 </button>
                 <button type="button" className="button secondary" onClick={() => navigate(`/purchases/${purchaseId}`)}>
                   查看购买记录

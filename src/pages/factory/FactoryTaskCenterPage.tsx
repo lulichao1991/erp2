@@ -251,7 +251,7 @@ export const FactoryTaskCenterPage = () => {
               canEdit={canSubmitFactoryReturn}
             />
           ) : (
-            <EmptyState title="暂无工厂任务" description="当前视图下没有分配给本工厂的商品行。" />
+            <EmptyState title="暂无工厂任务" description="当前视图下没有分配给本工厂的销售。" />
           )}
         </SectionCard>
       </div>

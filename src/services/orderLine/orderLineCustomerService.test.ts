@@ -18,8 +18,8 @@ describe('orderLineCustomerService', () => {
     })
 
     expect(result.complete).toBe(false)
-    expect(result.missingLabels).toEqual(['材质', '工艺要求', '生产任务编号'])
-    expect(result.summary).toBe('缺失：材质、工艺要求、生产任务编号')
+    expect(result.missingLabels).toEqual(['材质', '工艺要求', '货号'])
+    expect(result.summary).toBe('缺失：材质、工艺要求、货号')
   })
 
   it('builds completeness input from current OrderLine fields', () => {

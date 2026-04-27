@@ -30,7 +30,7 @@ describe('orderLineRiskSelectors', () => {
     const completeness = getOrderLineCompleteness(incompleteLine)
 
     expect(completeness.complete).toBe(false)
-    expect(completeness.missingLabels).toEqual(['材质', '工艺要求', '生产任务编号'])
+    expect(completeness.missingLabels).toEqual(['材质', '工艺要求', '货号'])
   })
 
   it('detects production overdue and blocked risks', () => {
@@ -88,6 +88,6 @@ describe('orderLineRiskSelectors', () => {
 
     expect(merchandiserBadges.find((badge) => badge.label === '待跟单审核')?.count).toBe(1)
     expect(financeBadges.find((badge) => badge.label === '财务待处理')?.count).toBeGreaterThan(0)
-    expect(managerBadges.find((badge) => badge.label === '风险商品行')?.count).toBeGreaterThan(0)
+    expect(managerBadges.find((badge) => badge.label === '风险销售')?.count).toBeGreaterThan(0)
   })
 })

@@ -162,7 +162,7 @@ export const DesignModelingWorkbenchPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            返回商品行中心
+            返回销售中心
           </Link>
         }
       />
@@ -202,7 +202,7 @@ export const DesignModelingWorkbenchPage = () => {
               canEdit={canUpdateDesignModeling}
             />
           ) : (
-            <EmptyState title="暂无设计建模任务" description="当前视图下没有需要处理的商品行。" />
+            <EmptyState title="暂无设计建模任务" description="当前视图下没有需要处理的销售。" />
           )}
         </SectionCard>
       </div>

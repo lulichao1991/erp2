@@ -148,7 +148,7 @@ export const ProductionFollowUpPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            查看商品行中心
+            查看销售中心
           </Link>
         }
       />
@@ -187,7 +187,7 @@ export const ProductionFollowUpPage = () => {
               canEdit={canDispatchProduction}
             />
           ) : (
-            <EmptyState title="暂无商品行" description="当前视图下没有需要跟进的商品行。" />
+            <EmptyState title="暂无销售" description="当前视图下没有需要跟进的销售。" />
           )}
         </SectionCard>
       </div>
@@ -261,7 +261,7 @@ const ProductionFollowUpTable = ({
                   <Link to={row.purchase ? `/purchases/${row.purchase.id}` : '/purchases'} className="production-plan-table-link">
                     {row.purchaseNo}
                   </Link>
-                  <span className="text-caption">商品行：{line.lineCode}</span>
+                  <span className="text-caption">销售：{line.lineCode}</span>
                 </section>
                 <section className="workbench-detail-block">
                   <h3>生产需求</h3>

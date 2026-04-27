@@ -22,7 +22,7 @@ const requiredFields: RequiredField[] = [
   { key: 'material', label: '材质' },
   { key: 'size', label: '尺寸 / 规格' },
   { key: 'craftRequirements', label: '工艺要求' },
-  { key: 'productionTaskNo', label: '生产任务编号' }
+  { key: 'productionTaskNo', label: '货号' }
 ]
 
 const hasValue = (value: unknown) => typeof value === 'string' ? value.trim().length > 0 : Boolean(value)

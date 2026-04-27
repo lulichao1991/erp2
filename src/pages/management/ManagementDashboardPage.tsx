@@ -13,15 +13,15 @@ export const ManagementDashboardPage = () => {
     { label: '今日新增购买记录', value: metrics.businessOverview.todayPurchaseCount },
     { label: '本月新增购买记录', value: metrics.businessOverview.monthPurchaseCount },
     { label: '进行中购买记录', value: metrics.businessOverview.activePurchaseCount },
-    { label: '进行中商品行', value: metrics.businessOverview.activeOrderLineCount },
-    { label: '待发货商品行', value: metrics.businessOverview.readyToShipLineCount },
-    { label: '已完成商品行', value: metrics.businessOverview.completedLineCount },
-    { label: '售后中商品行', value: metrics.businessOverview.afterSalesLineCount }
+    { label: '进行中销售', value: metrics.businessOverview.activeOrderLineCount },
+    { label: '待发货销售', value: metrics.businessOverview.readyToShipLineCount },
+    { label: '已完成销售', value: metrics.businessOverview.completedLineCount },
+    { label: '售后中销售', value: metrics.businessOverview.afterSalesLineCount }
   ]
   const riskMetrics = [
-    { label: '逾期商品行', value: metrics.productionRisks.overdueCount, danger: true },
-    { label: '即将逾期商品行', value: metrics.productionRisks.dueSoonCount },
-    { label: '阻塞商品行', value: metrics.productionRisks.blockedCount, danger: true },
+    { label: '逾期销售', value: metrics.productionRisks.overdueCount, danger: true },
+    { label: '即将逾期销售', value: metrics.productionRisks.dueSoonCount },
+    { label: '阻塞销售', value: metrics.productionRisks.blockedCount, danger: true },
     { label: '工厂未回传', value: metrics.productionRisks.pendingFactoryReturnCount },
     { label: '设计未完成', value: metrics.productionRisks.designIncompleteCount },
     { label: '建模未完成', value: metrics.productionRisks.modelingIncompleteCount },
@@ -45,7 +45,7 @@ export const ManagementDashboardPage = () => {
         actions={
           <div className="row wrap">
             <Link to="/order-lines" className="button secondary">
-              商品行中心
+              销售中心
             </Link>
             <Link to="/finance" className="button secondary">
               财务中心
@@ -59,7 +59,7 @@ export const ManagementDashboardPage = () => {
           <CompactMetricGrid items={businessMetrics} />
         </SectionCard>
 
-        <SectionCard title="商品行状态分布" className="compact-card management-panel">
+        <SectionCard title="销售状态分布" className="compact-card management-panel">
           <div className="management-status-grid">
             {metrics.statusDistribution.map((item) => (
               <div key={item.status} className="management-status-item">

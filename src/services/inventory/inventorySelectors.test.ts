@@ -20,7 +20,7 @@ describe('inventorySelectors', () => {
     expect(returnRow?.purchaseNo).toBe('PUR-202604-001')
     expect(returnRow?.orderLineCode).toBe('OL-202604-001-01')
     expect(returnRow?.customerName).toBe('张三')
-    expect(returnRow?.linkedSummary).toContain('商品行：OL-202604-001-01')
+    expect(returnRow?.linkedSummary).toContain('销售：OL-202604-001-01')
   })
 
   it('summarizes design samples, returns and review-needed inventory', () => {
@@ -118,7 +118,7 @@ describe('inventorySelectors', () => {
       operatorName: '周库管',
       occurredAt: '2026-04-26 10:00',
       relatedOrderLineId: 'oi-ring-001',
-      note: '为商品行预占链身'
+      note: '为销售预占链身'
     })
 
     expect(reserveResult.item.quantity).toBe(5)
