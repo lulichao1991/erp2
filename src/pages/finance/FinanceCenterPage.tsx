@@ -38,6 +38,7 @@ export const FinanceCenterPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<FinanceTab>('settlement')
   const [drafts, setDrafts] = useState<Record<string, FinanceDraft>>({})
+  const [expandedLineId, setExpandedLineId] = useState<string>('')
 
   const rows = useMemo(() => buildFinanceRows(appData.orderLines, appData.purchases), [appData.orderLines, appData.purchases])
   const visibleRows = useMemo(() => filterFinanceRowsByTab(rows, activeTab), [activeTab, rows])
@@ -141,11 +142,10 @@ export const FinanceCenterPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            查看商品行中心
+            查看销售中心
           </Link>
         }
       />
-      <p className="text-muted">财务中心围绕 Purchase 金额汇总和 OrderLine 工厂回传数据做确认、异常标记和锁定，不推进设计、建模或生产状态。</p>
 
       <SectionCard title="购买记录收款摘要" className="compact-card">
         <div className="stats-grid compact-stats">
@@ -199,10 +199,12 @@ export const FinanceCenterPage = () => {
               onConfirmSettlement={confirmSettlement}
               onMarkAbnormal={markAbnormal}
               onLock={lockFinance}
+              expandedLineId={expandedLineId}
+              onToggleLine={(lineId) => setExpandedLineId((current) => (current === lineId ? '' : lineId))}
               canEdit={canConfirmFinance}
             />
           ) : (
-            <EmptyState title="暂无财务任务" description="当前视图下没有需要处理的商品行。" />
+            <EmptyState title="暂无财务任务" description="当前视图下没有需要处理的销售。" />
           )}
         </SectionCard>
       </div>
@@ -217,6 +219,8 @@ const FinanceTable = ({
   onConfirmSettlement,
   onMarkAbnormal,
   onLock,
+  expandedLineId,
+  onToggleLine,
   canEdit
 }: {
   rows: FinanceRow[]
@@ -225,90 +229,92 @@ const FinanceTable = ({
   onConfirmSettlement: (row: FinanceRow) => void
   onMarkAbnormal: (row: FinanceRow) => void
   onLock: (line: OrderLine) => void
+  expandedLineId: string
+  onToggleLine: (lineId: string) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell">
-    <table className="table">
-      <thead>
-        <tr>
-          <th>商品行</th>
-          <th>工厂回传</th>
-          <th>销售 / 成本</th>
-          <th>毛利</th>
-          <th>风险</th>
-          <th>财务处理</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const line = row.line
-          const draft = getDraft(line)
+  <div className="workbench-task-list">
+    {rows.map((row) => {
+      const line = row.line
+      const draft = getDraft(line)
+      const isExpanded = expandedLineId === line.id
 
-          return (
-            <tr key={line.id}>
-              <td>
-                <strong>{line.productionTaskNo || line.lineCode}</strong>
-                <div>{line.name}</div>
-                <div className="text-caption">{row.purchaseNo}</div>
-                <StatusTag value={row.financeStatusLabel} />
-              </td>
-              <td>
-                <div>总重：{line.productionData?.totalWeight ?? '待回传'}</div>
-                <div>净金重：{line.productionData?.netMetalWeight ?? '待回传'}</div>
-                <div>材质：{line.productionData?.actualMaterial || '待回传'}</div>
-                <div className="text-caption">工费：{formatCurrency(line.productionData?.totalLaborCost)}</div>
-              </td>
-              <td>
-                <div>销售金额：{formatCurrency(row.salesAmount)}</div>
-                <div>工厂结算：{formatCurrency(row.factorySettlementAmount)}</div>
-                <div className="text-caption">定金分摊：{formatCurrency(line.allocatedDepositAmount)}</div>
-                <div className="text-caption">尾款分摊：{formatCurrency(line.allocatedFinalPaymentAmount)}</div>
-              </td>
-              <td>
-                <div>{formatCurrency(row.estimatedGrossProfit)}</div>
-                <div className="text-caption">毛利率 {row.estimatedGrossProfitRate}%</div>
-              </td>
-              <td>
-                <div className="row wrap">{row.riskLabels.length > 0 ? row.riskLabels.map((risk) => <RiskTag key={risk} value={risk} />) : <StatusTag value="无异常" />}</div>
-                {line.financeAbnormalReason ? <div className="text-caption">{line.financeAbnormalReason}</div> : null}
-              </td>
-              <td>
-                <label className="field-control">
-                  <span className="field-label">工厂结算金额</span>
-                  <input
-                    className="input"
-                    aria-label={`工厂结算金额-${line.id}`}
-                    value={draft.factorySettlementAmount}
-                    onChange={(event) => onDraftChange(line, { factorySettlementAmount: event.target.value })}
-                  />
-                </label>
-                <label className="field-control spacer-top">
-                  <span className="field-label">财务备注</span>
-                  <textarea className="textarea" aria-label={`财务备注-${line.id}`} value={draft.financeNote} onChange={(event) => onDraftChange(line, { financeNote: event.target.value })} />
-                </label>
-                <label className="field-control spacer-top">
-                  <span className="field-label">异常原因</span>
-                  <input className="input" aria-label={`异常原因-${line.id}`} value={draft.abnormalReason} onChange={(event) => onDraftChange(line, { abnormalReason: event.target.value })} />
-                </label>
-              </td>
-              <td>
-                <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onConfirmSettlement(row)} disabled={!canEdit}>
-                    确认工厂结算
-                  </button>
-                  <button type="button" className="button ghost small" onClick={() => onMarkAbnormal(row)} disabled={!canEdit}>
-                    标记财务异常
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onLock(line)} disabled={!canEdit}>
-                    锁定财务数据
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+      return (
+        <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
+          <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
+            <span className="workbench-task-main">
+              <strong>{line.productionTaskNo || line.lineCode}</strong>
+              <span>{line.name}</span>
+              <span className="text-caption">{row.purchaseNo}</span>
+            </span>
+            <span className="workbench-task-meta">
+              <span>销售 {formatCurrency(row.salesAmount)}</span>
+              <span>结算 {formatCurrency(row.factorySettlementAmount)}</span>
+              <span>毛利 {formatCurrency(row.estimatedGrossProfit)}</span>
+            </span>
+            <span className="workbench-task-tags">
+              <StatusTag value={row.financeStatusLabel} />
+              {row.riskLabels.slice(0, 2).map((risk) => (
+                <RiskTag key={risk} value={risk} />
+              ))}
+              {row.riskLabels.length === 0 ? <StatusTag value="无异常" /> : null}
+            </span>
+            <span className="workbench-task-toggle">{isExpanded ? '收起' : '展开'}</span>
+          </button>
+
+          {isExpanded ? (
+            <div className="workbench-task-detail">
+              <div className="workbench-detail-grid">
+                <section className="workbench-detail-block">
+                  <h3>工厂回传</h3>
+                  <span>总重：{line.productionData?.totalWeight ?? '待回传'}</span>
+                  <span>净金重：{line.productionData?.netMetalWeight ?? '待回传'}</span>
+                  <span>材质：{line.productionData?.actualMaterial || '待回传'}</span>
+                  <span className="text-caption">工费：{formatCurrency(line.productionData?.totalLaborCost)}</span>
+                </section>
+                <section className="workbench-detail-block">
+                  <h3>销售 / 成本</h3>
+                  <span>销售金额：{formatCurrency(row.salesAmount)}</span>
+                  <span>工厂结算：{formatCurrency(row.factorySettlementAmount)}</span>
+                  <span className="text-caption">定金分摊：{formatCurrency(line.allocatedDepositAmount)}</span>
+                  <span className="text-caption">尾款分摊：{formatCurrency(line.allocatedFinalPaymentAmount)}</span>
+                  <span className="text-caption">毛利率 {row.estimatedGrossProfitRate}%</span>
+                </section>
+                <section className="workbench-detail-block wide">
+                  <h3>财务处理</h3>
+                  <div className="row wrap">{row.riskLabels.length > 0 ? row.riskLabels.map((risk) => <RiskTag key={risk} value={risk} />) : <StatusTag value="无异常" />}</div>
+                  {line.financeAbnormalReason ? <div className="text-caption">{line.financeAbnormalReason}</div> : null}
+                  <div className="field-grid three spacer-top">
+                    <label className="field-control">
+                      <span className="field-label">工厂结算金额</span>
+                      <input className="input" aria-label={`工厂结算金额-${line.id}`} value={draft.factorySettlementAmount} onChange={(event) => onDraftChange(line, { factorySettlementAmount: event.target.value })} />
+                    </label>
+                    <label className="field-control">
+                      <span className="field-label">财务备注</span>
+                      <textarea className="textarea" aria-label={`财务备注-${line.id}`} value={draft.financeNote} onChange={(event) => onDraftChange(line, { financeNote: event.target.value })} />
+                    </label>
+                    <label className="field-control">
+                      <span className="field-label">异常原因</span>
+                      <input className="input" aria-label={`异常原因-${line.id}`} value={draft.abnormalReason} onChange={(event) => onDraftChange(line, { abnormalReason: event.target.value })} />
+                    </label>
+                  </div>
+                </section>
+              </div>
+              <div className="workbench-actions inline">
+                <button type="button" className="button secondary small" onClick={() => onConfirmSettlement(row)} disabled={!canEdit}>
+                  确认工厂结算
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onMarkAbnormal(row)} disabled={!canEdit}>
+                  标记财务异常
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onLock(line)} disabled={!canEdit}>
+                  锁定财务数据
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </article>
+      )
+    })}
   </div>
 )

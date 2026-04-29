@@ -164,7 +164,7 @@ export const ProductionPlanSummaryCard = ({
       <div className="production-plan-summary-top">
         <div className="production-plan-summary-hero">
           <div className="production-plan-summary-heading">
-            <div className="production-plan-summary-kicker">生产货号</div>
+            <div className="production-plan-summary-kicker">货号</div>
             <h2 className="production-plan-summary-code">{row.goodsNo}</h2>
             <p className="text-muted production-plan-summary-subtitle">{taskTitle}</p>
           </div>
@@ -190,7 +190,7 @@ export const ProductionPlanSummaryCard = ({
         </div>
         <ul className="production-plan-trace-grid">
           <li className="production-plan-trace-item">
-            <span className="production-plan-trace-label">关联商品行</span>
+            <span className="production-plan-trace-label">关联销售</span>
             <strong className="production-plan-trace-value">
               <Link to="/order-lines">{row.orderLineName || row.styleName}</Link>
             </strong>
@@ -456,7 +456,7 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
       <thead>
         <tr>
           <th>货号</th>
-          <th>商品行</th>
+          <th>销售</th>
           <th>来源版本</th>
           <th>品类</th>
           <th>规格</th>
@@ -504,7 +504,7 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
             <td>
               <div className="row wrap">
                 <Link to="/order-lines" className="button ghost small">
-                  查看商品行
+                  查看销售
                 </Link>
                 {row.purchaseId ? (
                   <Link to={`/purchases/${row.purchaseId}`} className="button ghost small">
