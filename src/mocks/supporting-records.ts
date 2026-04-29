@@ -29,8 +29,8 @@ export const afterSalesMock: AfterSalesCase[] = [
     reason: '客户反馈戒围可能偏紧',
     responsibleParty: '王客服',
     createdAt: '2026-04-24 11:20',
-    remark: '张三提前反馈戒围可能偏紧，先在戒指商品行上记录售后预警。',
-    note: '张三提前反馈戒围可能偏紧，先在戒指商品行上记录售后预警。'
+    remark: '张三提前反馈戒围可能偏紧，先在戒指销售上记录售后预警。',
+    note: '张三提前反馈戒围可能偏紧，先在戒指销售上记录售后预警。'
   }
 ]
 

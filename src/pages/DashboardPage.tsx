@@ -32,14 +32,14 @@ export const DashboardPage = () => {
     <PageContainer>
       <PageHeader title="协同概览" className="compact-page-header" />
       <div className="hero-placeholder">
-        <h2>产品管理 → 商品行中心 → 任务中心</h2>
-        <p>从工作台可以快速进入三个主模块，演示从产品标准模板到购买记录与商品行协同，再到任务推进的完整骨架。</p>
+        <h2>产品管理 → 销售中心 → 任务中心</h2>
+        <p>从工作台可以快速进入三个主模块，演示从产品标准模板到购买记录与销售协同，再到任务推进的完整骨架。</p>
         <div className="row wrap" style={{ justifyContent: 'center', marginTop: 20 }}>
           <Link to="/products" className="button primary">
             进入产品管理
           </Link>
           <Link to="/order-lines" className="button secondary">
-            进入商品行中心
+            进入销售中心
           </Link>
           <Link to="/tasks" className="button secondary">
             进入任务中心
@@ -55,9 +55,9 @@ export const DashboardPage = () => {
               <div className="text-muted">持续维护规格明细、价格规则和标准档案。</div>
             </div>
             <div>
-              <div className="text-caption">商品行中心</div>
-              <div className="quote-value">{orderLines.length} 条商品行</div>
-              <div className="text-muted">当前待确认 {pendingConfirmLineCount} 条商品行，待设计 {pendingDesignLineCount} 条商品行；购买记录 {purchases.length} 笔。</div>
+              <div className="text-caption">销售中心</div>
+              <div className="quote-value">{orderLines.length} 条销售</div>
+              <div className="text-muted">当前待确认 {pendingConfirmLineCount} 条销售，待设计 {pendingDesignLineCount} 条销售；购买记录 {purchases.length} 笔。</div>
             </div>
             <div>
               <div className="text-caption">任务中心</div>
@@ -98,7 +98,7 @@ export const DashboardPage = () => {
                   <StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />
                 </div>
                 <div className="spacer-top text-caption">{purchase.recipientName || '未维护收件人'}</div>
-                <div className="spacer-top text-muted">商品行：{orderLines.filter((line) => line.purchaseId === purchase.id || line.transactionId === purchase.id).length} 条</div>
+                <div className="spacer-top text-muted">销售：{orderLines.filter((line) => line.purchaseId === purchase.id || line.transactionId === purchase.id).length} 条</div>
                 <div className="spacer-top text-muted">最近活动：{purchase.latestActivityAt || '—'}</div>
                 <div className="spacer-top">
                   <Link to={`/purchases/${purchase.id}`} className="button ghost small">

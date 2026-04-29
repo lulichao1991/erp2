@@ -5,12 +5,12 @@
 
 当前 mock 数据结构服务于以下主链路：
 
-**产品维护（含规格明细与固定加价规则）  
--> 商品行引用产品  
--> 选择规格  
--> 自动带出规格参数  
--> 自动带出基础价格  
--> 叠加固定加价规则  
+**产品维护（含规格明细与固定加价规则）
+-> 销售引用产品
+-> 选择规格
+-> 自动带出规格参数
+-> 自动带出基础价格
+-> 叠加固定加价规则
 -> 生成系统参考报价**
 
 ---
@@ -61,7 +61,7 @@ mock 数据只用于：
 
 不要把产品模板、购买公共信息和单件商品执行对象混成一个对象。
 
-库存资产也要和产品模板、商品行执行对象分开：`InventoryItem` 是库管台账记录，可以关联 Product / Purchase / OrderLine，但不替代它们。
+库存资产也要和产品模板、销售执行对象分开：`InventoryItem` 是库管台账记录，可以关联 Product / Purchase / OrderLine，但不替代它们。
 
 ---
 
@@ -182,11 +182,11 @@ type Purchase = {
 
 ---
 
-## 5. OrderLine（商品行）
+## 5. OrderLine（销售）
 
-商品行是系统真正的业务执行对象，不等于产品模板，也不等于购买记录。
+销售是系统真正的业务执行对象，不等于产品模板，也不等于购买记录。
 
-一件商品对应一条独立商品行。同一次购买中的多个商品行可以分别推进规格确认、设计、委外、生产、发货和售后。
+一件商品对应一条独立销售。同一次购买中的多个销售可以分别推进规格确认、设计、委外、生产、发货和售后。
 
 ```ts
 type OrderLinePriority = 'normal' | 'high' | 'urgent' | 'vip'
@@ -356,7 +356,7 @@ type OrderLineProductionData = {
 ```
 
 说明：
-- `purchaseId` 是商品行归属购买记录的主要字段
+- `purchaseId` 是销售归属购买记录的主要字段
 - 如果历史代码里仍有 `transactionId`，只能作为兼容字段理解
 - `lineStatus` 是多角色工作流主状态，页面筛选、状态推进和任务分组优先基于它
 - `status` 短期保留为兼容展示字段，新增逻辑不要继续扩大它的主流程用途
@@ -417,8 +417,8 @@ type Product = {
 
 说明：
 - `Product` 是产品模板
-- 商品行引用产品时保留来源快照
-- 商品行的实际需求可以在模板基础上调整
+- 销售引用产品时保留来源快照
+- 销售的实际需求可以在模板基础上调整
 
 ---
 
@@ -467,14 +467,41 @@ type InventoryItem = {
   keeperName: string
   remark?: string
 }
+
+type InventoryMovementType =
+  | 'inbound'
+  | 'reserve'
+  | 'release'
+  | 'outbound'
+  | 'scrap'
+  | 'adjust'
+
+type InventoryMovement = {
+  id: string
+  inventoryItemId: string
+  inventoryCode: string
+  type: InventoryMovementType
+  quantity: number
+  operatorName: string
+  occurredAt: string
+  fromStatus?: InventoryItemStatus
+  toStatus?: InventoryItemStatus
+  fromLocation?: string
+  toLocation?: string
+  relatedOrderLineId?: string
+  note?: string
+}
 ```
 
 说明：
-- `InventoryItem` 是库管库存资产台账，不是产品模板，也不是商品行执行对象
+- `InventoryItem` 是库管库存资产台账，不是产品模板，也不是销售执行对象
 - 设计部门生产出来但不售卖的款式可以作为 `design_sample` 入库
 - 客户退货可以作为 `customer_return` 入库，并关联原 `purchaseId / orderLineId / customerId`
-- 常备采购、寄售或其他库存可以不关联商品行，但仍保持独立库存编号
+- 常备采购、寄售或其他库存可以不关联销售，但仍保持独立库存编号
 - 库存记录不推进 `OrderLine.lineStatus`、生产状态、财务状态或售后状态
+- 库存流转记录只描述库存资产变化：入库、占用、释放、出库、报废和调整
+- 库存盘点通过 `adjust` 流转记录表达账面与实盘差异，只更新库存总数、可用数和库位
+- 库存工作台的可领用、已占用、待出库、待盘点、低库存和不可用徽标由 `inventorySelectors` 统一计算
 
 ---
 
@@ -531,9 +558,9 @@ type ProductSnapshot = {
 ```
 
 说明：
-- 用于商品行与来源产品模板的关系显示和核对
+- 用于销售与来源产品模板的关系显示和核对
 - 首轮保留最关键的来源关系信息
-- 不把 `Product` 本体直接复制为商品行执行对象
+- 不把 `Product` 本体直接复制为销售执行对象
 
 ---
 
@@ -628,7 +655,7 @@ src/mocks/
 
 说明：
 - `purchases.ts` 是当前购买记录 mock 主线
-- `order-lines.ts` 是当前商品行 mock 主线
+- `order-lines.ts` 是当前销售 mock 主线
 - `transactions.ts` 只能作为 `Purchase` 的历史兼容导出
 - legacy `orders.ts` 已删除，不再作为 mock 入口
 
@@ -646,11 +673,11 @@ src/mocks/
 
 ## 15. 必须覆盖的 mock 场景
 
-### 场景 1：同一次购买，多件商品，多条商品行
+### 场景 1：同一次购买，多件商品，多条销售
 - 购买记录 1 条
-- 商品行多条
-- 商品行中心显示多行
-- 购买记录详情页显示本次购买下的所有商品行
+- 销售多条
+- 销售中心显示多行
+- 购买记录详情页显示本次购买下的所有销售
 
 ### 场景 2：戒指自动带价
 - 选择规格

@@ -31,7 +31,7 @@ export const purchaseMock: Purchase = {
     depositStatus: 'confirmed',
     finalPaymentStatus: 'pending',
     invoiced: false,
-    remark: '购买记录只汇总财务，商品推进以商品行为准。',
+    remark: '购买记录只汇总财务，商品推进以销售为准。',
     financeNote: '尾款待财务复核后确认。',
     transactions: [
       {
@@ -65,7 +65,7 @@ export const purchaseMock: Purchase = {
       transactionId: 'o-202604-001',
       type: 'purchase_created',
       title: '创建购买记录',
-      description: '同一次购买下创建山形戒指、山形吊坠、定制项链、手链蜡版等多条商品行。',
+      description: '同一次购买下创建山形戒指、山形吊坠、定制项链、手链蜡版等多条销售。',
       actorName: '王客服',
       createdAt: '2026-04-21 10:45'
     },
@@ -75,7 +75,7 @@ export const purchaseMock: Purchase = {
       transactionId: 'o-202604-001',
       type: 'status_changed',
       title: '山形戒指进入生产',
-      description: '戒指商品行独立推进到生产中。',
+      description: '戒指销售独立推进到生产中。',
       actorName: '李生产',
       createdAt: '2026-04-23 09:30',
       relatedOrderLineId: 'oi-ring-001'
@@ -86,7 +86,7 @@ export const purchaseMock: Purchase = {
       transactionId: 'o-202604-001',
       type: 'status_changed',
       title: '定制项链进入设计',
-      description: '项链商品行仍在设计中，不影响吊坠发货。',
+      description: '项链销售仍在设计中，不影响吊坠发货。',
       actorName: '陈设计',
       createdAt: '2026-04-24 16:30',
       relatedOrderLineId: 'ol-zhang-necklace-001'
