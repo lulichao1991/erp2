@@ -7,6 +7,9 @@ export type OrderLineCompletenessInput = {
   size?: string
   craftRequirements?: string
   productionTaskNo?: string
+  needsEngraving?: boolean
+  engraveImageFiles?: unknown[]
+  engravePltFiles?: unknown[]
   requiresDesign?: boolean
   requiresModeling?: boolean
 }
@@ -22,14 +25,39 @@ const requiredFields: RequiredField[] = [
   { key: 'material', label: '材质' },
   { key: 'size', label: '尺寸 / 规格' },
   { key: 'craftRequirements', label: '工艺要求' },
-  { key: 'productionTaskNo', label: '生产任务编号' }
+  { key: 'productionTaskNo', label: '货号' }
 ]
 
-const hasValue = (value: unknown) => typeof value === 'string' ? value.trim().length > 0 : Boolean(value)
+const engravingRequiredFields: RequiredField[] = [
+  { key: 'engraveImageFiles', label: '刻字参考图' },
+  { key: 'engravePltFiles', label: '刻字 PLT 文件' }
+]
+
+const hasValue = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value.length > 0
+  }
+
+  return typeof value === 'string' ? value.trim().length > 0 : Boolean(value)
+}
+
+export const hasEngravingRequirement = (input: Pick<
+  OrderLineCompletenessInput,
+  'needsEngraving' | 'engraveImageFiles' | 'engravePltFiles'
+> & {
+  engraveText?: string
+  selectedSpecialOptions?: string[]
+}) =>
+  Boolean(input.needsEngraving) ||
+  Boolean(input.engraveText?.trim()) ||
+  Boolean(input.selectedSpecialOptions?.includes('刻字')) ||
+  hasValue(input.engraveImageFiles) ||
+  hasValue(input.engravePltFiles)
 
 export const getOrderLineCompleteness = (input: OrderLineCompletenessInput) => {
-  const missingFields = requiredFields.filter((field) => !hasValue(input[field.key]))
-  const total = requiredFields.length
+  const activeRequiredFields = input.needsEngraving ? [...requiredFields, ...engravingRequiredFields] : requiredFields
+  const missingFields = activeRequiredFields.filter((field) => !hasValue(input[field.key]))
+  const total = activeRequiredFields.length
   const completed = total - missingFields.length
 
   return {
@@ -42,16 +70,29 @@ export const getOrderLineCompleteness = (input: OrderLineCompletenessInput) => {
   }
 }
 
-export const buildOrderLineCompletenessInput = (line: OrderLine): OrderLineCompletenessInput => ({
-  productName: line.name,
-  category: line.category,
-  material: line.selectedMaterial || line.actualRequirements?.material,
-  size: line.selectedSpecValue || line.actualRequirements?.sizeNote || line.actualRequirements?.specNote,
-  craftRequirements: line.selectedProcess || line.actualRequirements?.process,
-  productionTaskNo: line.productionTaskNo || line.skuCode || line.itemSku,
-  requiresDesign: Boolean(line.requiresDesign),
-  requiresModeling: Boolean(line.requiresModeling)
-})
+export const buildOrderLineCompletenessInput = (line: OrderLine): OrderLineCompletenessInput => {
+  const engraveImageFiles = line.actualRequirements?.engraveImageFiles ?? []
+  const engravePltFiles = line.actualRequirements?.engravePltFiles ?? []
+
+  return {
+    productName: line.name,
+    category: line.category,
+    material: line.selectedMaterial || line.actualRequirements?.material,
+    size: line.selectedSpecValue || line.actualRequirements?.sizeNote || line.actualRequirements?.specNote,
+    craftRequirements: line.selectedProcess || line.actualRequirements?.process,
+    productionTaskNo: line.productionTaskNo || line.skuCode || line.itemSku,
+    needsEngraving: hasEngravingRequirement({
+      engraveText: line.actualRequirements?.engraveText,
+      selectedSpecialOptions: line.selectedSpecialOptions,
+      engraveImageFiles,
+      engravePltFiles
+    }),
+    engraveImageFiles,
+    engravePltFiles,
+    requiresDesign: Boolean(line.requiresDesign),
+    requiresModeling: Boolean(line.requiresModeling)
+  }
+}
 
 export const getCustomerServiceNextLineStatus = (input: Pick<OrderLineCompletenessInput, 'requiresDesign' | 'requiresModeling'>): OrderLineLineStatus =>
   input.requiresDesign ? 'pending_design' : input.requiresModeling ? 'pending_modeling' : 'pending_merchandiser_review'

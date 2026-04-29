@@ -33,7 +33,7 @@ export const ProductionPlanDetailPage = () => {
   if (!detail) {
     return (
       <PageContainer>
-        <EmptyState title="未找到生产计划任务" description="当前任务不存在、不是工厂生产任务，或其关联商品行 / 来源产品 mock 数据不完整。" />
+        <EmptyState title="未找到生产计划" description="当前任务不存在、不是工厂任务，或其关联销售 / 来源产品 mock 数据不完整。" />
       </PageContainer>
     )
   }
@@ -103,9 +103,9 @@ export const ProductionPlanDetailPage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '生产计划', to: '/production-plan' }, { label: '生产任务详情' }, { label: row.goodsNo }]} />
+      <AppBreadcrumb items={[{ label: '生产计划', to: '/production-plan' }, { label: '货号详情' }, { label: row.goodsNo }]} />
       <PageHeader
-        title="生产任务详情"
+        title="货号详情"
         actions={
           <>
             <button className="button secondary" onClick={() => navigate('/production-plan')}>
@@ -115,7 +115,7 @@ export const ProductionPlanDetailPage = () => {
               查看原任务
             </button>
             <button className="button secondary" onClick={() => navigate('/order-lines')}>
-              查看商品行
+              查看销售
             </button>
             {row.purchaseId ? (
               <button className="button secondary" onClick={() => navigate(`/purchases/${row.purchaseId}`)}>
@@ -205,7 +205,7 @@ export const ProductionPlanDetailPage = () => {
               }))}
             />
           ) : (
-            <EmptyState title="当前还没有相关时间线" description="后续工厂状态变化、任务完成或商品行变更后，会继续沉淀到这里。" />
+            <EmptyState title="当前还没有相关时间线" description="后续工厂状态变化、任务完成或销售变更后，会继续沉淀到这里。" />
           )}
         </SectionCard>
       </div>

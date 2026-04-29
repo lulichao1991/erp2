@@ -76,7 +76,7 @@ const quickViewOptions: Array<{ value: InventoryQuickView; label: string; descri
   { value: 'customer_returns', label: '客户退货', description: '退货入库与待检商品' },
   { value: 'needs_review', label: '待检 / 瑕疵', description: '需要库管复核' },
   { value: 'reserved', label: '已占用', description: '已被预占的库存' },
-  { value: 'pending_outbound', label: '待出库', description: '已关联商品行的占用库存' },
+  { value: 'pending_outbound', label: '待出库', description: '已关联销售的占用库存' },
   { value: 'pending_stocktake', label: '待盘点', description: '待检、瑕疵或占用异常库存' },
   { value: 'low_stock', label: '低库存', description: '常备库存需补货' },
   { value: 'unavailable', label: '不可用', description: '无可用数量或已出库/报废' }
@@ -431,11 +431,10 @@ export const InventoryListPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            查看商品行中心
+            查看销售中心
           </Link>
         }
       />
-      <p className="text-muted">仓库商品管理是库存资产台账，记录设计留样、客户退货、常备采购和其他库存；它可以关联 Product / Purchase / OrderLine，但不替代产品模板或商品行执行流。</p>
 
       <div className="stats-grid compact-stats">
         <div className="stat-card compact-stat">
@@ -506,7 +505,7 @@ export const InventoryListPage = () => {
         <div className="filter-grid">
           <label>
             <span>搜索库存编号 / 商品 / 关联对象</span>
-            <input value={filters.keyword} onChange={(event) => updateFilter('keyword', event.target.value)} placeholder="输入库存编号、商品名称、购买记录或商品行" />
+            <input value={filters.keyword} onChange={(event) => updateFilter('keyword', event.target.value)} placeholder="输入库存编号、商品名称、购买记录或销售" />
           </label>
           <label>
             <span>来源筛选</span>
@@ -545,7 +544,7 @@ export const InventoryListPage = () => {
         </div>
       </SectionCard>
 
-      <div className="two-column-grid">
+      <div className="two-column-grid inventory-form-grid">
         <SectionCard title="入库登记" description="用于设计留样、客户退货、常备采购或其他库存的前端 mock 入库。">
           <div className="filter-grid">
             <label>
@@ -594,7 +593,7 @@ export const InventoryListPage = () => {
           </button>
         </SectionCard>
 
-        <SectionCard title="库存流转" description="占用、释放、出库、报废和库位调整只更新库存台账，不推进商品行状态。">
+        <SectionCard title="库存流转" description="占用、释放、出库、报废和库位调整只更新库存台账，不推进销售状态。">
           <div className="filter-grid">
             <label>
               <span>库存商品</span>
@@ -627,9 +626,9 @@ export const InventoryListPage = () => {
               <input value={movementDraft.toLocation} onChange={(event) => updateMovementDraft('toLocation', event.target.value)} placeholder="调整库位时填写" />
             </label>
             <label>
-              <span>关联商品行</span>
+              <span>关联销售</span>
               <select value={movementDraft.relatedOrderLineId} onChange={(event) => updateMovementDraft('relatedOrderLineId', event.target.value)}>
-                <option value="">不关联商品行</option>
+                <option value="">不关联销售</option>
                 {appData.orderLines.map((line) => (
                   <option key={line.id} value={line.id}>
                     {formatOrderLineOption(line)}
@@ -653,7 +652,7 @@ export const InventoryListPage = () => {
         </SectionCard>
       </div>
 
-      <SectionCard title="库存台账" description="库管视角只管理库存资产，不推进商品行生产、财务或售后状态。">
+      <SectionCard title="库存台账" description="库管视角只管理库存资产，不推进销售生产、财务或售后状态。">
         {visibleRows.length > 0 ? <InventoryTable rows={visibleRows} selectedId={selectedRow?.item.id} onSelect={setSelectedInventoryItemId} /> : <EmptyState title="暂无库存记录" description="当前筛选条件下没有库存商品，请放宽筛选或切回全部来源。" />}
       </SectionCard>
 
@@ -661,7 +660,7 @@ export const InventoryListPage = () => {
         {selectedRow ? <InventoryDetail row={selectedRow} movements={selectedMovements} orderLines={appData.orderLines} /> : <EmptyState title="未选择库存" description="请选择一条库存记录查看详情。" />}
       </SectionCard>
 
-      <SectionCard title="库存质检处置" description="用于客户退货、瑕疵件和待检修库存的库管复核；只更新库存资产，不推进商品行状态。">
+      <SectionCard title="库存质检处置" description="用于客户退货、瑕疵件和待检修库存的库管复核；只更新库存资产，不推进销售状态。">
         {selectedRow ? (
           <div className="filter-grid">
             <label>
@@ -719,7 +718,7 @@ export const InventoryListPage = () => {
         )}
       </SectionCard>
 
-      <SectionCard title="库存盘点" description="按实盘总数和实盘可用数调整库存台账，并生成调整流水；不推进商品行状态。">
+      <SectionCard title="库存盘点" description="按实盘总数和实盘可用数调整库存台账，并生成调整流水；不推进销售状态。">
         {selectedRow ? (
           <div className="filter-grid">
             <label>
@@ -761,7 +760,7 @@ export const InventoryListPage = () => {
         )}
       </SectionCard>
 
-      <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整；筛选只影响台账查看，不改变库存或商品行状态。">
+      <SectionCard title="库存流转记录" description="记录入库、占用、释放、出库、报废和库位调整；筛选只影响台账查看，不改变库存或销售状态。">
         <div className="filter-grid">
           <label>
             <span>流转类型筛选</span>
@@ -775,9 +774,9 @@ export const InventoryListPage = () => {
             </select>
           </label>
           <label>
-            <span>关联商品行筛选</span>
+            <span>关联销售筛选</span>
             <select value={movementFilters.relatedOrderLineId} onChange={(event) => updateMovementFilter('relatedOrderLineId', event.target.value)}>
-              <option value="">全部商品行关联</option>
+              <option value="">全部销售关联</option>
               {appData.orderLines.map((line) => (
                 <option key={line.id} value={line.id}>
                   {formatOrderLineOption(line)}
@@ -952,21 +951,21 @@ const OrderLineMovementSummary = ({ movements, orderLines }: { movements: Invent
   if (summaries.length === 0) {
     return (
       <div className="subtle-panel">
-        <strong>商品行占用 / 出库追溯</strong>
-        <p className="text-muted">当前库存还没有关联商品行的占用、释放或出库记录。</p>
+        <strong>销售占用 / 出库追溯</strong>
+        <p className="text-muted">当前库存还没有关联销售的占用、释放或出库记录。</p>
       </div>
     )
   }
 
   return (
     <div className="subtle-panel">
-      <strong>商品行占用 / 出库追溯</strong>
-      <p className="text-muted">这里只做库存追溯，不改写商品行状态。</p>
+      <strong>销售占用 / 出库追溯</strong>
+      <p className="text-muted">这里只做库存追溯，不改写销售状态。</p>
       <div className="table-wrap">
         <table className="data-table">
           <thead>
             <tr>
-              <th>关联商品行</th>
+              <th>关联销售</th>
               <th>占用</th>
               <th>释放</th>
               <th>出库</th>
@@ -1007,7 +1006,7 @@ const InventoryLinks = ({ row }: { row: InventoryRow }) => (
     ) : null}
     {row.item.orderLineId ? (
       <Link to="/order-lines" className="button ghost small" onClick={(event) => event.stopPropagation()}>
-        查看商品行中心
+        查看销售中心
       </Link>
     ) : null}
     {row.item.customerId ? (
@@ -1028,7 +1027,7 @@ const MovementTable = ({ movements, orderLines }: { movements: InventoryMovement
           <th>类型</th>
           <th>数量</th>
           <th>状态 / 库位</th>
-          <th>关联商品行</th>
+          <th>关联销售</th>
           <th>操作人</th>
           <th>备注</th>
         </tr>
