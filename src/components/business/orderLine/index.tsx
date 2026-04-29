@@ -31,6 +31,8 @@ import type {
   OrderLineOutsourceStatus,
   OrderLinePriority,
   OrderLineProductionStatus,
+  OrderLineWorkflowDesignStatus,
+  OrderLineWorkflowModelingStatus,
   OrderLineUploadedFile
 } from '@/types/order-line'
 import type { ProductCategory } from '@/types/product'
@@ -81,6 +83,14 @@ export type OrderLineDetailsDraft = {
   requiresDesign: boolean
   requiresModeling: boolean
   requiresWax: boolean
+  designStatus: OrderLineWorkflowDesignStatus
+  modelingStatus: OrderLineWorkflowModelingStatus
+  assignedDesignerId: string
+  assignedModelerId: string
+  assignedDesignerName: string
+  modelingFileUrl: string
+  waxFileUrl: string
+  designNote: string
   currentOwner: string
   promisedDate: string
 }
@@ -166,6 +176,16 @@ const priorityOptions: Array<{ value: OrderLinePriority; label: string }> = [
   { value: 'urgent', label: '加急' },
   { value: 'vip', label: 'VIP' }
 ]
+
+const designStatusOptions = Object.entries(designWorkflowStatusLabelMap).map(([value, label]) => ({
+  value: value as OrderLineWorkflowDesignStatus,
+  label
+}))
+
+const modelingStatusOptions = Object.entries(modelingWorkflowStatusLabelMap).map(([value, label]) => ({
+  value: value as OrderLineWorkflowModelingStatus,
+  label
+}))
 
 const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus | string; label: string }> = [
   { value: 'not_required', label: '不需要下厂' },
@@ -387,6 +407,14 @@ export const buildOrderLineDetailsDraft = (line: OrderLine): OrderLineDetailsDra
   requiresDesign: Boolean(line.requiresDesign ?? line.designInfo?.requiresRemodeling),
   requiresModeling: Boolean(line.requiresModeling ?? line.designInfo?.requiresRemodeling),
   requiresWax: Boolean(line.requiresWax ?? line.designInfo?.waxFileUrl),
+  designStatus: getOrderLineDesignStatus(line),
+  modelingStatus: getOrderLineModelingStatus(line),
+  assignedDesignerId: line.assignedDesignerId || '',
+  assignedModelerId: line.assignedModelerId || '',
+  assignedDesignerName: line.designInfo?.assignedDesigner || '',
+  modelingFileUrl: line.designInfo?.modelingFileUrl || '',
+  waxFileUrl: line.designInfo?.waxFileUrl || '',
+  designNote: line.designInfo?.designNote || '',
   currentOwner: line.currentOwner || '',
   promisedDate: line.promisedDate || ''
 })
@@ -421,6 +449,10 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
     requiresDesign: draft.requiresDesign,
     requiresModeling: draft.requiresModeling,
     requiresWax: draft.requiresWax,
+    designStatus: draft.designStatus,
+    modelingStatus: draft.modelingStatus,
+    assignedDesignerId: draft.assignedDesignerId.trim() || undefined,
+    assignedModelerId: draft.assignedModelerId.trim() || undefined,
     selectedSpecValue: selectedSpecValue || undefined,
     selectedMaterial: selectedMaterial || undefined,
     selectedProcess: selectedProcess || undefined,
@@ -440,7 +472,11 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
     designInfo: {
       ...line.designInfo,
       requiresRemodeling: draft.requiresModeling,
-      designStatus: draft.requiresDesign ? (line.designInfo?.designStatus === 'not_required' ? 'pending' : line.designInfo?.designStatus || 'pending') : 'not_required'
+      designStatus: draft.requiresDesign ? draft.designStatus : 'not_required',
+      assignedDesigner: draft.assignedDesignerName.trim() || undefined,
+      modelingFileUrl: draft.modelingFileUrl.trim() || undefined,
+      waxFileUrl: draft.waxFileUrl.trim() || undefined,
+      designNote: draft.designNote.trim() || undefined
     },
     productionInfo: {
       ...line.productionInfo,
@@ -468,7 +504,7 @@ export const buildOrderLineDetailsLog = ({
   actionLabel: '编辑销售需求',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: '修改了销售基础信息 / 实际需求'
+  note: '修改了销售定制参数'
 })
 
 export const buildOrderLineOutsourceDraft = (line: OrderLine): OrderLineOutsourceDraft => ({
@@ -1012,7 +1048,7 @@ const OrderLineDetailsSection = ({
 
     onUpdateLineDetails(line.id, draft)
     setEditing(false)
-    setMessage('已保存销售基础信息 / 实际需求')
+    setMessage('已保存定制参数')
   }
 
   const handleEngraveImageUpload = (files: FileList | null) => {
@@ -1025,10 +1061,10 @@ const OrderLineDetailsSection = ({
 
   return (
     <DetailSection
-      title="基础信息 / 实际需求"
+      title="定制参数"
       actions={
         !editing ? (
-          <button type="button" className="button ghost small" aria-label="编辑基础信息 / 实际需求" onClick={handleEdit} disabled={!onUpdateLineDetails}>
+          <button type="button" className="button ghost small" aria-label="编辑定制参数" onClick={handleEdit} disabled={!onUpdateLineDetails}>
             编辑
           </button>
         ) : null
@@ -1037,10 +1073,6 @@ const OrderLineDetailsSection = ({
       {editing ? (
         <div className="stack">
           <div className="field-grid three">
-            <label className="field-control">
-              <span className="field-label">销售编号</span>
-              <input className="input" value={draft.lineCode} onChange={(event) => updateDraft('lineCode', event.target.value)} />
-            </label>
             <label className="field-control">
               <span className="field-label">货号</span>
               <input className="input" value={draft.productionTaskNo} onChange={(event) => updateDraft('productionTaskNo', event.target.value)} />
@@ -1172,7 +1204,6 @@ const OrderLineDetailsSection = ({
         </div>
       ) : (
         <InfoGrid columns={3}>
-          <InfoField label="销售编号" value={line.lineCode || line.id} />
           <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
           <InfoField label="产品货号" value={line.skuCode || line.itemSku || '—'} />
           <InfoField label="商品名称" value={line.name} />
@@ -1269,6 +1300,10 @@ const OrderLineOutsourceSection = ({
         <div className="stack">
           <div className="field-grid three">
             <label className="field-control">
+              <span className="field-label">货号</span>
+              <input className="input" value={draft.itemSku} onChange={(event) => updateDraft('itemSku', event.target.value)} />
+            </label>
+            <label className="field-control">
               <span className="field-label">跟单负责人</span>
               <input className="input" value={draft.followUpOwner} onChange={(event) => updateDraft('followUpOwner', event.target.value)} />
             </label>
@@ -1279,10 +1314,6 @@ const OrderLineOutsourceSection = ({
             <label className="field-control">
               <span className="field-label">下厂时间</span>
               <input className="input" value={draft.outsourcedAt} onChange={(event) => updateDraft('outsourcedAt', event.target.value)} placeholder="YYYY-MM-DD" />
-            </label>
-            <label className="field-control">
-              <span className="field-label">货号</span>
-              <input className="input" value={draft.itemSku} onChange={(event) => updateDraft('itemSku', event.target.value)} />
             </label>
             <label className="field-control">
               <span className="field-label">工厂计划交期</span>
@@ -1314,13 +1345,169 @@ const OrderLineOutsourceSection = ({
         </div>
       ) : (
         <InfoGrid columns={3}>
+          <InfoField label="货号" value={line.productionTaskNo || line.itemSku || line.lineCode || '—'} />
           <InfoField label="跟单负责人" value={line.currentOwner || '待分配'} />
           <InfoField label="工厂" value={getFactorySummary(line)} />
           <InfoField label="下厂时间" value={line.outsourceInfo?.outsourcedAt || '待补充'} />
-          <InfoField label="货号" value={line.itemSku || line.lineCode || '—'} />
           <InfoField label="工厂计划交期" value={line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '—'} />
           <InfoField label="委外状态" value={getOutsourceStatusLabel(String(line.outsourceInfo?.outsourceStatus || ''))} />
           <InfoField label="跟单备注 / 委外备注" value={line.outsourceInfo?.outsourceNote || '—'} />
+        </InfoGrid>
+      )}
+      {message ? (
+        <div role="status" className="success-alert spacer-top">
+          {message}
+        </div>
+      ) : null}
+    </DetailSection>
+  )
+}
+
+const OrderLineDesignModelingSection = ({
+  line,
+  onUpdateLineDetails
+}: {
+  line: OrderLine
+  onUpdateLineDetails?: OrderLineDetailsUpdateHandler
+}) => {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<OrderLineDetailsDraft>(() => buildOrderLineDetailsDraft(line))
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    setDraft(buildOrderLineDetailsDraft(line))
+    setEditing(false)
+    setMessage('')
+  }, [line.id])
+
+  const updateDraft = <K extends keyof OrderLineDetailsDraft>(field: K, value: OrderLineDetailsDraft[K]) => {
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleEdit = () => {
+    setDraft(buildOrderLineDetailsDraft(line))
+    setMessage('')
+    setEditing(true)
+  }
+
+  const handleCancel = () => {
+    setDraft(buildOrderLineDetailsDraft(line))
+    setEditing(false)
+    setMessage('')
+  }
+
+  const handleSave = () => {
+    if (!onUpdateLineDetails) {
+      return
+    }
+
+    onUpdateLineDetails(line.id, draft)
+    setEditing(false)
+    setMessage('已保存设计建模信息')
+  }
+
+  return (
+    <DetailSection
+      title="设计建模"
+      actions={
+        !editing ? (
+          <button type="button" className="button ghost small" aria-label="编辑设计建模" onClick={handleEdit} disabled={!onUpdateLineDetails}>
+            编辑
+          </button>
+        ) : null
+      }
+    >
+      {editing ? (
+        <div className="stack">
+          <div className="field-grid three">
+            <label className="field-control">
+              <span className="field-label">是否需要设计</span>
+              <select className="select" value={draft.requiresDesign ? 'true' : 'false'} onChange={(event) => updateDraft('requiresDesign', event.target.value === 'true')}>
+                <option value="true">是</option>
+                <option value="false">否</option>
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">是否需要建模</span>
+              <select className="select" value={draft.requiresModeling ? 'true' : 'false'} onChange={(event) => updateDraft('requiresModeling', event.target.value === 'true')}>
+                <option value="true">是</option>
+                <option value="false">否</option>
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">是否需要出蜡</span>
+              <select className="select" value={draft.requiresWax ? 'true' : 'false'} onChange={(event) => updateDraft('requiresWax', event.target.value === 'true')}>
+                <option value="true">是</option>
+                <option value="false">否</option>
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">设计状态</span>
+              <select className="select" value={draft.designStatus} onChange={(event) => updateDraft('designStatus', event.target.value as OrderLineWorkflowDesignStatus)}>
+                {designStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">建模状态</span>
+              <select className="select" value={draft.modelingStatus} onChange={(event) => updateDraft('modelingStatus', event.target.value as OrderLineWorkflowModelingStatus)}>
+                {modelingStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-control">
+              <span className="field-label">设计负责人</span>
+              <input className="input" value={draft.assignedDesignerName} onChange={(event) => updateDraft('assignedDesignerName', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">设计人 ID</span>
+              <input className="input" value={draft.assignedDesignerId} onChange={(event) => updateDraft('assignedDesignerId', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">建模人 ID</span>
+              <input className="input" value={draft.assignedModelerId} onChange={(event) => updateDraft('assignedModelerId', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">建模文件</span>
+              <input className="input" value={draft.modelingFileUrl} onChange={(event) => updateDraft('modelingFileUrl', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">出蜡文件</span>
+              <input className="input" value={draft.waxFileUrl} onChange={(event) => updateDraft('waxFileUrl', event.target.value)} />
+            </label>
+            <label className="field-control">
+              <span className="field-label">设计备注</span>
+              <textarea className="textarea" value={draft.designNote} onChange={(event) => updateDraft('designNote', event.target.value)} />
+            </label>
+          </div>
+          <div className="row">
+            <button type="button" className="button primary small" onClick={handleSave}>
+              保存设计建模
+            </button>
+            <button type="button" className="button secondary small" onClick={handleCancel}>
+              取消编辑
+            </button>
+          </div>
+        </div>
+      ) : (
+        <InfoGrid columns={3}>
+          <InfoField label="是否需要设计" value={line.requiresDesign ? '是' : '否'} />
+          <InfoField label="是否需要建模" value={line.requiresModeling ? '是' : '否'} />
+          <InfoField label="是否需要出蜡" value={line.requiresWax ? '是' : '否'} />
+          <InfoField label="设计状态" value={designWorkflowStatusLabelMap[getOrderLineDesignStatus(line)]} />
+          <InfoField label="建模状态" value={modelingWorkflowStatusLabelMap[getOrderLineModelingStatus(line)]} />
+          <InfoField label="设计负责人" value={line.designInfo?.assignedDesigner || '—'} />
+          <InfoField label="设计人 ID" value={line.assignedDesignerId || '—'} />
+          <InfoField label="建模人 ID" value={line.assignedModelerId || '—'} />
+          <InfoField label="建模文件" value={line.designInfo?.modelingFileUrl || '暂无文件'} />
+          <InfoField label="出蜡文件" value={line.designInfo?.waxFileUrl || '暂无文件'} />
+          <InfoField label="设计备注" value={line.designInfo?.designNote || '—'} />
         </InfoGrid>
       )}
       {message ? (
@@ -2052,12 +2239,12 @@ export const OrderLineTable = ({
   afterSalesCases?: AfterSalesCase[]
 }) => (
   <div className="table-shell">
-    <table className="table">
+    <table className="table order-line-table">
       <thead>
         <tr>
           <th>风险</th>
           <th>货号</th>
-          <th>商品名称</th>
+          <th>商品</th>
           <th>客户</th>
           <th>参数摘要</th>
           <th>状态</th>
@@ -2116,10 +2303,12 @@ export const OrderLineTable = ({
               <td>
                 <div className="stack order-line-goods-no-cell">
                   <strong>{line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</strong>
+                  <span>{line.name}</span>
+                  <span className="text-caption">{versionLabel}</span>
                 </div>
               </td>
               <td>
-                <div className="order-line-product-preview">
+                <div className="order-line-product-preview compact">
                   {product?.coverImage ? (
                     <img className="order-line-product-thumb" src={product.coverImage} alt={`${line.name}缩略图`} />
                   ) : (
@@ -2127,10 +2316,6 @@ export const OrderLineTable = ({
                       {line.name.slice(0, 1) || '销'}
                     </span>
                   )}
-                  <div className="stack" style={{ gap: 4 }}>
-                    <div>{line.name}</div>
-                    <div className="text-caption">{versionLabel}</div>
-                  </div>
                 </div>
               </td>
               <td>
@@ -2228,6 +2413,12 @@ export const OrderLineDetailDrawer = ({
   const lineLogs = line ? logs.filter((log) => log.orderLineId === line.id) : []
   const sourceProduct = line ? mockProducts.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
   const sourceProductCompareValue = line ? buildOrderLineSourceProductCompareValue(line) : undefined
+  const listPrice = line?.quote?.systemQuote ?? line?.lineSalesAmount ?? line?.finalDisplayQuote
+  const dealPrice = line?.finalDisplayQuote ?? line?.lineSalesAmount ?? line?.quote?.systemQuote
+  const depositAmount = line?.allocatedDepositAmount
+  const finalPaymentAmount =
+    line?.allocatedFinalPaymentAmount ??
+    (typeof dealPrice === 'number' && typeof depositAmount === 'number' ? Math.max(dealPrice - depositAmount, 0) : undefined)
   useEffect(() => {
     setLogisticsFormOpen(false)
     setAfterSalesFormOpen(false)
@@ -2247,15 +2438,19 @@ export const OrderLineDetailDrawer = ({
         <div className="stack">
           <DetailSection title="顶部摘要">
             <InfoGrid columns={3}>
-              <InfoField label="销售编号" value={line.lineCode || line.id} />
               <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
               <InfoField label="商品名称" value={line.name} />
               <InfoField label="销售状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
               <InfoField label="当前负责人" value={line.currentOwner || purchase?.ownerName || '待分配'} />
               <InfoField label="客户姓名" value={customer?.name || '—'} />
+              <InfoField label="客户 ID" value={customer?.id || line.customerId || purchase?.customerId || '—'} />
               <InfoField label="所属购买记录编号" value={purchase?.purchaseNo || '—'} />
               <InfoField label="承诺交期" value={line.promisedDate || purchase?.promisedDate || '—'} />
               <InfoField label="生产状态" value={productionWorkflowStatusLabelMap[getOrderLineProductionStatus(line)]} />
+              <InfoField label="标价" value={formatPrice(listPrice)} />
+              <InfoField label="定金" value={formatPrice(depositAmount)} />
+              <InfoField label="成交价" value={formatPrice(dealPrice)} />
+              <InfoField label="尾款" value={formatPrice(finalPaymentAmount)} />
               <InfoField label="财务状态" value={financeWorkflowStatusLabelMap[getOrderLineFinanceStatus(line)]} />
               <InfoField
                 label="风险标签"
@@ -2307,21 +2502,7 @@ export const OrderLineDetailDrawer = ({
             </InfoGrid>
           </DetailSection>
 
-          <DetailSection title="设计建模摘要">
-            <InfoGrid columns={3}>
-              <InfoField label="是否需要设计" value={line.requiresDesign ? '是' : '否'} />
-              <InfoField label="是否需要建模" value={line.requiresModeling ? '是' : '否'} />
-              <InfoField label="是否需要出蜡" value={line.requiresWax ? '是' : '否'} />
-              <InfoField label="设计状态" value={designWorkflowStatusLabelMap[getOrderLineDesignStatus(line)]} />
-              <InfoField label="建模状态" value={modelingWorkflowStatusLabelMap[getOrderLineModelingStatus(line)]} />
-              <InfoField label="设计负责人" value={line.designInfo?.assignedDesigner || '—'} />
-              <InfoField label="设计人 ID" value={line.assignedDesignerId || '—'} />
-              <InfoField label="建模人 ID" value={line.assignedModelerId || '—'} />
-              <InfoField label="建模文件" value={line.designInfo?.modelingFileUrl || '暂无文件'} />
-              <InfoField label="出蜡文件" value={line.designInfo?.waxFileUrl || '暂无文件'} />
-              <InfoField label="设计备注" value={line.designInfo?.designNote || '—'} />
-            </InfoGrid>
-          </DetailSection>
+          <OrderLineDesignModelingSection line={line} onUpdateLineDetails={onUpdateLineDetails} />
 
           <OrderLineOutsourceSection line={line} onUpdateOutsourceInfo={onUpdateOutsourceInfo} />
           <OrderLineProductionSection line={line} onUpdateProductionInfo={onUpdateProductionInfo} />

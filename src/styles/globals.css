@@ -1083,6 +1083,61 @@ button.stat-card {
   background: rgba(42, 63, 94, 0.06);
 }
 
+.order-line-table {
+  table-layout: fixed;
+  min-width: 1280px;
+}
+
+.order-line-table th:nth-child(1),
+.order-line-table td:nth-child(1) {
+  width: 108px;
+}
+
+.order-line-table th:nth-child(2),
+.order-line-table td:nth-child(2) {
+  width: 164px;
+}
+
+.order-line-table th:nth-child(3),
+.order-line-table td:nth-child(3) {
+  width: 78px;
+}
+
+.order-line-table th:nth-child(4),
+.order-line-table td:nth-child(4) {
+  width: 128px;
+}
+
+.order-line-table th:nth-child(5),
+.order-line-table td:nth-child(5) {
+  width: 280px;
+}
+
+.order-line-table th:nth-child(6),
+.order-line-table td:nth-child(6) {
+  width: 104px;
+}
+
+.order-line-table th:nth-child(7),
+.order-line-table td:nth-child(7) {
+  width: 136px;
+}
+
+.order-line-table th:nth-child(8),
+.order-line-table td:nth-child(8) {
+  width: 116px;
+}
+
+.order-line-table th:nth-child(9),
+.order-line-table td:nth-child(9) {
+  width: 168px;
+}
+
+.order-line-table th:nth-child(10),
+.order-line-table td:nth-child(10) {
+  width: 72px;
+}
+
 .table td.price {
   font-weight: 600;
   color: var(--color-primary-600);
@@ -1464,7 +1519,7 @@ button.stat-card {
 
 .order-line-goods-no-cell {
   gap: 4px;
-  min-width: 112px;
+  min-width: 0;
 }
 
 .order-line-goods-no-cell strong {
@@ -1476,6 +1531,11 @@ button.stat-card {
   align-items: center;
   gap: 10px;
   min-width: 150px;
+}
+
+.order-line-product-preview.compact {
+  min-width: 0;
+  justify-content: center;
 }
 
 .order-line-product-thumb,
@@ -2049,7 +2109,7 @@ button.stat-card {
   position: fixed;
   inset: 0 0 0 auto;
   z-index: 60;
-  width: min(760px, 92vw);
+  width: min(980px, 94vw);
   background: var(--color-bg-card);
   box-shadow: -24px 0 60px rgba(15, 23, 42, 0.18);
   overflow: auto;
