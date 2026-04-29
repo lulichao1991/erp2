@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, buildInventoryRows, buildInventorySummary, filterInventoryRows } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryLocationSummaries, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryAvailabilityStatus, getInventoryReservedQuantity, getInventoryReviewStatus, getInventoryWorkbenchBadges } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -20,7 +20,7 @@ describe('inventorySelectors', () => {
     expect(returnRow?.purchaseNo).toBe('PUR-202604-001')
     expect(returnRow?.orderLineCode).toBe('OL-202604-001-01')
     expect(returnRow?.customerName).toBe('张三')
-    expect(returnRow?.linkedSummary).toContain('商品行：OL-202604-001-01')
+    expect(returnRow?.linkedSummary).toContain('销售：OL-202604-001-01')
   })
 
   it('summarizes design samples, returns and review-needed inventory', () => {
@@ -29,9 +29,31 @@ describe('inventorySelectors', () => {
     expect(summary.skuCount).toBe(inventoryItemsMock.length)
     expect(summary.totalQuantity).toBe(8)
     expect(summary.availableQuantity).toBe(7)
+    expect(summary.reservedQuantity).toBe(1)
     expect(summary.designSampleCount).toBe(1)
     expect(summary.customerReturnCount).toBe(1)
     expect(summary.needsReviewCount).toBe(1)
+    expect(summary.lowStockCount).toBe(1)
+  })
+
+  it('summarizes inventory quantities by warehouse location', () => {
+    const locationSummaries = buildInventoryLocationSummaries(buildRows())
+    const returnLocation = locationSummaries.find((summary) => summary.location === 'B-退货待检-03')
+    const stockLocation = locationSummaries.find((summary) => summary.location === 'C-常备链身-02')
+    expect(returnLocation).toMatchObject({
+      skuCount: 1,
+      totalQuantity: 1,
+      availableQuantity: 0,
+      reservedQuantity: 1,
+      needsReviewCount: 1
+    })
+    expect(stockLocation).toMatchObject({
+      skuCount: 1,
+      totalQuantity: 5,
+      availableQuantity: 5,
+      reservedQuantity: 0,
+      needsReviewCount: 0
+    })
   })
 
   it('filters inventory by source, status, condition, location and keyword', () => {
@@ -48,10 +70,42 @@ describe('inventorySelectors', () => {
     const rows = buildRows()
 
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'design_samples', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'available', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-DS-202604-001', 'INV-ST-202604-003', 'INV-OT-202604-004'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'customer_returns', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'needs_review', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'reserved', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_outbound', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002'])
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_stocktake', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002'])
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'low_stock', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-OT-202604-004'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+  })
+
+  it('calculates reserved quantity from total and available quantity', () => {
+    const reservedItem = inventoryItemsMock.find((item) => item.status === 'reserved')
+    expect(reservedItem).toBeDefined()
+
+    expect(getInventoryReservedQuantity(reservedItem!)).toBe(1)
+    expect(getInventoryReservedQuantity({ ...reservedItem!, availableQuantity: 2, quantity: 1 })).toBe(0)
+  })
+
+  it('classifies inventory availability, review status and workbench badges', () => {
+    const rows = buildRows()
+    const returnRow = rows.find((row) => row.item.id === 'inventory-return-ring-001')
+    const stockRow = rows.find((row) => row.item.id === 'inventory-stock-chain-001')
+    const stoneRow = rows.find((row) => row.item.id === 'inventory-other-stone-001')
+    expect(returnRow).toBeDefined()
+    expect(stockRow).toBeDefined()
+    expect(stoneRow).toBeDefined()
+
+    expect(getInventoryAvailabilityStatus(returnRow!.item)).toBe('reserved')
+    expect(getInventoryReviewStatus(returnRow!.item)).toBe('needs_review')
+    expect(getInventoryWorkbenchBadges(returnRow!)).toEqual(expect.arrayContaining(['已占用', '待质检', '待出库']))
+
+    expect(getInventoryAvailabilityStatus(stockRow!.item)).toBe('available')
+    expect(getInventoryReviewStatus(stockRow!.item)).toBe('clear')
+    expect(getInventoryWorkbenchBadges(stockRow!)).toContain('可领用')
+
+    expect(getInventoryWorkbenchBadges(stoneRow!)).toEqual(expect.arrayContaining(['可领用', '低库存']))
   })
 
   it('applies inventory movements without changing linked order lines', () => {
@@ -63,7 +117,8 @@ describe('inventorySelectors', () => {
       quantity: 2,
       operatorName: '周库管',
       occurredAt: '2026-04-26 10:00',
-      note: '为商品行预占链身'
+      relatedOrderLineId: 'oi-ring-001',
+      note: '为销售预占链身'
     })
 
     expect(reserveResult.item.quantity).toBe(5)
@@ -72,6 +127,7 @@ describe('inventorySelectors', () => {
     expect(reserveResult.movement.type).toBe('reserve')
     expect(reserveResult.movement.fromStatus).toBe('in_stock')
     expect(reserveResult.movement.toStatus).toBe('in_stock')
+    expect(reserveResult.movement.relatedOrderLineId).toBe('oi-ring-001')
 
     const outboundResult = applyInventoryMovement(reserveResult.item, {
       type: 'outbound',
@@ -85,6 +141,40 @@ describe('inventorySelectors', () => {
     expect(outboundResult.item.availableQuantity).toBe(2)
     expect(outboundResult.item.status).toBe('in_stock')
     expect(outboundResult.movement.type).toBe('outbound')
+  })
+
+  it('summarizes inventory movements linked to order lines', () => {
+    const movements = [
+      {
+        id: 'movement-reserve',
+        inventoryItemId: 'inventory-stock-chain-001',
+        inventoryCode: 'INV-ST-202604-003',
+        type: 'reserve' as const,
+        quantity: 2,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 10:00',
+        relatedOrderLineId: 'oi-ring-001'
+      },
+      {
+        id: 'movement-outbound',
+        inventoryItemId: 'inventory-stock-chain-001',
+        inventoryCode: 'INV-ST-202604-003',
+        type: 'outbound' as const,
+        quantity: 1,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 11:00',
+        relatedOrderLineId: 'oi-ring-001'
+      }
+    ]
+
+    const [summary] = buildInventoryOrderLineMovementSummary(movements, orderLinesMock)
+
+    expect(summary.orderLineDisplay).toBe('OL-202604-001-01 / 山形戒指')
+    expect(summary.reserveQuantity).toBe(2)
+    expect(summary.releaseQuantity).toBe(0)
+    expect(summary.outboundQuantity).toBe(1)
+    expect(summary.movementCount).toBe(2)
+    expect(summary.latestOccurredAt).toBe('2026-04-26 11:00')
   })
 
   it('rejects invalid movement quantities', () => {
@@ -147,5 +237,53 @@ describe('inventorySelectors', () => {
         occurredAt: '2026-04-26 12:00'
       })
     ).toThrow('可用数量不能大于库存数量')
+  })
+
+  it('applies stocktaking as an inventory adjustment movement', () => {
+    const stockItem = inventoryItemsMock.find((item) => item.id === 'inventory-stock-chain-001')
+    expect(stockItem).toBeDefined()
+
+    const result = applyInventoryStocktake(stockItem!, {
+      countedQuantity: 4,
+      countedAvailableQuantity: 3,
+      operatorName: '周库管',
+      occurredAt: '2026-04-26 15:00',
+      toLocation: 'C-常备库存-02',
+      reason: '盘亏 1 件',
+      note: '月度盘点'
+    })
+
+    expect(result.item.quantity).toBe(4)
+    expect(result.item.availableQuantity).toBe(3)
+    expect(result.item.warehouseLocation).toBe('C-常备库存-02')
+    expect(result.item.orderLineId).toBe(stockItem?.orderLineId)
+    expect(result.movement.type).toBe('adjust')
+    expect(result.movement.quantity).toBe(1)
+    expect(result.movement.note).toContain('盘点调整：总数 5→4，可用 5→3')
+    expect(result.movement.note).toContain('原因：盘亏 1 件')
+    expect(result.movement.note).toContain('月度盘点')
+  })
+
+  it('rejects invalid stocktaking quantities', () => {
+    const stockItem = inventoryItemsMock.find((item) => item.id === 'inventory-stock-chain-001')
+    expect(stockItem).toBeDefined()
+
+    expect(() =>
+      applyInventoryStocktake(stockItem!, {
+        countedQuantity: 1,
+        countedAvailableQuantity: 2,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 15:00'
+      })
+    ).toThrow('实盘可用数不能大于实盘总数')
+
+    expect(() =>
+      applyInventoryStocktake(stockItem!, {
+        countedQuantity: -1,
+        countedAvailableQuantity: 0,
+        operatorName: '周库管',
+        occurredAt: '2026-04-26 15:00'
+      })
+    ).toThrow('盘点数量不能为负数')
   })
 })

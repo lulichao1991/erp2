@@ -11,7 +11,7 @@ const taskTypeTitleMap: Record<TaskType, string> = {
   order_process: '订单处理任务',
   design_modeling: '设计建模任务',
   production_prep: '生产准备任务',
-  factory_production: '工厂生产任务',
+  factory_production: '工厂任务',
   after_sales: '售后任务'
 }
 
