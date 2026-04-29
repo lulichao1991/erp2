@@ -42,7 +42,6 @@ export const CustomerDetailPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">客户详情只做历史归集；购买执行仍进入购买记录和商品行中心。</p>
       <div className="stack">
         <CustomerBasicSection overview={overview} />
         <CustomerLegacyTotalsSection customer={customer} />

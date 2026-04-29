@@ -75,7 +75,7 @@ export const CustomerListTable = ({ overviews }: { overviews: CustomerOverview[]
             <th>微信</th>
             <th>来源渠道</th>
             <th>当前购买记录</th>
-            <th>当前商品行</th>
+            <th>当前销售</th>
             <th>当前售后</th>
             <th>最近购买时间</th>
             <th>操作</th>
@@ -116,7 +116,7 @@ export const CustomerBasicSection = ({ overview }: { overview: CustomerOverview 
         <InfoField label="微信" value={customer.wechat || '—'} />
         <InfoField label="来源渠道" value={formatChannels(customer.sourceChannels)} />
         <InfoField label="当前购买记录数" value={overview.purchases.length} />
-        <InfoField label="当前商品行数量" value={overview.orderLines.length} />
+        <InfoField label="当前销售数量" value={overview.orderLines.length} />
         <InfoField label="当前售后数" value={overview.afterSalesCases.length} />
         <InfoField label="最近购买时间" value={overview.latestPurchaseAt} />
         <InfoField label="客户备注" value={customer.remark || '—'} />
@@ -127,10 +127,10 @@ export const CustomerBasicSection = ({ overview }: { overview: CustomerOverview 
 
 export const CustomerLegacyTotalsSection = ({ customer }: { customer: Customer }) => (
   <SectionCard title="外部导入统计参考">
-    <p className="text-muted">以下为客户 mock 保留的历史兼容字段，不作为当前系统内购买记录、商品行或售后列表的数量来源。</p>
+    <p className="text-muted">以下为客户 mock 保留的历史兼容字段，不作为当前系统内购买记录、销售或售后列表的数量来源。</p>
     <InfoGrid columns={3}>
       <InfoField label="外部历史购买次数" value={customer.totalTransactionCount} />
-      <InfoField label="外部历史商品行数量" value={customer.totalOrderLineCount} />
+      <InfoField label="外部历史销售数量" value={customer.totalOrderLineCount} />
       <InfoField label="外部历史售后次数" value={customer.totalAfterSalesCount} />
     </InfoGrid>
   </SectionCard>
@@ -146,7 +146,7 @@ export const CustomerPurchasesSection = ({ purchases }: { purchases: Purchase[] 
               <th>购买记录编号</th>
               <th>渠道</th>
               <th>平台订单号</th>
-              <th>商品行数量</th>
+              <th>销售数量</th>
               <th>最近动态</th>
             </tr>
           </thead>
@@ -174,13 +174,13 @@ export const CustomerPurchasesSection = ({ purchases }: { purchases: Purchase[] 
 )
 
 export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLine[] }) => (
-  <SectionCard title="历史商品行">
+  <SectionCard title="历史销售">
     {orderLines.length > 0 ? (
       <div className="table-shell">
         <table className="table">
           <thead>
             <tr>
-              <th>商品行编号</th>
+              <th>销售编号</th>
               <th>商品名称</th>
               <th>状态</th>
               <th>当前负责人</th>
@@ -200,7 +200,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
                 <td>{line.promisedDate || '—'}</td>
                 <td>
                   <Link to="/order-lines" className="button ghost small">
-                    查看商品行
+                    查看销售
                   </Link>
                 </td>
               </tr>
@@ -209,7 +209,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
         </table>
       </div>
     ) : (
-      <EmptyState title="暂无商品行" description="当前客户还没有商品行记录。" />
+      <EmptyState title="暂无销售" description="当前客户还没有销售记录。" />
     )}
   </SectionCard>
 )
@@ -225,7 +225,7 @@ export const CustomerAfterSalesSection = ({ cases }: { cases: AfterSalesCase[] }
               <StatusTag value={item.status || '待处理'} />
             </div>
             <div className="text-caption">
-              商品行 {item.orderLineId} · 负责人 {item.responsibleParty || '待分配'} · {item.createdAt || '—'}
+              销售 {item.orderLineId} · 负责人 {item.responsibleParty || '待分配'} · {item.createdAt || '—'}
             </div>
           </div>
         ))}

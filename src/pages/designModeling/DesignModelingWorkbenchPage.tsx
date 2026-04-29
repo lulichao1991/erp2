@@ -38,6 +38,7 @@ export const DesignModelingWorkbenchPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<DesignModelingTab>('pending_design')
   const [rowDrafts, setRowDrafts] = useState<Record<string, RowDraft>>({})
+  const [expandedLineId, setExpandedLineId] = useState<string>('')
 
   const rows = useMemo(() => buildDesignModelingRows(appData.orderLines), [appData.orderLines])
   const visibleRows = useMemo(() => filterDesignModelingRowsByTab(rows, activeTab), [activeTab, rows])
@@ -161,11 +162,10 @@ export const DesignModelingWorkbenchPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            返回商品行中心
+            返回销售中心
           </Link>
         }
       />
-      <p className="text-muted">设计建模中心只展示需要设计、建模、出蜡或修改的 OrderLine，不展示客户联系方式和财务金额。</p>
 
       <div className="stack">
         <div className="stats-grid compact-stats">
@@ -197,10 +197,12 @@ export const DesignModelingWorkbenchPage = () => {
               onModelingComplete={completeModeling}
               onRevision={requestRevision}
               onRecordWax={recordWaxFile}
+              expandedLineId={expandedLineId}
+              onToggleLine={(lineId) => setExpandedLineId((current) => (current === lineId ? '' : lineId))}
               canEdit={canUpdateDesignModeling}
             />
           ) : (
-            <EmptyState title="暂无设计建模任务" description="当前视图下没有需要处理的商品行。" />
+            <EmptyState title="暂无设计建模任务" description="当前视图下没有需要处理的销售。" />
           )}
         </SectionCard>
       </div>
@@ -220,6 +222,8 @@ const DesignModelingTable = ({
   onModelingComplete,
   onRevision,
   onRecordWax,
+  expandedLineId,
+  onToggleLine,
   canEdit
 }: {
   rows: DesignModelingRow[]
@@ -233,109 +237,106 @@ const DesignModelingTable = ({
   onModelingComplete: (line: OrderLine) => void
   onRevision: (line: OrderLine) => void
   onRecordWax: (line: OrderLine) => void
+  expandedLineId: string
+  onToggleLine: (lineId: string) => void
   canEdit: boolean
 }) => (
-  <div className="table-shell">
-    <table className="table">
-      <thead>
-        <tr>
-          <th>商品行</th>
-          <th>生产需求</th>
-          <th>设计 / 建模</th>
-          <th>文件与出蜡</th>
-          <th>备注</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const line = row.line
-          const draft = getDraft(line)
+  <div className="workbench-task-list">
+    {rows.map((row) => {
+      const line = row.line
+      const draft = getDraft(line)
+      const isExpanded = expandedLineId === line.id
 
-          return (
-            <tr key={line.id}>
-              <td>
-                <strong>{line.productionTaskNo || line.lineCode}</strong>
-                <div className="text-caption">{line.lineCode}</div>
-                <div>{line.name}</div>
-                <div className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ')}</div>
-              </td>
-              <td>
-                <div>{getRequirementSummary(line)}</div>
-                <div className="text-caption">{line.actualRequirements?.engraveText ? `印记：${line.actualRequirements.engraveText}` : '无印记'}</div>
-                <div className="text-caption">{line.actualRequirements?.specialNotes?.join(' / ') || line.actualRequirements?.remark || '无特殊备注'}</div>
-              </td>
-              <td>
-                <div className="stack">
-                  <StatusTag value={row.designStatusLabel} />
-                  <StatusTag value={row.modelingStatusLabel} />
-                  <span className="text-caption">设计：{line.assignedDesignerId || '未分配'}</span>
-                  <span className="text-caption">建模：{line.assignedModelerId || '未分配'}</span>
-                  {line.revisionReason ? <span className="text-caption">修改原因：{line.revisionReason}</span> : null}
-                </div>
-              </td>
-              <td>
-                <div className="text-caption">设计文件 {line.designFiles?.length ?? 0} / 建模文件 {line.modelingFiles?.length ?? 0} / 出蜡文件 {line.waxFiles?.length ?? 0}</div>
-                <label className="field-control spacer-top">
-                  <span className="field-label">出蜡文件名</span>
-                  <input className="input" aria-label={`出蜡文件-${line.id}`} value={draft.waxFileName} onChange={(event) => onDraftChange(line, { waxFileName: event.target.value })} />
-                </label>
-                <label className="field-control spacer-top">
-                  <span className="field-label">发送出蜡厂时间</span>
-                  <input
-                    className="input"
-                    aria-label={`发送出蜡厂时间-${line.id}`}
-                    value={draft.waxFactorySentAt}
-                    onChange={(event) => onDraftChange(line, { waxFactorySentAt: event.target.value })}
-                  />
-                </label>
-                <button type="button" className="button ghost small spacer-top" onClick={() => onRecordWax(line)} disabled={!canEdit}>
-                  记录出蜡资料
+      return (
+        <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
+          <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
+            <span className="workbench-task-main">
+              <strong>{line.productionTaskNo || line.lineCode}</strong>
+              <span>{line.name}</span>
+              <span className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ') || getRequirementSummary(line)}</span>
+            </span>
+            <span className="workbench-task-meta">
+              <span>设计 {line.assignedDesignerId || '未分配'}</span>
+              <span>建模 {line.assignedModelerId || '未分配'}</span>
+              <span>文件 {(line.designFiles?.length ?? 0) + (line.modelingFiles?.length ?? 0) + (line.waxFiles?.length ?? 0)}</span>
+            </span>
+            <span className="workbench-task-tags">
+              <StatusTag value={row.designStatusLabel} />
+              <StatusTag value={row.modelingStatusLabel} />
+              {line.revisionReason ? <StatusTag value="需修改" /> : null}
+            </span>
+            <span className="workbench-task-toggle">{isExpanded ? '收起' : '展开'}</span>
+          </button>
+
+          {isExpanded ? (
+            <div className="workbench-task-detail">
+              <div className="workbench-detail-grid">
+                <section className="workbench-detail-block">
+                  <h3>生产需求</h3>
+                  <p>{getRequirementSummary(line)}</p>
+                  <span className="text-caption">{line.actualRequirements?.engraveText ? `印记：${line.actualRequirements.engraveText}` : '无印记'}</span>
+                  <span className="text-caption">{line.actualRequirements?.specialNotes?.join(' / ') || line.actualRequirements?.remark || '无特殊备注'}</span>
+                </section>
+                <section className="workbench-detail-block">
+                  <h3>文件与出蜡</h3>
+                  <div className="text-caption">设计文件 {line.designFiles?.length ?? 0} / 建模文件 {line.modelingFiles?.length ?? 0} / 出蜡文件 {line.waxFiles?.length ?? 0}</div>
+                  <label className="field-control spacer-top">
+                    <span className="field-label">出蜡文件名</span>
+                    <input className="input" aria-label={`出蜡文件-${line.id}`} value={draft.waxFileName} onChange={(event) => onDraftChange(line, { waxFileName: event.target.value })} />
+                  </label>
+                  <label className="field-control spacer-top">
+                    <span className="field-label">发送出蜡厂时间</span>
+                    <input className="input" aria-label={`发送出蜡厂时间-${line.id}`} value={draft.waxFactorySentAt} onChange={(event) => onDraftChange(line, { waxFactorySentAt: event.target.value })} />
+                  </label>
+                  <button type="button" className="button ghost small spacer-top" onClick={() => onRecordWax(line)} disabled={!canEdit}>
+                    记录出蜡资料
+                  </button>
+                </section>
+                <section className="workbench-detail-block wide">
+                  <h3>备注与修改</h3>
+                  <div className="field-grid three">
+                    <label className="field-control">
+                      <span className="field-label">设计备注</span>
+                      <textarea className="textarea" aria-label={`设计备注-${line.id}`} value={draft.designNote} onChange={(event) => onDraftChange(line, { designNote: event.target.value })} />
+                    </label>
+                    <label className="field-control">
+                      <span className="field-label">建模备注</span>
+                      <textarea className="textarea" aria-label={`建模备注-${line.id}`} value={draft.modelingNote} onChange={(event) => onDraftChange(line, { modelingNote: event.target.value })} />
+                    </label>
+                    <label className="field-control">
+                      <span className="field-label">修改原因</span>
+                      <input className="input" aria-label={`修改原因-${line.id}`} value={draft.revisionReason} onChange={(event) => onDraftChange(line, { revisionReason: event.target.value })} />
+                    </label>
+                  </div>
+                </section>
+              </div>
+              <div className="workbench-actions inline">
+                <button type="button" className="button secondary small" onClick={() => onClaimDesign(line)} disabled={!canEdit}>
+                  领取设计任务
                 </button>
-              </td>
-              <td>
-                <label className="field-control">
-                  <span className="field-label">设计备注</span>
-                  <textarea className="textarea" aria-label={`设计备注-${line.id}`} value={draft.designNote} onChange={(event) => onDraftChange(line, { designNote: event.target.value })} />
-                </label>
-                <label className="field-control spacer-top">
-                  <span className="field-label">建模备注</span>
-                  <textarea className="textarea" aria-label={`建模备注-${line.id}`} value={draft.modelingNote} onChange={(event) => onDraftChange(line, { modelingNote: event.target.value })} />
-                </label>
-                <label className="field-control spacer-top">
-                  <span className="field-label">修改原因</span>
-                  <input className="input" aria-label={`修改原因-${line.id}`} value={draft.revisionReason} onChange={(event) => onDraftChange(line, { revisionReason: event.target.value })} />
-                </label>
-              </td>
-              <td>
-                <div className="row wrap">
-                  <button type="button" className="button secondary small" onClick={() => onClaimDesign(line)} disabled={!canEdit}>
-                    领取设计任务
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onDesignInProgress(line)} disabled={!canEdit}>
-                    标记设计中
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onDesignComplete(line)} disabled={!canEdit}>
-                    标记设计完成
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onClaimModeling(line)} disabled={!canEdit}>
-                    领取建模任务
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onModelingInProgress(line)} disabled={!canEdit}>
-                    标记建模中
-                  </button>
-                  <button type="button" className="button secondary small" onClick={() => onModelingComplete(line)} disabled={!canEdit}>
-                    标记建模完成
-                  </button>
-                  <button type="button" className="button ghost small" onClick={() => onRevision(line)} disabled={!canEdit}>
-                    标记需修改
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                <button type="button" className="button secondary small" onClick={() => onDesignInProgress(line)} disabled={!canEdit}>
+                  标记设计中
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onDesignComplete(line)} disabled={!canEdit}>
+                  标记设计完成
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onClaimModeling(line)} disabled={!canEdit}>
+                  领取建模任务
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onModelingInProgress(line)} disabled={!canEdit}>
+                  标记建模中
+                </button>
+                <button type="button" className="button secondary small" onClick={() => onModelingComplete(line)} disabled={!canEdit}>
+                  标记建模完成
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onRevision(line)} disabled={!canEdit}>
+                  标记需修改
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </article>
+      )
+    })}
   </div>
 )

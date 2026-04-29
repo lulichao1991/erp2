@@ -22,7 +22,7 @@ import {
   modelingWorkflowStatusLabelMap,
   financeWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
-import { getCustomerServiceNextLineStatus } from '@/services/orderLine/orderLineCustomerService'
+import { getCustomerServiceNextLineStatus, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
 import { getOrderLineCompleteness, getOrderLineRisks, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type {
   OrderLine,
@@ -30,7 +30,8 @@ import type {
   OrderLineLog,
   OrderLineOutsourceStatus,
   OrderLinePriority,
-  OrderLineProductionStatus
+  OrderLineProductionStatus,
+  OrderLineUploadedFile
 } from '@/types/order-line'
 import type { ProductCategory } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
@@ -72,6 +73,8 @@ export type OrderLineDetailsDraft = {
   selectedSpecialOptionsText: string
   sizeNote: string
   engraveText: string
+  engraveImageFiles: OrderLineUploadedFile[]
+  engravePltFiles: OrderLineUploadedFile[]
   customerRemark: string
   productionRemark: string
   priority: OrderLinePriority
@@ -144,7 +147,7 @@ export const orderLineStatusOptions = orderLineLineStatusOptions
 const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineLineStatusOptions]
 
 const quickViewOptions: Array<{ value: OrderLineCenterFilters['quickView']; label: string }> = [
-  { value: 'all', label: '全部商品行' },
+  { value: 'all', label: '全部销售' },
   ...orderLineLineStatusOptions
 ]
 
@@ -303,6 +306,13 @@ const splitTextList = (value: string) =>
 
 const TextList = ({ values, empty = '—' }: { values?: string[]; empty?: string }) => (values && values.length > 0 ? values.join(' / ') : empty)
 
+const buildUploadedFiles = (files: FileList | null, prefix: string): OrderLineUploadedFile[] =>
+  Array.from(files ?? []).map((file, index) => ({
+    id: `${prefix}-${Date.now()}-${index}`,
+    name: file.name,
+    url: `mock-upload:${encodeURIComponent(file.name)}`
+  }))
+
 const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProductCompareValue => ({
   sourceLabel: `${line.lineCode || line.id} ${line.name}`,
   specValue: line.selectedSpecValue || line.sourceProduct?.sourceSpecValue,
@@ -341,7 +351,7 @@ export const buildOrderLineStatusLog = ({
     createdAt: formatDateTime(new Date()),
     fromStatus,
     toStatus,
-    note: `将商品行 ${line.lineCode || line.id} 从「${getStatusLabel(fromStatus)}」改为「${getStatusLabel(toStatus)}」`
+    note: `将销售 ${line.lineCode || line.id} 从「${getStatusLabel(fromStatus)}」改为「${getStatusLabel(toStatus)}」`
   }
 }
 
@@ -360,6 +370,8 @@ export const buildOrderLineDetailsDraft = (line: OrderLine): OrderLineDetailsDra
   selectedSpecialOptionsText: (line.selectedSpecialOptions || line.actualRequirements?.specialNotes || []).join(' / '),
   sizeNote: line.actualRequirements?.sizeNote || '',
   engraveText: line.actualRequirements?.engraveText || '',
+  engraveImageFiles: line.actualRequirements?.engraveImageFiles ?? [],
+  engravePltFiles: line.actualRequirements?.engravePltFiles ?? [],
   customerRemark: line.actualRequirements?.remark || '',
   productionRemark: line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '',
   priority: line.priority || 'normal',
@@ -411,6 +423,8 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
       specNote: draft.specNote.trim() || undefined,
       sizeNote: draft.sizeNote.trim() || undefined,
       engraveText: draft.engraveText.trim() || undefined,
+      engraveImageFiles: draft.engraveImageFiles.length > 0 ? draft.engraveImageFiles : undefined,
+      engravePltFiles: draft.engravePltFiles.length > 0 ? draft.engravePltFiles : undefined,
       specialNotes: selectedSpecialOptions.length > 0 ? selectedSpecialOptions : undefined,
       remark: draft.customerRemark.trim() || undefined
     },
@@ -442,10 +456,10 @@ export const buildOrderLineDetailsLog = ({
   orderLineId: line.id,
   purchaseId: line.purchaseId || line.transactionId || purchase?.id,
   actionType: 'order_line_updated',
-  actionLabel: '编辑商品行需求',
+  actionLabel: '编辑销售需求',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: '修改了商品行基础信息 / 实际需求'
+  note: '修改了销售基础信息 / 实际需求'
 })
 
 export const buildOrderLineOutsourceDraft = (line: OrderLine): OrderLineOutsourceDraft => ({
@@ -498,7 +512,7 @@ export const buildOrderLineOutsourceLog = ({
   actionLabel: '编辑跟单 / 下厂信息',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: '修改了商品行跟单 / 下厂信息'
+  note: '修改了销售跟单 / 下厂信息'
 })
 
 const getProductionTotalWeight = (line: OrderLine) => line.productionInfo?.totalWeight || line.productionInfo?.returnedWeight || ''
@@ -566,7 +580,7 @@ export const buildOrderLineProductionLog = ({
   actionLabel: '编辑工厂回传信息',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: '修改了商品行工厂回传信息'
+  note: '修改了销售工厂回传信息'
 })
 
 export const buildOrderLineLogisticsLog = ({
@@ -587,7 +601,7 @@ export const buildOrderLineLogisticsLog = ({
   actionLabel: '新增物流',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `为商品行 ${line.lineCode || line.id} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
+  note: `为销售 ${line.lineCode || line.id} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
 })
 
 export const buildOrderLineLogisticsDraft = (record?: LogisticsRecord): OrderLineLogisticsDraft => ({
@@ -674,7 +688,7 @@ export const buildOrderLineLogisticsEditLog = ({
   actionLabel: '编辑物流',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `编辑了商品行 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}`
+  note: `编辑了销售 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}`
 })
 
 export const buildOrderLineLogisticsVoidLog = ({
@@ -697,7 +711,7 @@ export const buildOrderLineLogisticsVoidLog = ({
   actionLabel: '作废物流',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `作废了商品行 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}：${voidReason.trim() || '未填写作废原因'}`
+  note: `作废了销售 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}：${voidReason.trim() || '未填写作废原因'}`
 })
 
 export const buildOrderLineAfterSalesLog = ({
@@ -718,7 +732,7 @@ export const buildOrderLineAfterSalesLog = ({
   actionLabel: '新增售后',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `为商品行 ${line.lineCode || line.id} 新增${getAfterSalesTypeLabel(record.type)}售后：${getAfterSalesReason(record)}`
+  note: `为销售 ${line.lineCode || line.id} 新增${getAfterSalesTypeLabel(record.type)}售后：${getAfterSalesReason(record)}`
 })
 
 export const buildOrderLineAfterSalesCase = ({
@@ -793,7 +807,7 @@ export const buildOrderLineAfterSalesEditLog = ({
   actionLabel: '编辑售后',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `编辑了商品行 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
+  note: `编辑了销售 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
 })
 
 export const buildOrderLineAfterSalesCloseLog = ({
@@ -814,7 +828,7 @@ export const buildOrderLineAfterSalesCloseLog = ({
   actionLabel: '关闭售后',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `关闭了商品行 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
+  note: `关闭了销售 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
 })
 
 const OrderLineStatusUpdatePanel = ({
@@ -864,7 +878,7 @@ const OrderLineStatusUpdatePanel = ({
     }
 
     if (customerConfirmStatus === getOrderLineLineStatus(line)) {
-      setStatusMessage('当前商品行已经在目标分流状态。')
+      setStatusMessage('当前销售已经在目标分流状态。')
       return
     }
 
@@ -930,7 +944,7 @@ const OrderLineLogSection = ({ logs }: { logs: OrderLineLog[] }) => {
           }))}
         />
       ) : (
-        <EmptyState title="暂无操作日志" description="当前商品行还没有记录操作。" />
+        <EmptyState title="暂无操作日志" description="当前销售还没有记录操作。" />
       )}
     </DetailSection>
   )
@@ -946,6 +960,19 @@ const OrderLineDetailsSection = ({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<OrderLineDetailsDraft>(() => buildOrderLineDetailsDraft(line))
   const [message, setMessage] = useState('')
+  const draftSpecialOptions = splitTextList(draft.selectedSpecialOptionsText)
+  const draftNeedsEngraving = hasEngravingRequirement({
+    engraveText: draft.engraveText,
+    selectedSpecialOptions: draftSpecialOptions,
+    engraveImageFiles: draft.engraveImageFiles,
+    engravePltFiles: draft.engravePltFiles
+  })
+  const needsEngraving = hasEngravingRequirement({
+    engraveText: line.actualRequirements?.engraveText,
+    selectedSpecialOptions: line.selectedSpecialOptions,
+    engraveImageFiles: line.actualRequirements?.engraveImageFiles,
+    engravePltFiles: line.actualRequirements?.engravePltFiles
+  })
 
   useEffect(() => {
     setDraft(buildOrderLineDetailsDraft(line))
@@ -976,7 +1003,15 @@ const OrderLineDetailsSection = ({
 
     onUpdateLineDetails(line.id, draft)
     setEditing(false)
-    setMessage('已保存商品行基础信息 / 实际需求')
+    setMessage('已保存销售基础信息 / 实际需求')
+  }
+
+  const handleEngraveImageUpload = (files: FileList | null) => {
+    updateDraft('engraveImageFiles', buildUploadedFiles(files, `${line.id}-engrave-image`))
+  }
+
+  const handleEngravePltUpload = (files: FileList | null) => {
+    updateDraft('engravePltFiles', buildUploadedFiles(files, `${line.id}-engrave-plt`))
   }
 
   return (
@@ -994,15 +1029,15 @@ const OrderLineDetailsSection = ({
         <div className="stack">
           <div className="field-grid three">
             <label className="field-control">
-              <span className="field-label">商品行编号</span>
+              <span className="field-label">销售编号</span>
               <input className="input" value={draft.lineCode} onChange={(event) => updateDraft('lineCode', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">生产任务编号</span>
+              <span className="field-label">货号</span>
               <input className="input" value={draft.productionTaskNo} onChange={(event) => updateDraft('productionTaskNo', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">货号 / SKU</span>
+              <span className="field-label">产品货号</span>
               <input className="input" value={draft.skuCode} onChange={(event) => updateDraft('skuCode', event.target.value)} />
             </label>
             <label className="field-control">
@@ -1055,6 +1090,20 @@ const OrderLineDetailsSection = ({
               <span className="field-label">刻字 / 印记</span>
               <input className="input" value={draft.engraveText} onChange={(event) => updateDraft('engraveText', event.target.value)} />
             </label>
+            {draftNeedsEngraving ? (
+              <>
+                <label className="field-control">
+                  <span className="field-label">刻字参考图</span>
+                  <input aria-label="刻字参考图" className="input" type="file" accept="image/*,.pdf" multiple onChange={(event) => handleEngraveImageUpload(event.target.files)} />
+                  <span className="text-caption">{draft.engraveImageFiles.length > 0 ? draft.engraveImageFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
+                </label>
+                <label className="field-control">
+                  <span className="field-label">刻字 PLT 文件</span>
+                  <input aria-label="刻字 PLT 文件" className="input" type="file" accept=".plt" multiple onChange={(event) => handleEngravePltUpload(event.target.files)} />
+                  <span className="text-caption">{draft.engravePltFiles.length > 0 ? draft.engravePltFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
+                </label>
+              </>
+            ) : null}
             <label className="field-control">
               <span className="field-label">当前负责人</span>
               <input className="input" value={draft.currentOwner} onChange={(event) => updateDraft('currentOwner', event.target.value)} />
@@ -1114,9 +1163,9 @@ const OrderLineDetailsSection = ({
         </div>
       ) : (
         <InfoGrid columns={3}>
-          <InfoField label="商品行编号" value={line.lineCode || line.id} />
-          <InfoField label="生产任务编号" value={line.productionTaskNo || line.itemSku || '—'} />
-          <InfoField label="货号 / SKU" value={line.skuCode || line.itemSku || '—'} />
+          <InfoField label="销售编号" value={line.lineCode || line.id} />
+          <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
+          <InfoField label="产品货号" value={line.skuCode || line.itemSku || '—'} />
           <InfoField label="商品名称" value={line.name} />
           <InfoField label="款式名称" value={line.styleName || '—'} />
           <InfoField label="版本号" value={line.versionNo || line.sourceProduct?.sourceProductVersion || '—'} />
@@ -1128,6 +1177,12 @@ const OrderLineDetailsSection = ({
           <InfoField label="特殊需求" value={<TextList values={line.selectedSpecialOptions || line.actualRequirements?.specialNotes} />} />
           <InfoField label="尺寸备注" value={line.actualRequirements?.sizeNote || '—'} />
           <InfoField label="刻字 / 印记" value={line.actualRequirements?.engraveText || '—'} />
+          {needsEngraving ? (
+            <>
+              <InfoField label="刻字参考图" value={<TextList values={line.actualRequirements?.engraveImageFiles?.map((file) => file.name)} />} />
+              <InfoField label="刻字 PLT 文件" value={<TextList values={line.actualRequirements?.engravePltFiles?.map((file) => file.name)} />} />
+            </>
+          ) : null}
           <InfoField label="客服备注" value={line.actualRequirements?.remark || '—'} />
           <InfoField label="生产备注" value={line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '—'} />
           <InfoField label="是否加急" value={line.isUrgent || line.priority === 'urgent' ? '加急' : line.priority === 'vip' ? 'VIP' : line.priority === 'high' ? '高优先' : '否'} />
@@ -1217,7 +1272,7 @@ const OrderLineOutsourceSection = ({
               <input className="input" value={draft.outsourcedAt} onChange={(event) => updateDraft('outsourcedAt', event.target.value)} placeholder="YYYY-MM-DD" />
             </label>
             <label className="field-control">
-              <span className="field-label">生产任务编号 / 货号</span>
+              <span className="field-label">货号</span>
               <input className="input" value={draft.itemSku} onChange={(event) => updateDraft('itemSku', event.target.value)} />
             </label>
             <label className="field-control">
@@ -1253,7 +1308,7 @@ const OrderLineOutsourceSection = ({
           <InfoField label="跟单负责人" value={line.currentOwner || '待分配'} />
           <InfoField label="工厂" value={getFactorySummary(line)} />
           <InfoField label="下厂时间" value={line.outsourceInfo?.outsourcedAt || '待补充'} />
-          <InfoField label="生产任务编号 / 货号" value={line.itemSku || line.lineCode || '—'} />
+          <InfoField label="货号" value={line.itemSku || line.lineCode || '—'} />
           <InfoField label="工厂计划交期" value={line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '—'} />
           <InfoField label="委外状态" value={getOutsourceStatusLabel(String(line.outsourceInfo?.outsourceStatus || ''))} />
           <InfoField label="跟单备注 / 委外备注" value={line.outsourceInfo?.outsourceNote || '—'} />
@@ -1817,7 +1872,7 @@ export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], l
 
 export const OrderLineQuickStats = ({ rows, afterSalesCases = afterSalesMock }: { rows: OrderLineRow[]; afterSalesCases?: AfterSalesCase[] }) => {
   const stats = [
-    { label: '全部商品行', value: rows.length },
+    { label: '全部销售', value: rows.length },
     { label: '待客服确认', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_customer_confirmation').length },
     { label: '待设计', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_design').length },
     { label: '待建模', value: rows.filter(({ line }) => getOrderLineLineStatus(line) === 'pending_modeling').length },
@@ -1846,119 +1901,135 @@ export const OrderLineFilterBar = ({
 }: {
   value: OrderLineCenterFilters
   onChange: (next: OrderLineCenterFilters) => void
-}) => (
-  <SectionCard title="搜索与筛选" description="按商品行编号、商品名称、客户、购买记录和负责人快速定位。">
-    <div className="row wrap">
-      {quickViewOptions.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className={`button small ${value.quickView === option.value ? 'primary' : 'ghost'}`}
-          onClick={() => onChange({ ...value, quickView: option.value })}
-        >
-          {option.label}
+}) => {
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+
+  return (
+    <SectionCard
+      title="搜索与筛选"
+      className="compact-card order-line-filter-card"
+      actions={
+        <button type="button" className="button secondary small" onClick={() => setAdvancedOpen((current) => !current)}>
+          {advancedOpen ? '收起筛选' : '展开筛选'}
         </button>
-      ))}
-    </div>
-    <div className="field-grid three">
-      <div className="field-control">
-        <label className="field-label">搜索商品行编号 / 商品名称 / 客户 / 购买记录 / 平台单号</label>
-        <input
-          className="input"
-          aria-label="搜索商品行编号 / 商品名称 / 客户 / 购买记录 / 平台单号"
-          value={value.keyword}
-          onChange={(event) => onChange({ ...value, keyword: event.target.value })}
-          placeholder="例如：山形戒指 / 张三 / PUR-202604-001"
-        />
+      }
+    >
+      <div className="order-line-filter-strip">
+        {quickViewOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`button small ${value.quickView === option.value ? 'primary' : 'ghost'}`}
+            onClick={() => onChange({ ...value, quickView: option.value })}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
-      <div className="field-control">
-        <label className="field-label">状态筛选</label>
-        <select className="select" aria-label="状态筛选" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}>
-          {statusFilterOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      <div className="order-line-filter-primary">
+        <div className="field-control">
+          <label className="field-label">搜索销售编号 / 商品名称 / 客户 / 购买记录 / 平台单号</label>
+          <input
+            className="input"
+            aria-label="搜索销售编号 / 商品名称 / 客户 / 购买记录 / 平台单号"
+            value={value.keyword}
+            onChange={(event) => onChange({ ...value, keyword: event.target.value })}
+            placeholder="例如：山形戒指 / 张三 / PUR-202604-001"
+          />
+        </div>
+        <div className="field-control">
+          <label className="field-label">状态筛选</label>
+          <select className="select" aria-label="状态筛选" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}>
+            {statusFilterOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div className="field-control">
-        <label className="field-label">品类筛选</label>
-        <select className="select" aria-label="品类筛选" value={value.category} onChange={(event) => onChange({ ...value, category: event.target.value })}>
-          <option value="all">全部品类</option>
-          {categoryOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field-control">
-        <label className="field-label">负责人筛选</label>
-        <input
-          className="input"
-          aria-label="负责人筛选"
-          value={value.owner}
-          onChange={(event) => onChange({ ...value, owner: event.target.value })}
-          placeholder="例如：王客服 / 陈设计"
-        />
-      </div>
-      <div className="field-control">
-        <label className="field-label">是否加急</label>
-        <select className="select" aria-label="是否加急筛选" value={value.urgent} onChange={(event) => onChange({ ...value, urgent: event.target.value as OrderLineCenterFilters['urgent'] })}>
-          <option value="all">全部</option>
-          <option value="yes">加急</option>
-          <option value="no">非加急</option>
-        </select>
-      </div>
-      <div className="field-control">
-        <label className="field-label">是否售后中</label>
-        <select className="select" aria-label="是否售后中" value={value.afterSales} onChange={(event) => onChange({ ...value, afterSales: event.target.value as OrderLineCenterFilters['afterSales'] })}>
-          <option value="all">全部</option>
-          <option value="yes">售后中</option>
-          <option value="no">无活跃售后</option>
-        </select>
-      </div>
-      <div className="field-control">
-        <label className="field-label">是否超期</label>
-        <select className="select" aria-label="是否超期" value={value.overdue} onChange={(event) => onChange({ ...value, overdue: event.target.value as OrderLineCenterFilters['overdue'] })}>
-          <option value="all">全部</option>
-          <option value="yes">已超期</option>
-          <option value="no">未超期</option>
-        </select>
-      </div>
-      <div className="field-control">
-        <label className="field-label">工厂筛选</label>
-        <input
-          className="input"
-          aria-label="工厂筛选"
-          value={value.factory}
-          onChange={(event) => onChange({ ...value, factory: event.target.value })}
-          placeholder="例如：苏州金工厂"
-        />
-      </div>
-      <div className="field-control">
-        <label className="field-label">购买记录筛选</label>
-        <input
-          className="input"
-          aria-label="购买记录筛选"
-          value={value.purchase}
-          onChange={(event) => onChange({ ...value, purchase: event.target.value })}
-          placeholder="例如：PUR-202604-001"
-        />
-      </div>
-      <div className="field-control">
-        <label className="field-label">客户筛选</label>
-        <input
-          className="input"
-          aria-label="客户筛选"
-          value={value.customer}
-          onChange={(event) => onChange({ ...value, customer: event.target.value })}
-          placeholder="例如：张三 / 手机号"
-        />
-      </div>
-    </div>
-  </SectionCard>
-)
+      {advancedOpen ? (
+        <div className="field-grid three order-line-filter-advanced">
+          <div className="field-control">
+            <label className="field-label">品类筛选</label>
+            <select className="select" aria-label="品类筛选" value={value.category} onChange={(event) => onChange({ ...value, category: event.target.value })}>
+              <option value="all">全部品类</option>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field-control">
+            <label className="field-label">负责人筛选</label>
+            <input
+              className="input"
+              aria-label="负责人筛选"
+              value={value.owner}
+              onChange={(event) => onChange({ ...value, owner: event.target.value })}
+              placeholder="例如：王客服 / 陈设计"
+            />
+          </div>
+          <div className="field-control">
+            <label className="field-label">是否加急</label>
+            <select className="select" aria-label="是否加急筛选" value={value.urgent} onChange={(event) => onChange({ ...value, urgent: event.target.value as OrderLineCenterFilters['urgent'] })}>
+              <option value="all">全部</option>
+              <option value="yes">加急</option>
+              <option value="no">非加急</option>
+            </select>
+          </div>
+          <div className="field-control">
+            <label className="field-label">是否售后中</label>
+            <select className="select" aria-label="是否售后中" value={value.afterSales} onChange={(event) => onChange({ ...value, afterSales: event.target.value as OrderLineCenterFilters['afterSales'] })}>
+              <option value="all">全部</option>
+              <option value="yes">售后中</option>
+              <option value="no">无活跃售后</option>
+            </select>
+          </div>
+          <div className="field-control">
+            <label className="field-label">是否超期</label>
+            <select className="select" aria-label="是否超期" value={value.overdue} onChange={(event) => onChange({ ...value, overdue: event.target.value as OrderLineCenterFilters['overdue'] })}>
+              <option value="all">全部</option>
+              <option value="yes">已超期</option>
+              <option value="no">未超期</option>
+            </select>
+          </div>
+          <div className="field-control">
+            <label className="field-label">工厂筛选</label>
+            <input
+              className="input"
+              aria-label="工厂筛选"
+              value={value.factory}
+              onChange={(event) => onChange({ ...value, factory: event.target.value })}
+              placeholder="例如：苏州金工厂"
+            />
+          </div>
+          <div className="field-control">
+            <label className="field-label">购买记录筛选</label>
+            <input
+              className="input"
+              aria-label="购买记录筛选"
+              value={value.purchase}
+              onChange={(event) => onChange({ ...value, purchase: event.target.value })}
+              placeholder="例如：PUR-202604-001"
+            />
+          </div>
+          <div className="field-control">
+            <label className="field-label">客户筛选</label>
+            <input
+              className="input"
+              aria-label="客户筛选"
+              value={value.customer}
+              onChange={(event) => onChange({ ...value, customer: event.target.value })}
+              placeholder="例如：张三 / 手机号"
+            />
+          </div>
+        </div>
+      ) : null}
+    </SectionCard>
+  )
+}
 
 export const OrderLineTable = ({
   rows,
@@ -1976,7 +2047,7 @@ export const OrderLineTable = ({
       <thead>
         <tr>
           <th>风险</th>
-          <th>商品行编号</th>
+          <th>销售编号</th>
           <th>商品名称</th>
           <th>客户</th>
           <th>所属购买记录</th>
@@ -1993,7 +2064,7 @@ export const OrderLineTable = ({
         {rows.length === 0 ? (
           <tr>
             <td colSpan={12}>
-              <EmptyState title="暂无匹配商品行" description="当前筛选条件下没有商品行，请放宽筛选或切回全部商品行。" />
+              <EmptyState title="暂无匹配销售" description="当前筛选条件下没有销售，请放宽筛选或切回全部销售。" />
             </td>
           </tr>
         ) : null}
@@ -2036,7 +2107,7 @@ export const OrderLineTable = ({
               <td>
                 <div className="stack" style={{ gap: 6 }}>
                   <strong>{line.lineCode || line.id}</strong>
-                  <span className="text-caption">生产任务 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</span>
+                  <span className="text-caption">货号 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</span>
                 </div>
               </td>
               <td>
@@ -2156,17 +2227,17 @@ export const OrderLineDetailDrawer = ({
   }
 
   return (
-    <SideDrawer open={open} title="商品行详情" onClose={handleClose}>
+    <SideDrawer open={open} title="销售详情" onClose={handleClose}>
       {!line ? (
-        <EmptyState title="未选择商品行" description="请选择一条商品行查看详情。" />
+        <EmptyState title="未选择销售" description="请选择一条销售查看详情。" />
       ) : (
         <div className="stack">
           <DetailSection title="顶部摘要">
             <InfoGrid columns={3}>
-              <InfoField label="商品行编号" value={line.lineCode || line.id} />
-              <InfoField label="生产任务编号" value={line.productionTaskNo || line.itemSku || '—'} />
+              <InfoField label="销售编号" value={line.lineCode || line.id} />
+              <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
               <InfoField label="商品名称" value={line.name} />
-              <InfoField label="商品行状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
+              <InfoField label="销售状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
               <InfoField label="当前负责人" value={line.currentOwner || purchase?.ownerName || '待分配'} />
               <InfoField label="客户姓名" value={customer?.name || '—'} />
               <InfoField label="所属购买记录编号" value={purchase?.purchaseNo || '—'} />
@@ -2263,7 +2334,7 @@ export const OrderLineDetailDrawer = ({
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState title="暂无物流记录" description="当前商品行还没有关联物流记录。" />
+                  <EmptyState title="暂无物流记录" description="当前销售还没有关联物流记录。" />
                 )}
               </div>
               <div className="subtle-panel">
@@ -2285,7 +2356,7 @@ export const OrderLineDetailDrawer = ({
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState title="暂无售后记录" description="当前商品行还没有关联售后记录。" />
+                  <EmptyState title="暂无售后记录" description="当前销售还没有关联售后记录。" />
                 )}
               </div>
             </div>

@@ -65,7 +65,7 @@ export const ProductionPlanListPage = () => {
         {filteredRows.length > 0 ? (
           <ProductionPlanTable rows={filteredRows} />
         ) : (
-          <EmptyState title="当前没有可展示的生产任务" description="请先保留或新增 factory_production mock 任务，再回到此页查看生产计划。" />
+          <EmptyState title="当前没有可展示的生产资料" description="请先保留或新增 factory_production mock 任务，再回到此页查看生产计划。" />
         )}
       </div>
     </PageContainer>
