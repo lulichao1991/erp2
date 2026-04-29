@@ -43,7 +43,7 @@ export const ProductDetailPage = () => {
   if (!product) {
     return (
       <PageContainer>
-        <EmptyState title="未找到产品" description="当前产品可能已被删除，或链接中的产品 ID 不存在。" />
+        <EmptyState title="未找到款式" description="当前款式可能已被删除，或链接中的款式 ID 不存在。" />
       </PageContainer>
     )
   }
@@ -52,8 +52,8 @@ export const ProductDetailPage = () => {
     <PageContainer>
       <AppBreadcrumb
         items={[
-          { label: '产品管理', to: '/products' },
-          { label: '产品详情' },
+          { label: '款式管理', to: '/products' },
+          { label: '款式详情' },
           { label: product.name }
         ]}
       />

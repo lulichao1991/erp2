@@ -203,7 +203,7 @@ export const ProductionPlanSummaryCard = ({
             </strong>
           </li>
           <li className="production-plan-trace-item">
-            <span className="production-plan-trace-label">来源产品</span>
+            <span className="production-plan-trace-label">来源款式</span>
             <strong className="production-plan-trace-value">
               <Link to={`/products/${sourceProductId}`}>{sourceProductName}</Link>
             </strong>
@@ -303,7 +303,7 @@ export const ProductionOrderLineInfoBlock = ({
     <div className="stack">
       <div className="field-grid four">
         <InfoField label="货号" value={line.goodsNo || '待维护'} />
-        <InfoField label="来源产品编码" value={line.sourceProductCode || '待引用模板'} />
+        <InfoField label="来源款式编码" value={line.sourceProductCode || '待引用模板'} />
         <InfoField label="规格" value={line.selectedSpecValue || '未选规格'} />
         <InfoField label="数量" value={`${line.quantity || 1} 件`} />
       </div>

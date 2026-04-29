@@ -5,8 +5,8 @@
 
 当前 mock 数据结构服务于以下主链路：
 
-**产品维护（含规格明细与固定加价规则）
--> 销售引用产品
+**款式维护（含规格明细与固定加价规则）
+-> 销售引用款式
 -> 选择规格
 -> 自动带出规格参数
 -> 自动带出基础价格
@@ -59,9 +59,9 @@ mock 数据只用于：
 - `AfterSalesCase`
 - `QuoteResult`
 
-不要把产品模板、购买公共信息和单件商品执行对象混成一个对象。
+不要把款式模板、购买公共信息和单件商品执行对象混成一个对象。
 
-库存资产也要和产品模板、销售执行对象分开：`InventoryItem` 是库管台账记录，可以关联 Product / Purchase / OrderLine，但不替代它们。
+库存资产也要和款式模板、销售执行对象分开：`InventoryItem` 是库管台账记录，可以关联 Product / Purchase / OrderLine，但不替代它们。
 
 ---
 
@@ -184,7 +184,7 @@ type Purchase = {
 
 ## 5. OrderLine（销售）
 
-销售是系统真正的业务执行对象，不等于产品模板，也不等于购买记录。
+销售是系统真正的业务执行对象，不等于款式模板，也不等于购买记录。
 
 一件商品对应一条独立销售。同一次购买中的多个销售可以分别推进规格确认、设计、委外、生产、发货和售后。
 
@@ -371,7 +371,7 @@ type OrderLineProductionData = {
 
 ---
 
-## 6. Product（产品模板）
+## 6. Product（款式模板）
 
 ```ts
 type ProductStatus = 'draft' | 'enabled' | 'disabled'
@@ -416,8 +416,8 @@ type Product = {
 ```
 
 说明：
-- `Product` 是产品模板
-- 销售引用产品时保留来源快照
+- `Product` 是款式模板
+- 销售引用款式时保留来源快照
 - 销售的实际需求可以在模板基础上调整
 
 ---
@@ -494,7 +494,7 @@ type InventoryMovement = {
 ```
 
 说明：
-- `InventoryItem` 是库管库存资产台账，不是产品模板，也不是销售执行对象
+- `InventoryItem` 是库管库存资产台账，不是款式模板，也不是销售执行对象
 - 设计部门生产出来但不售卖的款式可以作为 `design_sample` 入库
 - 客户退货可以作为 `customer_return` 入库，并关联原 `purchaseId / orderLineId / customerId`
 - 常备采购、寄售或其他库存可以不关联销售，但仍保持独立库存编号
@@ -541,7 +541,7 @@ type ProductPriceRule = {
 
 ---
 
-## 10. ProductSnapshot（来源产品快照）
+## 10. ProductSnapshot（来源款式快照）
 
 ```ts
 type ProductSnapshot = {
@@ -558,7 +558,7 @@ type ProductSnapshot = {
 ```
 
 说明：
-- 用于销售与来源产品模板的关系显示和核对
+- 用于销售与来源款式模板的关系显示和核对
 - 首轮保留最关键的来源关系信息
 - 不把 `Product` 本体直接复制为销售执行对象
 
@@ -707,7 +707,7 @@ src/mocks/
 
 - mock 能表达 `Customer -> Purchase -> OrderLine`
 - `Purchase` 不承载单件商品执行字段
-- `OrderLine` 能承载来源产品、规格、报价、设计、委外、生产、物流、售后关联
+- `OrderLine` 能承载来源款式、规格、报价、设计、委外、生产、物流、售后关联
 - `LogisticsRecord` 和 `AfterSalesCase` 默认关联 `orderLineId`
 - `TransactionRecord` 只作为兼容别名出现
 - legacy `orders.ts` 不再作为 runtime mock 保留

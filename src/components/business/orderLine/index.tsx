@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { EmptyState, InfoField, InfoGrid, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
+import { EmptyState, InfoField, InfoGrid, LargeModal, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import {
@@ -1096,11 +1096,11 @@ const OrderLineDetailsSection = ({
               <input className="input" value={draft.productionTaskNo} onChange={(event) => updateDraft('productionTaskNo', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">商品名称</span>
+              <span className="field-label">款式名称</span>
               <input className="input" value={draft.name} onChange={(event) => updateDraft('name', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">款式名称</span>
+              <span className="field-label">款式别名</span>
               <input className="input" value={draft.styleName} onChange={(event) => updateDraft('styleName', event.target.value)} />
             </label>
             <label className="field-control">
@@ -1219,8 +1219,8 @@ const OrderLineDetailsSection = ({
       ) : (
         <InfoGrid columns={3}>
           <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
-          <InfoField label="商品名称" value={line.name} />
-          <InfoField label="款式名称" value={line.styleName || '—'} />
+          <InfoField label="款式名称" value={line.name} />
+          <InfoField label="款式别名" value={line.styleName || '—'} />
           <InfoField label="版本号" value={line.versionNo || line.sourceProduct?.sourceProductVersion || '—'} />
           <InfoField label="品类" value={categoryLabelMap[line.category || 'other'] || line.category || '其他'} />
           <InfoField label="规格" value={line.selectedSpecValue || '—'} />
@@ -2137,10 +2137,10 @@ export const OrderLineFilterBar = ({
       </div>
       <div className="order-line-filter-primary">
         <div className="field-control">
-          <label className="field-label">搜索货号 / 商品名称 / 客户 / 内部编号 / 购买记录 / 平台单号</label>
+          <label className="field-label">搜索货号 / 款式名称 / 客户 / 内部编号 / 购买记录 / 平台单号</label>
           <input
             className="input"
-            aria-label="搜索货号 / 商品名称 / 客户 / 内部编号 / 购买记录 / 平台单号"
+            aria-label="搜索货号 / 款式名称 / 客户 / 内部编号 / 购买记录 / 平台单号"
             value={value.keyword}
             onChange={(event) => onChange({ ...value, keyword: event.target.value })}
             placeholder="例如：RING-SH-016 / 山形戒指 / 张三"
@@ -2250,36 +2250,43 @@ export const OrderLineTable = ({
   onOpenDetail?: (row: OrderLineRow) => void
   logisticsRecords?: LogisticsRecord[]
   afterSalesCases?: AfterSalesCase[]
-}) => (
-  <div className="table-shell">
-    <table className="table order-line-table">
-      <thead>
-        <tr>
-          <th>风险</th>
-          <th>货号</th>
-          <th>商品</th>
-          <th>客户</th>
-          <th>参数摘要</th>
-          <th>状态</th>
-          <th>当前负责人</th>
-          <th>承诺交期</th>
-          <th>物流 / 售后</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={10}>
-              <EmptyState title="暂无匹配销售" description="当前筛选条件下没有销售，请放宽筛选或切回全部销售。" />
-            </td>
-          </tr>
-        ) : null}
-        {rows.map(({ line, purchase }) => {
+}) => {
+  const [previewImage, setPreviewImage] = useState<{ src: string; title: string; alt: string } | null>(null)
+
+  return (
+    <>
+      <div className="table-shell">
+        <table className="table order-line-table">
+          <thead>
+            <tr>
+              <th>风险</th>
+              <th>货号</th>
+              <th>款式</th>
+              <th>客户</th>
+              <th>参数摘要</th>
+              <th>状态</th>
+              <th>当前负责人</th>
+              <th>承诺交期</th>
+              <th>物流 / 售后</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={10}>
+                  <EmptyState title="暂无匹配销售" description="当前筛选条件下没有销售，请放宽筛选或切回全部销售。" />
+                </td>
+              </tr>
+            ) : null}
+            {rows.map(({ line, purchase }) => {
           const row = { line, purchase }
           const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
           const product = mockProducts.find((item) => item.id === line.productId || item.id === line.sourceProduct?.sourceProductId)
+          const coverImage = product?.coverImage
           const versionLabel = line.versionNo || line.sourceProduct?.sourceProductVersion || '无版本'
+          const styleLabel = line.styleName || line.sourceProduct?.sourceProductName || line.name || '未命名款式'
+          const goodsNo = line.productionTaskNo || line.skuCode || line.itemSku || '待生成'
           const logistics = findCurrentLogisticsRecord(logisticsRecords, line.id)
           const afterSales = findCurrentAfterSalesCase(afterSalesCases, line.id)
           const pressure = getTimePressure(line, line.promisedDate)
@@ -2315,18 +2322,25 @@ export const OrderLineTable = ({
               </td>
               <td>
                 <div className="stack order-line-goods-no-cell">
-                  <strong>{line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</strong>
-                  <span>{line.name}</span>
+                  <strong>{goodsNo}</strong>
+                  <span>{styleLabel}</span>
                   <span className="text-caption">{versionLabel}</span>
                 </div>
               </td>
               <td>
                 <div className="order-line-product-preview compact">
-                  {product?.coverImage ? (
-                    <img className="order-line-product-thumb" src={product.coverImage} alt={`${line.name}缩略图`} />
+                  {coverImage ? (
+                    <button
+                      type="button"
+                      className="order-line-product-preview-button"
+                      aria-label={`查看${styleLabel}缩略图`}
+                      onClick={() => setPreviewImage({ src: coverImage, title: `${styleLabel} · ${goodsNo}`, alt: `${styleLabel}缩略图` })}
+                    >
+                      <img className="order-line-product-thumb" src={coverImage} alt={`${styleLabel}缩略图`} />
+                    </button>
                   ) : (
                     <span className="order-line-product-thumb-placeholder" aria-hidden="true">
-                      {line.name.slice(0, 1) || '销'}
+                      {styleLabel.slice(0, 1) || '款'}
                     </span>
                   )}
                 </div>
@@ -2372,11 +2386,20 @@ export const OrderLineTable = ({
               </td>
             </tr>
           )
-        })}
-      </tbody>
-    </table>
-  </div>
-)
+            })}
+          </tbody>
+        </table>
+      </div>
+      <LargeModal open={Boolean(previewImage)} title={previewImage?.title || '款式预览'} onClose={() => setPreviewImage(null)}>
+        {previewImage ? (
+          <div className="order-line-image-preview-modal">
+            <img src={previewImage.src} alt={previewImage.alt} />
+          </div>
+        ) : null}
+      </LargeModal>
+    </>
+  )
+}
 
 export const OrderLineDetailDrawer = ({
   open,
@@ -2451,7 +2474,7 @@ export const OrderLineDetailDrawer = ({
           <DetailSection title="顶部摘要">
             <InfoGrid columns={3}>
               <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
-              <InfoField label="商品名称" value={line.name} />
+              <InfoField label="款式名称" value={line.name} />
               <InfoField label="销售状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
               <InfoField label="当前负责人" value={line.currentOwner || purchase?.ownerName || '待分配'} />
               <InfoField label="客户姓名" value={customer?.name || '—'} />
@@ -2485,18 +2508,18 @@ export const OrderLineDetailDrawer = ({
           <OrderLineLogSection line={line} logs={lineLogs} />
           <OrderLineDetailsSection line={line} onUpdateLineDetails={onUpdateLineDetails} />
 
-          <DetailSection title="来源产品">
+          <DetailSection title="来源款式">
             <InfoGrid columns={3}>
-              <InfoField label="是否引用产品" value={line.isReferencedProduct ? '是' : '否'} />
-              <InfoField label="来源产品名称" value={line.sourceProduct?.sourceProductName || '未引用产品'} />
-              <InfoField label="来源产品编号" value={line.sourceProduct?.sourceProductCode || '—'} />
-              <InfoField label="来源产品版本" value={line.sourceProduct?.sourceProductVersion ? <VersionBadge value={line.sourceProduct.sourceProductVersion} /> : '—'} />
+              <InfoField label="是否引用款式" value={line.isReferencedProduct ? '是' : '否'} />
+              <InfoField label="来源款式名称" value={line.sourceProduct?.sourceProductName || '未引用款式'} />
+              <InfoField label="来源款式编号" value={line.sourceProduct?.sourceProductCode || '—'} />
+              <InfoField label="来源款式版本" value={line.sourceProduct?.sourceProductVersion ? <VersionBadge value={line.sourceProduct.sourceProductVersion} /> : '—'} />
               <InfoField label="所选规格" value={line.selectedSpecValue || line.sourceProduct?.sourceSpecValue || '—'} />
               <InfoField
-                label="来源产品入口"
+                label="来源款式入口"
                 value={
                   <button type="button" className="button ghost small" onClick={() => setSourceProductOpen(true)} disabled={!sourceProduct}>
-                    查看来源产品
+                    查看来源款式
                   </button>
                 }
               />

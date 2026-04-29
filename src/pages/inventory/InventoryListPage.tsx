@@ -344,7 +344,7 @@ export const InventoryListPage = () => {
   const submitInbound = () => {
     const quantity = toPositiveInteger(inboundDraft.quantity)
     if (!inboundDraft.name.trim()) {
-      setFormMessage('请填写入库商品名称。')
+      setFormMessage('请填写入库款式名称。')
       return
     }
     if (quantity <= 0) {
@@ -505,7 +505,7 @@ export const InventoryListPage = () => {
         <div className="filter-grid">
           <label>
             <span>搜索库存编号 / 商品 / 关联对象</span>
-            <input value={filters.keyword} onChange={(event) => updateFilter('keyword', event.target.value)} placeholder="输入库存编号、商品名称、购买记录或销售" />
+            <input value={filters.keyword} onChange={(event) => updateFilter('keyword', event.target.value)} placeholder="输入库存编号、款式名称、购买记录或销售" />
           </label>
           <label>
             <span>来源筛选</span>
@@ -548,7 +548,7 @@ export const InventoryListPage = () => {
         <SectionCard title="入库登记" description="用于设计留样、客户退货、常备采购或其他库存的前端 mock 入库。">
           <div className="filter-grid">
             <label>
-              <span>商品名称</span>
+              <span>款式名称</span>
               <input value={inboundDraft.name} onChange={(event) => updateInboundDraft('name', event.target.value)} placeholder="例如 设计留样戒指" />
             </label>
             <label>
@@ -996,7 +996,7 @@ const InventoryLinks = ({ row }: { row: InventoryRow }) => (
   <div className="row wrap compact-row">
     {row.item.productId ? (
       <Link to={`/products/${row.item.productId}`} className="button ghost small" onClick={(event) => event.stopPropagation()}>
-        查看产品模板
+        查看款式模板
       </Link>
     ) : null}
     {row.item.purchaseId ? (

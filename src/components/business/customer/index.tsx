@@ -181,7 +181,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
           <thead>
             <tr>
               <th>销售编号</th>
-              <th>商品名称</th>
+              <th>款式名称</th>
               <th>状态</th>
               <th>当前负责人</th>
               <th>承诺交期</th>

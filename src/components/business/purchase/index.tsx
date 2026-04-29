@@ -395,7 +395,7 @@ const validatePurchaseDraft = (
 
   const missingNameIndex = orderLines.findIndex((line) => !line.productName.trim())
   if (missingNameIndex >= 0) {
-    return `销售 ${getTempLineNo(missingNameIndex)} 需要填写商品名称。`
+    return `销售 ${getTempLineNo(missingNameIndex)} 需要填写款式名称。`
   }
 
   const missingSpecIndex = orderLines.findIndex((line) => {
@@ -403,7 +403,7 @@ const validatePurchaseDraft = (
     return Boolean(line.sourceProductId && product?.isSpecRequired && !line.selectedSpecId)
   })
   if (missingSpecIndex >= 0) {
-    return `销售 ${getTempLineNo(missingSpecIndex)} 引用产品时需要选择规格。`
+    return `销售 ${getTempLineNo(missingSpecIndex)} 引用款式时需要选择规格。`
   }
 
   return ''
@@ -581,7 +581,7 @@ export const PurchaseOrderLineTable = ({
           <thead>
             <tr>
               <th>销售编号</th>
-              <th>商品名称</th>
+              <th>款式名称</th>
               <th>状态</th>
               <th>当前负责人</th>
               <th>承诺交期</th>
@@ -897,7 +897,7 @@ export const PurchaseDraftPaymentSection = ({
 
 const OrderLineDraftQuotePanel = ({ product, selectedSpec, quote }: { product?: Product; selectedSpec?: ProductSpecRow; quote?: QuoteResult }) => {
   if (!product) {
-    return <div className="text-caption">未引用产品时保留手动填写，暂不生成系统参考报价。</div>
+    return <div className="text-caption">未引用款式时保留手动填写，暂不生成系统参考报价。</div>
   }
 
   if (!quote || quote.status === 'waiting_spec') {
@@ -1006,9 +1006,9 @@ export const OrderLineDraftCard = ({
       </div>
       <div className="field-grid three">
         <label className="field-control">
-          <span className="field-label">引用产品</span>
+          <span className="field-label">引用款式</span>
           <select className="select" value={line.sourceProductId || ''} onChange={(event) => onApplyProduct(event.target.value)}>
-            <option value="">不引用产品，手动填写</option>
+            <option value="">不引用款式，手动填写</option>
             {referableProducts.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -1025,15 +1025,15 @@ export const OrderLineDraftCard = ({
           <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder={getGoodsNumberExample()} />
         </label>
         <label className="field-control">
-          <span className="field-label">商品名称（必填）</span>
-          <input aria-label="商品名称" className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
+          <span className="field-label">款式名称（必填）</span>
+          <input aria-label="款式名称" className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
         </label>
         <label className="field-control">
           <span className="field-label">品类</span>
           <input className="input" value={line.category} onChange={(event) => onChange({ category: event.target.value })} />
         </label>
         <label className="field-control">
-          <span className="field-label">款式名称</span>
+          <span className="field-label">款式别名</span>
           <input className="input" value={line.styleName} onChange={(event) => onChange({ styleName: event.target.value })} />
         </label>
         <label className="field-control">
@@ -1049,10 +1049,10 @@ export const OrderLineDraftCard = ({
       {product ? (
         <div className="row wrap spacer-top" style={{ justifyContent: 'space-between' }}>
           <div className="text-caption">
-            来源产品：{product.name} · {product.code} · {product.version}
+            来源款式：{product.name} · {product.code} · {product.version}
           </div>
           <button type="button" className="button ghost small" onClick={onOpenSourceProduct}>
-            查看来源产品
+            查看来源款式
           </button>
         </div>
       ) : null}

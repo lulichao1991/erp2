@@ -32,11 +32,11 @@ export const DashboardPage = () => {
     <PageContainer>
       <PageHeader title="协同概览" className="compact-page-header" />
       <div className="hero-placeholder">
-        <h2>产品管理 → 销售中心 → 任务中心</h2>
+        <h2>款式管理 → 销售中心 → 任务中心</h2>
         <p>从工作台可以快速进入三个主模块，演示从产品标准模板到购买记录与销售协同，再到任务推进的完整骨架。</p>
         <div className="row wrap" style={{ justifyContent: 'center', marginTop: 20 }}>
           <Link to="/products" className="button primary">
-            进入产品管理
+            进入款式管理
           </Link>
           <Link to="/order-lines" className="button secondary">
             进入销售中心

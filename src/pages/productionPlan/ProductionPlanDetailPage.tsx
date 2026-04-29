@@ -33,7 +33,7 @@ export const ProductionPlanDetailPage = () => {
   if (!detail) {
     return (
       <PageContainer>
-        <EmptyState title="未找到生产计划" description="当前任务不存在、不是工厂任务，或其关联销售 / 来源产品 mock 数据不完整。" />
+        <EmptyState title="未找到生产计划" description="当前任务不存在、不是工厂任务，或其关联销售 / 来源款式 mock 数据不完整。" />
       </PageContainer>
     )
   }

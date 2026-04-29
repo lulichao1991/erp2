@@ -46,8 +46,8 @@ const getSidebarShortLabel = (label: string) => {
     return '管理'
   }
 
-  if (label === '产品管理') {
-    return '产品'
+  if (label === '款式管理') {
+    return '款式'
   }
 
   if (label === '工作台') {

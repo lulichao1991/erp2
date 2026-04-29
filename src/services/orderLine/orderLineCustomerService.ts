@@ -20,7 +20,7 @@ type RequiredField = {
 }
 
 const requiredFields: RequiredField[] = [
-  { key: 'productName', label: '商品名称' },
+  { key: 'productName', label: '款式名称' },
   { key: 'category', label: '品类' },
   { key: 'material', label: '材质' },
   { key: 'size', label: '尺寸 / 规格' },

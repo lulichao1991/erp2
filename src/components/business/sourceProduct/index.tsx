@@ -105,7 +105,7 @@ const SourceProductCompareSection = ({
   const selectedSpecialOptions = compareValue.specialOptions ?? []
 
   return (
-    <SectionCard title="销售参数对比" description="左侧是产品模板允许的范围，右侧是当前销售或草稿的实际选择。">
+    <SectionCard title="销售参数对比" description="左侧是款式模板允许的范围，右侧是当前销售或草稿的实际选择。">
       <div className="stack">
         {compareValue.sourceLabel ? <div className="text-caption">当前对象：{compareValue.sourceLabel}</div> : null}
         <ComparisonRow
@@ -156,17 +156,17 @@ export const SourceProductDrawer = ({
   compareValue?: SourceProductCompareValue
   onClose: () => void
 }) => (
-  <SideDrawer open={open} title="来源产品详情" onClose={onClose}>
+  <SideDrawer open={open} title="来源款式详情" onClose={onClose}>
     {!product ? (
-      <EmptyState title="未找到来源产品" description="当前销售没有可查看的产品模板。" />
+      <EmptyState title="未找到来源款式" description="当前销售没有可查看的款式模板。" />
     ) : (
       <div className="stack">
-        <div className="text-caption">这里展示产品模板原始信息；查看或调整销售不会修改产品模板。</div>
+        <div className="text-caption">这里展示款式模板原始信息；查看或调整销售不会修改款式模板。</div>
 
         <SectionCard title="顶部摘要">
           <InfoGrid columns={3}>
-            <InfoField label="产品名称" value={product.name} />
-            <InfoField label="产品编号" value={product.code} />
+            <InfoField label="款式名称" value={product.name} />
+            <InfoField label="款式编号" value={product.code} />
             <InfoField label="当前版本" value={<VersionBadge value={product.version} />} />
             <InfoField label="品类" value={categoryLabelMap[product.category] || product.category} />
             <InfoField label="状态" value={<StatusTag value={product.status === 'enabled' ? '启用' : product.status === 'disabled' ? '停用' : '草稿'} />} />
@@ -215,7 +215,7 @@ export const SourceProductDrawer = ({
               </table>
             </div>
           ) : (
-            <EmptyState title="暂无规格" description="当前产品模板不需要规格行。" />
+            <EmptyState title="暂无规格" description="当前款式模板不需要规格行。" />
           )}
         </SectionCard>
 
@@ -248,7 +248,7 @@ export const SourceProductDrawer = ({
               </table>
             </div>
           ) : (
-            <EmptyState title="暂无价格规则" description="当前产品模板没有配置固定加价规则。" />
+            <EmptyState title="暂无价格规则" description="当前款式模板没有配置固定加价规则。" />
           )}
         </SectionCard>
 

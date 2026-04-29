@@ -507,7 +507,7 @@ export const ProductFieldDictionaryDrawer = ({
 
 export const ProductListHeader = ({ onOpenDictionary }: { onOpenDictionary?: () => void }) => (
   <PageHeader
-    title="产品列表"
+    title="款式列表"
     className="compact-page-header"
     actions={
       <>
@@ -517,7 +517,7 @@ export const ProductListHeader = ({ onOpenDictionary }: { onOpenDictionary?: () 
           </button>
         ) : null}
         <Link to="/products/new" className="button primary">
-          新建产品
+          新建款式
         </Link>
       </>
     }
@@ -529,7 +529,7 @@ export const ProductQuickStats = ({ products }: { products: Product[] }) => {
   const averagePrice = firstPrices.length > 0 ? Math.round(firstPrices.reduce((sum, item) => sum + item, 0) / firstPrices.length) : 0
 
   const stats = [
-    { label: '全部产品', value: products.length },
+    { label: '全部款式', value: products.length },
     { label: '可引用', value: products.filter((item) => item.isReferable).length },
     { label: '启用中', value: products.filter((item) => item.status === 'enabled').length },
     { label: '单轴规格', value: products.filter((item) => item.specMode === 'single_axis').length },
@@ -566,7 +566,7 @@ export const ProductFilterBar = ({
   <SectionCard title="搜索与筛选" className="compact-card">
     <div className="field-grid four">
       <div className="field-control">
-        <label className="field-label">搜索产品名称 / 编号</label>
+        <label className="field-label">搜索款式名称 / 编号</label>
         <input
           className="input"
           value={value.keyword}
@@ -613,7 +613,7 @@ export const ProductTable = ({ products }: { products: Product[] }) => (
       <thead>
         <tr>
           <th>主图</th>
-          <th>产品信息</th>
+          <th>款式信息</th>
           <th>默认材质</th>
           <th>参考价格</th>
           <th>状态</th>
@@ -674,11 +674,11 @@ export const ProductTable = ({ products }: { products: Product[] }) => (
 
 export const ProductHeaderBar = ({ product }: { product: Product }) => (
   <PageHeader
-    title="产品详情"
+    title="款式详情"
     actions={
       <>
         <Link to={`/products/${product.id}/edit`} className="button primary">
-          编辑产品
+          编辑款式
         </Link>
         <Link to="/products" className="button secondary">
           返回列表
@@ -738,8 +738,8 @@ export const ProductAnchorNav = ({
 export const ProductBasicInfoSection = ({ product }: { product: Product }) => (
   <SectionCard id="basic" title="基础信息">
     <InfoGrid columns={3}>
-      <InfoField label="产品名称" value={product.name} />
-      <InfoField label="产品编号" value={product.code} />
+      <InfoField label="款式名称" value={product.name} />
+      <InfoField label="款式编号" value={product.code} />
       <InfoField label="品类" value={product.category} />
       <InfoField label="系列" value={product.series || '—'} />
       <InfoField label="风格标签" value={product.styleTags.join(' / ') || '—'} />
@@ -925,7 +925,7 @@ export const ProductVersionHistorySection = ({
   <SectionCard
     id="versions"
     title="版本记录"
-    description="查看产品模板版本演进、更新摘要和相关文件，首轮先做查看态。"
+    description="查看款式模板版本演进、更新摘要和相关文件，首轮先做查看态。"
     actions={
       <button type="button" className="button secondary small" onClick={onOpen}>
         查看版本记录
@@ -1111,12 +1111,12 @@ export const ProductEditHeader = ({
   hasUnsavedChanges: boolean
 }) => (
   <PageHeader
-    title={mode === 'create' ? '新建产品' : '编辑产品'}
+    title={mode === 'create' ? '新建款式' : '编辑款式'}
     actions={
       <>
         <span className="topbar-pill">{hasUnsavedChanges ? '有未保存修改' : '已同步到当前页面状态'}</span>
         <button className="button primary" onClick={onSave}>
-          {mode === 'create' ? '创建产品' : '保存修改'}
+          {mode === 'create' ? '创建款式' : '保存修改'}
         </button>
       </>
     }
@@ -1152,11 +1152,11 @@ export const ProductBasicFormSection = ({
   <SectionCard id="basic-form" title="基础信息">
     <div className="field-grid two">
       <div className="field-control">
-        <label className="field-label">产品名称</label>
+        <label className="field-label">款式名称</label>
         <input className="input" value={product.name} onChange={(event) => setProduct((current) => ({ ...current, name: event.target.value }))} />
       </div>
       <div className="field-control">
-        <label className="field-label">产品编号</label>
+        <label className="field-label">款式编号</label>
         <input className="input" value={product.code} onChange={(event) => setProduct((current) => ({ ...current, code: event.target.value }))} />
       </div>
       <div className="field-control">
@@ -1686,7 +1686,7 @@ export const ProductSpecSection = ({
                     </div>
                   </div>
                 ))}
-                {spec.sizeFields.length > 0 ? <div className="text-muted">参数名称来自产品管理里的“字典配置”，字段标识已隐藏为系统内部字段。</div> : null}
+                {spec.sizeFields.length > 0 ? <div className="text-muted">参数名称来自款式管理里的“字典配置”，字段标识已隐藏为系统内部字段。</div> : null}
                 {spec.sizeFields.length === 0 ? <div className="placeholder-block">当前规格还没有尺寸参数，请先新增。</div> : null}
               </div>
             </div>

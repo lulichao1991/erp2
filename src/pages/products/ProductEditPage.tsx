@@ -28,7 +28,7 @@ export const ProductEditPage = () => {
   if (!product) {
     return (
       <PageContainer>
-        <EmptyState title="未找到产品" description="当前产品不存在，无法进入编辑页。" />
+        <EmptyState title="未找到款式" description="当前款式不存在，无法进入编辑页。" />
       </PageContainer>
     )
   }
@@ -55,10 +55,10 @@ export const ProductEditPage = () => {
     <PageContainer>
       <AppBreadcrumb
         items={[
-          { label: '产品管理', to: '/products' },
-          { label: '产品详情', to: `/products/${product.id}` },
-          { label: product.name || '未命名产品' },
-          { label: '编辑产品' }
+          { label: '款式管理', to: '/products' },
+          { label: '款式详情', to: `/products/${product.id}` },
+          { label: product.name || '未命名款式' },
+          { label: '编辑款式' }
         ]}
       />
       <ProductEditHeader mode="edit" onSave={handleSave} hasUnsavedChanges />

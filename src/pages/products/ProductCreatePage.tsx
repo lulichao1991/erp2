@@ -27,7 +27,7 @@ export const ProductCreatePage = () => {
 
   return (
     <PageContainer>
-      <AppBreadcrumb items={[{ label: '产品管理', to: '/products' }, { label: '新建产品' }]} />
+      <AppBreadcrumb items={[{ label: '款式管理', to: '/products' }, { label: '新建款式' }]} />
       <ProductEditHeader mode="create" onSave={handleSave} hasUnsavedChanges />
       <div className="editor-shell">
         <ProductEditSideNav activeSection="basic-form" />
