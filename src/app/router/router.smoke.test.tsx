@@ -175,7 +175,8 @@ describe('router smoke', () => {
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
     expect(screen.getByText('手链蜡版确认')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'PUR-202604-001' }).length).toBeGreaterThan(0)
+    expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'PUR-202604-001' })).not.toBeInTheDocument()
   })
 
   it('filters order-line center by category, owner, after-sales, urgent flag and keyword', async () => {
@@ -214,7 +215,7 @@ describe('router smoke', () => {
     expect(screen.getByText('定制项链')).toBeInTheDocument()
 
     await user.clear(screen.getByLabelText('负责人筛选'))
-    await user.type(screen.getByLabelText('搜索销售编号 / 商品名称 / 客户 / 购买记录 / 平台单号'), 'TB-9938201')
+    await user.type(screen.getByLabelText('搜索货号 / 商品名称 / 客户 / 内部编号 / 购买记录 / 平台单号'), 'TB-9938201')
     expect(screen.getByText('山形戒指')).toBeInTheDocument()
     expect(screen.getByText('山形吊坠')).toBeInTheDocument()
     expect(screen.getByText('定制项链')).toBeInTheDocument()
@@ -259,7 +260,7 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
     expect(ringRow).not.toBeNull()
 
     await user.click(within(ringRow as HTMLElement).getByRole('button', { name: '查看' }))
@@ -282,7 +283,7 @@ describe('router smoke', () => {
     await user.click(closeButtons[closeButtons.length - 1] as HTMLElement)
     await user.click(screen.getAllByRole('button', { name: '关闭' })[0] as HTMLElement)
 
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
     expect(pendantRow).not.toBeNull()
     await user.click(pendantRow as HTMLElement)
 
@@ -296,9 +297,9 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
-    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
+    const necklaceRow = screen.getByText('NECK-CUSTOM-042').closest('tr')
     expect(ringRow).not.toBeNull()
     expect(pendantRow).not.toBeNull()
     expect(necklaceRow).not.toBeNull()
@@ -324,8 +325,8 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
     expect(ringRow).not.toBeNull()
     expect(pendantRow).not.toBeNull()
 
@@ -372,8 +373,8 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
     expect(ringRow).not.toBeNull()
     expect(pendantRow).not.toBeNull()
 
@@ -410,8 +411,8 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
     expect(ringRow).not.toBeNull()
     expect(pendantRow).not.toBeNull()
 
@@ -442,8 +443,8 @@ describe('router smoke', () => {
     expect(screen.getByText('5.1g')).toBeInTheDocument()
     expect(screen.getByText('主石 0.3ct')).toBeInTheDocument()
     expect(screen.getAllByText('戒指工厂回传完成').length).toBeGreaterThan(0)
-    expect(within(ringRow as HTMLElement).getByText('工厂 工厂已回传')).toBeInTheDocument()
-    expect(within(pendantRow as HTMLElement).getByText('工厂 工厂已回传')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('苏州金工厂')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('杭州珐琅工作室')).toBeInTheDocument()
 
     await user.click(screen.getAllByRole('button', { name: '关闭' })[0] as HTMLElement)
     await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: '查看' }))
@@ -455,9 +456,9 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
-    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
+    const necklaceRow = screen.getByText('NECK-CUSTOM-042').closest('tr')
     expect(ringRow).not.toBeNull()
     expect(pendantRow).not.toBeNull()
     expect(necklaceRow).not.toBeNull()
@@ -509,9 +510,9 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const ringRow = screen.getByText('OL-202604-001-01').closest('tr')
-    const pendantRow = screen.getByText('OL-202604-001-02').closest('tr')
-    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
+    const necklaceRow = screen.getByText('NECK-CUSTOM-042').closest('tr')
     expect(ringRow).not.toBeNull()
     expect(pendantRow).not.toBeNull()
     expect(necklaceRow).not.toBeNull()
@@ -561,7 +562,7 @@ describe('router smoke', () => {
     const user = userEvent.setup()
     renderRoute('/order-lines')
 
-    const necklaceRow = screen.getByText('OL-202604-001-03').closest('tr')
+    const necklaceRow = screen.getByText('NECK-CUSTOM-042').closest('tr')
     expect(necklaceRow).not.toBeNull()
 
     await user.click(necklaceRow as HTMLElement)

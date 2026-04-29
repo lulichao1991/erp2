@@ -11,6 +11,7 @@ import {
   factoryWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
 import { getCustomerServiceNextLineStatus, getOrderLineCompleteness, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
+import { generateGoodsNumber, getGoodsNumberExample } from '@/services/orderLine/goodsNumber'
 import { getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type { Customer } from '@/types/customer'
 import type { OrderLine, OrderLineLineStatus, OrderLineUploadedFile } from '@/types/order-line'
@@ -139,42 +140,52 @@ const defaultPurchaseDraft: PurchaseDraftFormValue = {
 
 let draftLineSeed = 1
 
-const createOrderLineDraftId = () => `order-line-draft-${draftLineSeed++}`
+const createOrderLineDraftSequence = () => draftLineSeed++
 
-const createOrderLineDraft = (): OrderLineDraft => ({
-  id: createOrderLineDraftId(),
-  lineCode: '',
-  productionTaskNo: '',
-  skuCode: '',
-  selectedSpecialOptions: [],
-  productName: '',
-  category: '',
-  styleName: '',
-  versionNo: '',
-  spec: '',
-  material: '',
-  process: '',
-  sizeNote: '',
-  engraveText: '',
-  engraveImageFiles: [],
-  engravePltFiles: [],
-  specialRequirement: '',
-  needsDesign: true,
-  needsModeling: false,
-  needsWax: false,
-  urgent: false,
-  lineStatus: 'draft',
-  ownerName: '客服A',
-  promisedDate: ''
-})
+const createOrderLineDraftId = (sequence: number) => `order-line-draft-${sequence}`
 
-const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => ({
-  ...line,
-  id: createOrderLineDraftId(),
-  lineCode: '',
-  productionTaskNo: '',
-  lineStatus: 'draft'
-})
+const createOrderLineDraft = (): OrderLineDraft => {
+  const sequence = createOrderLineDraftSequence()
+
+  return {
+    id: createOrderLineDraftId(sequence),
+    lineCode: '',
+    productionTaskNo: generateGoodsNumber(sequence),
+    skuCode: '',
+    selectedSpecialOptions: [],
+    productName: '',
+    category: '',
+    styleName: '',
+    versionNo: '',
+    spec: '',
+    material: '',
+    process: '',
+    sizeNote: '',
+    engraveText: '',
+    engraveImageFiles: [],
+    engravePltFiles: [],
+    specialRequirement: '',
+    needsDesign: true,
+    needsModeling: false,
+    needsWax: false,
+    urgent: false,
+    lineStatus: 'draft',
+    ownerName: '客服A',
+    promisedDate: ''
+  }
+}
+
+const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => {
+  const sequence = createOrderLineDraftSequence()
+
+  return {
+    ...line,
+    id: createOrderLineDraftId(sequence),
+    lineCode: '',
+    productionTaskNo: generateGoodsNumber(sequence),
+    lineStatus: 'draft'
+  }
+}
 
 const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
 
@@ -999,12 +1010,12 @@ export const OrderLineDraftCard = ({
           </select>
         </label>
         <label className="field-control">
-          <span className="field-label">销售编号</span>
+          <span className="field-label">内部销售编号</span>
           <input className="input" value={line.lineCode} onChange={(event) => onChange({ lineCode: event.target.value })} placeholder={tempLineNo} />
         </label>
         <label className="field-control">
           <span className="field-label">货号</span>
-          <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder="默认同销售编号 / 货号" />
+          <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder={getGoodsNumberExample()} />
         </label>
         <label className="field-control">
           <span className="field-label">商品名称（必填）</span>

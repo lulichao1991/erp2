@@ -271,15 +271,24 @@ const getAfterSalesTypeLabel = (type?: string) => (type ? afterSalesTypeLabelMap
 
 const getTimePressure = (line: OrderLine, promisedDate?: string) => getProductionDelayStatus(line, new Date(), promisedDate, { respectCompleted: false })
 
-const getParameterSummary = (line: OrderLine) =>
-  [
-    line.selectedSpecValue ? `规格 ${line.selectedSpecValue}` : null,
-    line.selectedMaterial ? `材质 ${line.selectedMaterial}` : line.actualRequirements?.material ? `材质 ${line.actualRequirements.material}` : null,
-    line.selectedProcess ? `工艺 ${line.selectedProcess}` : line.actualRequirements?.process ? `工艺 ${line.actualRequirements.process}` : null,
-    line.actualRequirements?.sizeNote ? `尺寸 ${line.actualRequirements.sizeNote}` : null
-  ]
-    .filter(Boolean)
-    .join(' / ') || '待补充参数'
+const normalizeParameterText = (value: string) => value.replace(/\s+/g, '')
+
+const getParameterSummary = (line: OrderLine) => {
+  const spec = line.selectedSpecValue?.trim()
+  const size = line.actualRequirements?.sizeNote?.trim()
+  const shouldShowSpec = Boolean(spec && (!size || !normalizeParameterText(size).includes(normalizeParameterText(spec))))
+
+  return (
+    [
+      shouldShowSpec ? `规格 ${spec}` : null,
+      line.selectedMaterial ? `材质 ${line.selectedMaterial}` : line.actualRequirements?.material ? `材质 ${line.actualRequirements.material}` : null,
+      line.selectedProcess ? `工艺 ${line.selectedProcess}` : line.actualRequirements?.process ? `工艺 ${line.actualRequirements.process}` : null,
+      size ? `尺寸 ${size}` : null
+    ]
+      .filter(Boolean)
+      .join(' / ') || '待补充参数'
+  )
+}
 
 const getFactorySummary = (line: OrderLine) =>
   line.outsourceInfo?.supplierName && line.outsourceInfo.supplierName !== '待定' ? line.outsourceInfo.supplierName : '待确认工厂'
@@ -1928,13 +1937,13 @@ export const OrderLineFilterBar = ({
       </div>
       <div className="order-line-filter-primary">
         <div className="field-control">
-          <label className="field-label">搜索销售编号 / 商品名称 / 客户 / 购买记录 / 平台单号</label>
+          <label className="field-label">搜索货号 / 商品名称 / 客户 / 内部编号 / 购买记录 / 平台单号</label>
           <input
             className="input"
-            aria-label="搜索销售编号 / 商品名称 / 客户 / 购买记录 / 平台单号"
+            aria-label="搜索货号 / 商品名称 / 客户 / 内部编号 / 购买记录 / 平台单号"
             value={value.keyword}
             onChange={(event) => onChange({ ...value, keyword: event.target.value })}
-            placeholder="例如：山形戒指 / 张三 / PUR-202604-001"
+            placeholder="例如：RING-SH-016 / 山形戒指 / 张三"
           />
         </div>
         <div className="field-control">
@@ -2047,15 +2056,13 @@ export const OrderLineTable = ({
       <thead>
         <tr>
           <th>风险</th>
-          <th>销售编号</th>
+          <th>货号</th>
           <th>商品名称</th>
           <th>客户</th>
-          <th>所属购买记录</th>
           <th>参数摘要</th>
           <th>状态</th>
           <th>当前负责人</th>
           <th>承诺交期</th>
-          <th>工厂</th>
           <th>物流 / 售后</th>
           <th>操作</th>
         </tr>
@@ -2063,7 +2070,7 @@ export const OrderLineTable = ({
       <tbody>
         {rows.length === 0 ? (
           <tr>
-            <td colSpan={12}>
+            <td colSpan={10}>
               <EmptyState title="暂无匹配销售" description="当前筛选条件下没有销售，请放宽筛选或切回全部销售。" />
             </td>
           </tr>
@@ -2105,9 +2112,9 @@ export const OrderLineTable = ({
                 )}
               </td>
               <td>
-                <div className="stack" style={{ gap: 6 }}>
-                  <strong>{line.lineCode || line.id}</strong>
-                  <span className="text-caption">货号 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</span>
+                <div className="stack order-line-goods-no-cell">
+                  <strong>{line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</strong>
+                  <span className="text-caption">内部 {line.lineCode || line.id}</span>
                 </div>
               </td>
               <td>
@@ -2119,16 +2126,6 @@ export const OrderLineTable = ({
                 <div className="text-caption">{customer?.phone || '—'}</div>
               </td>
               <td>
-                {purchase ? (
-                  <Link to={`/purchases/${purchase.id}`} className="text-price">
-                    {purchase.purchaseNo}
-                  </Link>
-                ) : (
-                  <span className="text-muted">—</span>
-                )}
-                <div className="text-caption">{purchase?.platformOrderNo || '无平台单号'}</div>
-              </td>
-              <td>
                 <div className="stack" style={{ gap: 4 }}>
                   <span>{getParameterSummary(line)}</span>
                   <span className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</span>
@@ -2138,16 +2135,21 @@ export const OrderLineTable = ({
                 <StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />
                 <div className="text-caption">生产 {productionWorkflowStatusLabelMap[getOrderLineProductionStatus(line)]}</div>
               </td>
-              <td>{line.currentOwner || purchase?.ownerName || '待分配'}</td>
+              <td>
+                <div>{line.currentOwner || purchase?.ownerName || '待分配'}</div>
+                {getOrderLineLineStatus(line) === 'pending_factory_production' ||
+                getOrderLineLineStatus(line) === 'in_production' ||
+                getOrderLineLineStatus(line) === 'factory_returned' ||
+                getOrderLineProductionStatus(line) === 'in_production' ||
+                getOrderLineFactoryStatus(line) !== 'not_assigned' ? (
+                  <div className="text-caption">{getFactorySummary(line)}</div>
+                ) : null}
+              </td>
               <td>
                 <div>{line.promisedDate || purchase?.promisedDate || '—'}</div>
                 <div className="spacer-top">
                   <TimePressureBadge label={pressure.label} variant={pressure.variant} />
                 </div>
-              </td>
-              <td>
-                <div>{getFactorySummary(line)}</div>
-                <div className="text-caption">工厂 {getFactoryStatusLabel(getOrderLineFactoryStatus(line))}</div>
               </td>
               <td>
                 <div className="stack" style={{ gap: 4 }}>

@@ -1462,6 +1462,15 @@ button.stat-card {
   margin-top: 12px;
 }
 
+.order-line-goods-no-cell {
+  gap: 4px;
+  min-width: 112px;
+}
+
+.order-line-goods-no-cell strong {
+  letter-spacing: 0;
+}
+
 .card-grid {
   display: grid;
   gap: 16px;
