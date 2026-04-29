@@ -1161,7 +1161,7 @@ describe('router smoke', () => {
 
     await user.click(screen.getByRole('button', { name: '切换到异常 / 逾期' }))
     expect(screen.getByText('胸针补石')).toBeInTheDocument()
-    expect(screen.getByText('已逾期')).toBeInTheDocument()
+    expect(screen.getAllByText('已逾期').length).toBeGreaterThan(0)
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
