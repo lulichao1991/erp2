@@ -69,7 +69,7 @@ export const inventoryItemsMock: InventoryItem[] = [
     status: 'in_stock',
     receivedAt: '2026-04-20 09:30',
     keeperName: '周库管',
-    remark: '库管常备货，后续可按商品行领用。'
+    remark: '库管常备货，后续可按销售领用。'
   },
   {
     id: 'inventory-other-stone-001',

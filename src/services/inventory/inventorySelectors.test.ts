@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { customersMock, inventoryItemsMock, mockProducts, orderLinesMock, purchasesMock } from '@/mocks'
-import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryAvailabilityStatus, getInventoryReservedQuantity, getInventoryReviewStatus, getInventoryWorkbenchBadges } from '@/services/inventory/inventorySelectors'
+import { applyInventoryMovement, applyInventoryReview, applyInventoryStocktake, buildInventoryLocationSummaries, buildInventoryOrderLineMovementSummary, buildInventoryRows, buildInventorySummary, filterInventoryRows, getInventoryAvailabilityStatus, getInventoryReservedQuantity, getInventoryReviewStatus, getInventoryWorkbenchBadges } from '@/services/inventory/inventorySelectors'
 
 const buildRows = () =>
   buildInventoryRows({
@@ -20,7 +20,7 @@ describe('inventorySelectors', () => {
     expect(returnRow?.purchaseNo).toBe('PUR-202604-001')
     expect(returnRow?.orderLineCode).toBe('OL-202604-001-01')
     expect(returnRow?.customerName).toBe('张三')
-    expect(returnRow?.linkedSummary).toContain('商品行：OL-202604-001-01')
+    expect(returnRow?.linkedSummary).toContain('销售：OL-202604-001-01')
   })
 
   it('summarizes design samples, returns and review-needed inventory', () => {
@@ -34,6 +34,26 @@ describe('inventorySelectors', () => {
     expect(summary.customerReturnCount).toBe(1)
     expect(summary.needsReviewCount).toBe(1)
     expect(summary.lowStockCount).toBe(1)
+  })
+
+  it('summarizes inventory quantities by warehouse location', () => {
+    const locationSummaries = buildInventoryLocationSummaries(buildRows())
+    const returnLocation = locationSummaries.find((summary) => summary.location === 'B-退货待检-03')
+    const stockLocation = locationSummaries.find((summary) => summary.location === 'C-常备链身-02')
+    expect(returnLocation).toMatchObject({
+      skuCount: 1,
+      totalQuantity: 1,
+      availableQuantity: 0,
+      reservedQuantity: 1,
+      needsReviewCount: 1
+    })
+    expect(stockLocation).toMatchObject({
+      skuCount: 1,
+      totalQuantity: 5,
+      availableQuantity: 5,
+      reservedQuantity: 0,
+      needsReviewCount: 0
+    })
   })
 
   it('filters inventory by source, status, condition, location and keyword', () => {
@@ -98,7 +118,7 @@ describe('inventorySelectors', () => {
       operatorName: '周库管',
       occurredAt: '2026-04-26 10:00',
       relatedOrderLineId: 'oi-ring-001',
-      note: '为商品行预占链身'
+      note: '为销售预占链身'
     })
 
     expect(reserveResult.item.quantity).toBe(5)

@@ -17,7 +17,7 @@ export const TaskListHeader = () => (
     className="compact-page-header"
     actions={
       <Link to="/order-lines" className="button secondary">
-        返回商品行中心
+        返回销售中心
       </Link>
     }
   />
@@ -43,7 +43,7 @@ export const TaskQuickStats = ({ tasks, orderLines = [] }: { tasks: Task[]; orde
           </div>
         ))}
       </div>
-      <SectionCard title="商品行任务分组" description="按 OrderLine 状态生成任务分组，供后续客服、设计、跟单、工厂和财务视图复用。" className="compact-card">
+      <SectionCard title="销售任务分组" description="按 OrderLine 状态生成任务分组，供后续客服、设计、跟单、工厂和财务视图复用。" className="compact-card">
         <div className="stats-grid compact-stats">
           {getOrderLineTaskGroups(orderLines).map((item) => (
             <div key={item.value} className="stat-card compact-stat">
@@ -147,7 +147,7 @@ export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
           <th>优先级</th>
           <th>任务标题</th>
           <th>任务类型</th>
-          <th>关联商品行</th>
+          <th>关联销售</th>
           <th>责任人</th>
           <th>截止时间</th>
           <th>状态</th>
@@ -251,7 +251,7 @@ export const TaskInfoCardGroup = ({
         <InfoField label="购买记录编号" value={renderTaskPurchaseLink(task)} />
         <InfoField label="购买记录阶段" value={getPurchaseAggregateStatusLabel(purchase?.aggregateStatus)} />
         <InfoField label="购买记录负责人" value={purchase?.ownerName || '—'} />
-        <InfoField label="关联商品行" value={getOrderLineDisplayLabel(task, orderLine)} />
+        <InfoField label="关联销售" value={getOrderLineDisplayLabel(task, orderLine)} />
         {!hideCommercialInfo ? <InfoField label="收件人" value={purchase?.recipientName || '—'} /> : null}
         <InfoField label="风险标签" value={purchase?.riskTags.join(' / ') || '—'} />
       </InfoGrid>

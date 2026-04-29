@@ -118,7 +118,7 @@ export const mockProducts: Product[] = [
         selectedSpecValue: '16号',
         referencedAt: '2026-04-21 10:46',
         status: 'referenced',
-        note: '当前购买记录下的商品行沿用模板规格，追加了 18K 金和微镶需求。'
+        note: '当前购买记录下的销售沿用模板规格，追加了 18K 金和微镶需求。'
       },
       {
         id: 'ref-ring-002',
@@ -135,7 +135,7 @@ export const mockProducts: Product[] = [
         selectedSpecValue: '10号',
         referencedAt: '2026-03-28 14:20',
         status: 'adjusted',
-        note: '商品行侧追加内圈加厚，已偏离模板默认底厚。'
+        note: '销售侧追加内圈加厚，已偏离模板默认底厚。'
       }
     ],
     versionHistory: [
@@ -274,7 +274,7 @@ export const mockProducts: Product[] = [
         selectedSpecValue: '小号',
         referencedAt: '2026-04-21 10:48',
         status: 'referenced',
-        note: '购买记录下的商品行沿用小号规格，商品行侧增加了加急和礼盒要求。'
+        note: '购买记录下的销售沿用小号规格，销售侧增加了加急和礼盒要求。'
       }
     ],
     versionHistory: [

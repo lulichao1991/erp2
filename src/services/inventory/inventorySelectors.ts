@@ -73,6 +73,15 @@ export type InventorySummary = {
   unavailableCount: number
 }
 
+export type InventoryLocationSummary = {
+  location: string
+  skuCount: number
+  totalQuantity: number
+  availableQuantity: number
+  reservedQuantity: number
+  needsReviewCount: number
+}
+
 export type InventoryMovementInput = {
   type: InventoryMovementType
   quantity: number
@@ -223,7 +232,7 @@ export const buildInventoryRows = ({
     const customerName = customer?.name
     const linkedSummary = [
       productName ? `产品：${productName}` : null,
-      orderLineCode ? `商品行：${orderLineCode}` : null,
+      orderLineCode ? `销售：${orderLineCode}` : null,
       purchaseNo ? `购买记录：${purchaseNo}` : null,
       customerName ? `客户：${customerName}` : null
     ]
@@ -334,6 +343,33 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   lowStockCount: rows.filter(isLowStockInventoryRow).length,
   unavailableCount: rows.filter((row) => getInventoryAvailabilityStatus(row.item) === 'unavailable').length
 })
+
+export const buildInventoryLocationSummaries = (rows: InventoryRow[]): InventoryLocationSummary[] => {
+  const summaries = new Map<string, InventoryLocationSummary>()
+
+  rows.forEach((row) => {
+    const location = row.item.warehouseLocation || '未分配库位'
+    const current = summaries.get(location) ?? {
+      location,
+      skuCount: 0,
+      totalQuantity: 0,
+      availableQuantity: 0,
+      reservedQuantity: 0,
+      needsReviewCount: 0
+    }
+
+    summaries.set(location, {
+      ...current,
+      skuCount: current.skuCount + 1,
+      totalQuantity: current.totalQuantity + row.item.quantity,
+      availableQuantity: current.availableQuantity + row.item.availableQuantity,
+      reservedQuantity: current.reservedQuantity + getInventoryReservedQuantity(row.item),
+      needsReviewCount: current.needsReviewCount + (getInventoryReviewStatus(row.item) === 'needs_review' ? 1 : 0)
+    })
+  })
+
+  return Array.from(summaries.values()).sort((left, right) => left.location.localeCompare(right.location, 'zh-Hans-CN'))
+}
 
 export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovement[], orderLines: OrderLine[]): InventoryOrderLineMovementSummary[] => {
   const summaries = new Map<string, InventoryOrderLineMovementSummary>()
