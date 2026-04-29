@@ -31,7 +31,7 @@ export const OrderLineListPage = () => {
   return (
     <PageContainer>
       <PageHeader
-        title="商品行中心"
+        title="销售中心"
         className="compact-page-header"
         actions={
           <Link to="/purchases/new" className="button primary">
@@ -39,7 +39,6 @@ export const OrderLineListPage = () => {
           </Link>
         }
       />
-      <p className="text-muted">一行代表一件商品，支持独立推进设计、生产、发货与售后。</p>
       <div className="stack">
         <OrderLineQuickStats rows={workspace.rows} afterSalesCases={workspace.afterSalesCases} />
         <OrderLineFilterBar value={filters} onChange={setFilters} />

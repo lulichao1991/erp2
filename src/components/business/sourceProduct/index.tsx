@@ -105,7 +105,7 @@ const SourceProductCompareSection = ({
   const selectedSpecialOptions = compareValue.specialOptions ?? []
 
   return (
-    <SectionCard title="商品行参数对比" description="左侧是产品模板允许的范围，右侧是当前商品行或草稿的实际选择。">
+    <SectionCard title="销售参数对比" description="左侧是产品模板允许的范围，右侧是当前销售或草稿的实际选择。">
       <div className="stack">
         {compareValue.sourceLabel ? <div className="text-caption">当前对象：{compareValue.sourceLabel}</div> : null}
         <ComparisonRow
@@ -158,10 +158,10 @@ export const SourceProductDrawer = ({
 }) => (
   <SideDrawer open={open} title="来源产品详情" onClose={onClose}>
     {!product ? (
-      <EmptyState title="未找到来源产品" description="当前商品行没有可查看的产品模板。" />
+      <EmptyState title="未找到来源产品" description="当前销售没有可查看的产品模板。" />
     ) : (
       <div className="stack">
-        <div className="text-caption">这里展示产品模板原始信息；查看或调整商品行不会修改产品模板。</div>
+        <div className="text-caption">这里展示产品模板原始信息；查看或调整销售不会修改产品模板。</div>
 
         <SectionCard title="顶部摘要">
           <InfoGrid columns={3}>
