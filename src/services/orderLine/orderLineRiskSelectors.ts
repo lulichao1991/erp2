@@ -204,7 +204,7 @@ export const getRoleTaskBadges = (lines: OrderLine[], role: TaskAssigneeRole) =>
       return [{ label: '财务待处理', count: count((line) => ['pending', 'abnormal'].includes(getOrderLineFinanceStatus(line)) || getFinanceRiskStatus(line).labels.length > 0) }]
     case 'manager':
     case 'admin':
-      return [{ label: '风险商品行', count: count((line) => getOrderLineRisks(line).length > 0) }]
+      return [{ label: '风险销售', count: count((line) => getOrderLineRisks(line).length > 0) }]
     default:
       return []
   }
