@@ -23,6 +23,7 @@ Customer -> Purchase -> OrderLine -> Product
 - `/design-modeling`
 - `/factory`
 - `/finance`
+- `/inventory`
 - `/management`
 - `/production-plan`
 
@@ -57,13 +58,13 @@ legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口
 4. `docs/frontend/ui-structure.md`
 
 作用：
-- 定义商品行中心、购买记录新建页、购买记录详情页和产品页的 UI 结构
+- 定义销售中心、购买记录新建页、购买记录详情页和产品页的 UI 结构
 - 约束页面信息层级和对象边界
 
 5. `docs/frontend/mock-data-schema.md`
 
 作用：
-- 定义 `Customer / Purchase / OrderLine / ProductSnapshot` 等当前主对象
+- 定义 `Customer / Purchase / OrderLine / ProductSnapshot / InventoryItem` 等当前主对象
 - 明确 `TransactionRecord` 只能作为 `Purchase` 的兼容别名
 - 明确当前 mock 主线为 `purchases.ts + order-lines.ts`
 
@@ -223,7 +224,7 @@ legacy `/orders` 模块已经删除，不再作为当前主入口、兼容入口
 
 正确理解：
 - `OrderLine` 是当前系统主操作对象
-- 商品行可以独立推进状态、设计、委外、生产、物流和售后
+- 销售可以独立推进状态、设计、委外、生产、物流和售后
 
 ---
 

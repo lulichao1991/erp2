@@ -10,6 +10,7 @@ export type TaskAssigneeRole =
   | 'designer'
   | 'modeler'
   | 'factory'
+  | 'warehouse'
   | 'finance'
   | 'manager'
   | 'admin'

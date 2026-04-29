@@ -30,6 +30,7 @@ export const taskAssigneeRoleLabelMap: Record<TaskAssigneeRole, string> = {
   designer: roleCapabilities.designer.label,
   modeler: roleCapabilities.modeler.label,
   factory: roleCapabilities.factory.label,
+  warehouse: roleCapabilities.warehouse.label,
   finance: roleCapabilities.finance.label,
   manager: roleCapabilities.manager.label,
   admin: roleCapabilities.admin.label

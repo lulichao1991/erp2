@@ -1,0 +1,139 @@
+import type { InventoryItem, InventoryMovement } from '@/types/inventory'
+
+export const inventoryItemsMock: InventoryItem[] = [
+  {
+    id: 'inventory-design-sample-ring-001',
+    inventoryCode: 'INV-DS-202604-001',
+    name: '山形素圈戒指设计留样',
+    category: 'ring',
+    sourceType: 'design_sample',
+    sourceLabel: '设计部门留样',
+    productId: 'p-ring-001',
+    productName: '山形素圈戒指',
+    material: '银版',
+    size: '16号',
+    craftRequirements: '设计确认样，不对外销售',
+    weight: 4.2,
+    quantity: 1,
+    availableQuantity: 1,
+    warehouseLocation: 'A-设计样品-01',
+    ownerDepartment: 'design',
+    condition: 'sample',
+    status: 'in_stock',
+    receivedAt: '2026-04-23 18:20',
+    keeperName: '周库管',
+    remark: '设计部门生产出的款式样，入库用于后续客户沟通参考。'
+  },
+  {
+    id: 'inventory-return-ring-001',
+    inventoryCode: 'INV-RT-202604-002',
+    name: '客户退回山形戒指',
+    category: 'ring',
+    sourceType: 'customer_return',
+    sourceLabel: '客户退货入库',
+    productId: 'p-ring-001',
+    productName: '山形素圈戒指',
+    orderLineId: 'oi-ring-001',
+    purchaseId: 'o-202604-001',
+    customerId: 'customer-zhang-001',
+    material: '18K金',
+    size: '16号',
+    craftRequirements: '内圈刻字 ZS，需复检戒围',
+    weight: 3.8,
+    quantity: 1,
+    availableQuantity: 0,
+    warehouseLocation: 'B-退货待检-03',
+    ownerDepartment: 'customer_service',
+    condition: 'repair_needed',
+    status: 'reserved',
+    receivedAt: '2026-04-25 11:10',
+    keeperName: '周库管',
+    remark: '客户退回后进入待检库位，暂不可再次销售。'
+  },
+  {
+    id: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    name: '通用 18K 项链链身',
+    category: 'necklace',
+    sourceType: 'stock_purchase',
+    sourceLabel: '常备库存采购',
+    material: '18K金',
+    size: '42cm',
+    craftRequirements: '通用链身，可用于多款吊坠搭配',
+    weight: 2.6,
+    quantity: 5,
+    availableQuantity: 5,
+    warehouseLocation: 'C-常备链身-02',
+    ownerDepartment: 'warehouse',
+    condition: 'new',
+    status: 'in_stock',
+    receivedAt: '2026-04-20 09:30',
+    keeperName: '周库管',
+    remark: '库管常备货，后续可按销售领用。'
+  },
+  {
+    id: 'inventory-other-stone-001',
+    inventoryCode: 'INV-OT-202604-004',
+    name: '小颗辅石混包',
+    category: 'other',
+    sourceType: 'other',
+    sourceLabel: '其他来源库存',
+    material: '锆石',
+    size: '1.0-1.2mm',
+    craftRequirements: '辅石备用包，需按领用记录拆分',
+    weight: 12,
+    quantity: 1,
+    availableQuantity: 1,
+    warehouseLocation: 'D-辅石-08',
+    ownerDepartment: 'warehouse',
+    condition: 'new',
+    status: 'in_stock',
+    receivedAt: '2026-04-18 15:00',
+    keeperName: '周库管',
+    remark: '其他渠道入库，用于临时补料。'
+  }
+]
+
+export const mockInventoryItems = inventoryItemsMock
+
+export const inventoryMovementsMock: InventoryMovement[] = [
+  {
+    id: 'inventory-movement-design-sample-ring-001',
+    inventoryItemId: 'inventory-design-sample-ring-001',
+    inventoryCode: 'INV-DS-202604-001',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-23 18:20',
+    toStatus: 'in_stock',
+    toLocation: 'A-设计样品-01',
+    note: '设计部门留样入库。'
+  },
+  {
+    id: 'inventory-movement-return-ring-001',
+    inventoryItemId: 'inventory-return-ring-001',
+    inventoryCode: 'INV-RT-202604-002',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-25 11:10',
+    toStatus: 'reserved',
+    toLocation: 'B-退货待检-03',
+    relatedOrderLineId: 'oi-ring-001',
+    note: '客户退货入库，进入待检库位。'
+  },
+  {
+    id: 'inventory-movement-stock-chain-001',
+    inventoryItemId: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    type: 'inbound',
+    quantity: 5,
+    operatorName: '周库管',
+    occurredAt: '2026-04-20 09:30',
+    toStatus: 'in_stock',
+    toLocation: 'C-常备链身-02',
+    note: '常备链身采购入库。'
+  }
+]
+
+export const mockInventoryMovements = inventoryMovementsMock
