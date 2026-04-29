@@ -342,8 +342,22 @@ const buildUploadedFiles = (files: FileList | null, prefix: string): OrderLineUp
     url: `mock-upload:${encodeURIComponent(file.name)}`
   }))
 
+const getOrderLineGoodsNo = (line: Pick<OrderLine, 'productionTaskNo' | 'skuCode' | 'itemSku' | 'lineCode' | 'id'>) =>
+  line.productionTaskNo || line.skuCode || line.itemSku || line.lineCode || line.id
+
+const formatOrderLineLogNote = (line: OrderLine, note?: string) => {
+  if (!note) {
+    return ''
+  }
+
+  const goodsNo = getOrderLineGoodsNo(line)
+  const legacyIds = [line.lineCode, line.id].filter((value): value is string => Boolean(value && value !== goodsNo))
+
+  return legacyIds.reduce((current, legacyId) => current.split(legacyId).join(goodsNo), note)
+}
+
 const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProductCompareValue => ({
-  sourceLabel: `${line.lineCode || line.id} ${line.name}`,
+  sourceLabel: `${getOrderLineGoodsNo(line)} ${line.name}`,
   specValue: line.selectedSpecValue || line.sourceProduct?.sourceSpecValue,
   material: line.selectedMaterial || line.actualRequirements?.material,
   process: line.selectedProcess || line.actualRequirements?.process,
@@ -380,7 +394,7 @@ export const buildOrderLineStatusLog = ({
     createdAt: formatDateTime(new Date()),
     fromStatus,
     toStatus,
-    note: `将销售 ${line.lineCode || line.id} 从「${getStatusLabel(fromStatus)}」改为「${getStatusLabel(toStatus)}」`
+    note: `将销售 ${getOrderLineGoodsNo(line)} 从「${getStatusLabel(fromStatus)}」改为「${getStatusLabel(toStatus)}」`
   }
 }
 
@@ -646,7 +660,7 @@ export const buildOrderLineLogisticsLog = ({
   actionLabel: '新增物流',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `为销售 ${line.lineCode || line.id} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
+  note: `为销售 ${getOrderLineGoodsNo(line)} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
 })
 
 export const buildOrderLineLogisticsDraft = (record?: LogisticsRecord): OrderLineLogisticsDraft => ({
@@ -733,7 +747,7 @@ export const buildOrderLineLogisticsEditLog = ({
   actionLabel: '编辑物流',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `编辑了销售 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}`
+  note: `编辑了销售 ${getOrderLineGoodsNo(line)} 的物流记录 ${record.trackingNo || record.id}`
 })
 
 export const buildOrderLineLogisticsVoidLog = ({
@@ -756,7 +770,7 @@ export const buildOrderLineLogisticsVoidLog = ({
   actionLabel: '作废物流',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `作废了销售 ${line.lineCode || line.id} 的物流记录 ${record.trackingNo || record.id}：${voidReason.trim() || '未填写作废原因'}`
+  note: `作废了销售 ${getOrderLineGoodsNo(line)} 的物流记录 ${record.trackingNo || record.id}：${voidReason.trim() || '未填写作废原因'}`
 })
 
 export const buildOrderLineAfterSalesLog = ({
@@ -777,7 +791,7 @@ export const buildOrderLineAfterSalesLog = ({
   actionLabel: '新增售后',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `为销售 ${line.lineCode || line.id} 新增${getAfterSalesTypeLabel(record.type)}售后：${getAfterSalesReason(record)}`
+  note: `为销售 ${getOrderLineGoodsNo(line)} 新增${getAfterSalesTypeLabel(record.type)}售后：${getAfterSalesReason(record)}`
 })
 
 export const buildOrderLineAfterSalesCase = ({
@@ -852,7 +866,7 @@ export const buildOrderLineAfterSalesEditLog = ({
   actionLabel: '编辑售后',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `编辑了销售 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
+  note: `编辑了销售 ${getOrderLineGoodsNo(line)} 的售后记录：${getAfterSalesReason(record)}`
 })
 
 export const buildOrderLineAfterSalesCloseLog = ({
@@ -873,7 +887,7 @@ export const buildOrderLineAfterSalesCloseLog = ({
   actionLabel: '关闭售后',
   operatorName,
   createdAt: formatDateTime(new Date()),
-  note: `关闭了销售 ${line.lineCode || line.id} 的售后记录：${getAfterSalesReason(record)}`
+  note: `关闭了销售 ${getOrderLineGoodsNo(line)} 的售后记录：${getAfterSalesReason(record)}`
 })
 
 const OrderLineStatusUpdatePanel = ({
@@ -970,23 +984,27 @@ const OrderLineStatusUpdatePanel = ({
   )
 }
 
-const OrderLineLogSection = ({ logs }: { logs: OrderLineLog[] }) => {
+const OrderLineLogSection = ({ line, logs }: { line: OrderLine; logs: OrderLineLog[] }) => {
   const sortedLogs = [...logs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
   return (
     <DetailSection title="操作日志">
       {sortedLogs.length > 0 ? (
         <RecordTimeline
-          items={sortedLogs.map((log) => ({
-            id: log.id,
-            title: log.actionLabel,
-            meta: `${log.createdAt} · ${log.operatorName}`,
-            description:
-              log.note ||
-              (log.fromStatus || log.toStatus
-                ? `状态：${log.fromStatus ? getStatusLabel(String(log.fromStatus)) : '—'} → ${log.toStatus ? getStatusLabel(String(log.toStatus)) : '—'}`
-                : '—')
-          }))}
+          items={sortedLogs.map((log) => {
+            const displayNote = formatOrderLineLogNote(line, log.note)
+
+            return {
+              id: log.id,
+              title: log.actionLabel,
+              meta: `${log.createdAt} · ${log.operatorName}`,
+              description:
+                displayNote ||
+                (log.fromStatus || log.toStatus
+                  ? `状态：${log.fromStatus ? getStatusLabel(String(log.fromStatus)) : '—'} → ${log.toStatus ? getStatusLabel(String(log.toStatus)) : '—'}`
+                  : '—')
+            }
+          })}
         />
       ) : (
         <EmptyState title="暂无操作日志" description="当前销售还没有记录操作。" />
@@ -1076,10 +1094,6 @@ const OrderLineDetailsSection = ({
             <label className="field-control">
               <span className="field-label">货号</span>
               <input className="input" value={draft.productionTaskNo} onChange={(event) => updateDraft('productionTaskNo', event.target.value)} />
-            </label>
-            <label className="field-control">
-              <span className="field-label">产品货号</span>
-              <input className="input" value={draft.skuCode} onChange={(event) => updateDraft('skuCode', event.target.value)} />
             </label>
             <label className="field-control">
               <span className="field-label">商品名称</span>
@@ -1205,7 +1219,6 @@ const OrderLineDetailsSection = ({
       ) : (
         <InfoGrid columns={3}>
           <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
-          <InfoField label="产品货号" value={line.skuCode || line.itemSku || '—'} />
           <InfoField label="商品名称" value={line.name} />
           <InfoField label="款式名称" value={line.styleName || '—'} />
           <InfoField label="版本号" value={line.versionNo || line.sourceProduct?.sourceProductVersion || '—'} />
@@ -1482,7 +1495,7 @@ const OrderLineDesignModelingSection = ({
               <input className="input" value={draft.waxFileUrl} onChange={(event) => updateDraft('waxFileUrl', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">设计备注</span>
+              <span className="field-label">设计流转备注</span>
               <textarea className="textarea" value={draft.designNote} onChange={(event) => updateDraft('designNote', event.target.value)} />
             </label>
           </div>
@@ -1507,7 +1520,7 @@ const OrderLineDesignModelingSection = ({
           <InfoField label="建模人 ID" value={line.assignedModelerId || '—'} />
           <InfoField label="建模文件" value={line.designInfo?.modelingFileUrl || '暂无文件'} />
           <InfoField label="出蜡文件" value={line.designInfo?.waxFileUrl || '暂无文件'} />
-          <InfoField label="设计备注" value={line.designInfo?.designNote || '—'} />
+          <InfoField label="设计流转备注" value={line.designInfo?.designNote || '—'} />
         </InfoGrid>
       )}
       {message ? (
@@ -2325,7 +2338,6 @@ export const OrderLineTable = ({
               <td>
                 <div className="stack" style={{ gap: 4 }}>
                   <span>{getParameterSummary(line)}</span>
-                  <span className="text-caption">参考报价 {formatPrice(line.quote?.systemQuote)}</span>
                 </div>
               </td>
               <td>
@@ -2470,7 +2482,7 @@ export const OrderLineDetailDrawer = ({
           </DetailSection>
 
           <OrderLineStatusUpdatePanel line={line} onStatusChange={onStatusChange} />
-          <OrderLineLogSection logs={lineLogs} />
+          <OrderLineLogSection line={line} logs={lineLogs} />
           <OrderLineDetailsSection line={line} onUpdateLineDetails={onUpdateLineDetails} />
 
           <DetailSection title="来源产品">

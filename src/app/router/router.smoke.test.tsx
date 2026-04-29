@@ -270,6 +270,7 @@ describe('router smoke', () => {
 
     const ringRow = screen.getByText('RING-SH-016').closest('tr')
     expect(ringRow).not.toBeNull()
+    expect(within(ringRow as HTMLElement).queryByText(/参考报价/)).not.toBeInTheDocument()
 
     await user.click(within(ringRow as HTMLElement).getByRole('button', { name: '查看' }))
 
@@ -284,6 +285,9 @@ describe('router smoke', () => {
     expect(screen.getAllByText('山形戒指').length).toBeGreaterThan(0)
     expect(screen.getByText('定制参数')).toBeInTheDocument()
     expect(screen.queryByText('基础信息 / 实际需求')).not.toBeInTheDocument()
+    const customParams = screen.getByText('定制参数').closest('section') as HTMLElement
+    expect(customParams).not.toBeNull()
+    expect(within(customParams).queryByText('产品货号')).not.toBeInTheDocument()
     expect(screen.getByText('设计建模')).toBeInTheDocument()
     expect(screen.getByText('售后记录')).toBeInTheDocument()
     expect(screen.getByText('改圈/改尺寸')).toBeInTheDocument()
@@ -327,15 +331,15 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('已将状态从 生产中 更新为 待发货')
     expect(screen.getByText('操作日志')).toBeInTheDocument()
-    expect(screen.getByText('将销售 OL-202604-001-01 从「生产中」改为「待发货」')).toBeInTheDocument()
+    expect(screen.getByText('将销售 RING-SH-016 从「生产中」改为「待发货」')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('待发货')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('待财务确认')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('待设计')).toBeInTheDocument()
 
     await user.click(screen.getAllByRole('button', { name: '关闭' })[0] as HTMLElement)
     await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: '查看' }))
-    expect(screen.queryByText('将销售 OL-202604-001-01 从「生产中」改为「待发货」')).not.toBeInTheDocument()
-    expect(screen.getByText('将销售 OL-202604-001-02 从「生产中」改为「待发货」')).toBeInTheDocument()
+    expect(screen.queryByText('将销售 RING-SH-016 从「生产中」改为「待发货」')).not.toBeInTheDocument()
+    expect(screen.getByText('将销售 PDT-SH-S 从「生产中」改为「待发货」')).toBeInTheDocument()
   })
 
   it('edits basic order-line requirements from the detail drawer without changing siblings', async () => {
@@ -395,6 +399,7 @@ describe('router smoke', () => {
 
     await user.click(within(ringRow as HTMLElement).getByRole('button', { name: '查看' }))
     await user.click(screen.getByRole('button', { name: '编辑设计建模' }))
+    expect(screen.getByLabelText('设计流转备注')).toBeInTheDocument()
 
     await user.selectOptions(screen.getByLabelText('设计状态'), 'revision_requested')
     await user.clear(screen.getByLabelText('设计负责人'))
@@ -513,7 +518,7 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '保存物流' }))
 
     expect(screen.getByText('SF-RING-NEW-001')).toBeInTheDocument()
-    expect(screen.getByText('为销售 OL-202604-001-01 新增货品物流 SF-RING-NEW-001')).toBeInTheDocument()
+    expect(screen.getByText('为销售 RING-SH-016 新增货品物流 SF-RING-NEW-001')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('物流 SF-RING-NEW-001')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('物流 SF202604280001')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('未发货')).toBeInTheDocument()
@@ -569,7 +574,7 @@ describe('router smoke', () => {
 
     expect(screen.getByText('返工抛光')).toBeInTheDocument()
     expect(screen.getByText('吊坠表面需要返工抛光')).toBeInTheDocument()
-    expect(screen.getByText('为销售 OL-202604-001-02 新增返工抛光售后：吊坠表面需要返工抛光')).toBeInTheDocument()
+    expect(screen.getByText('为销售 PDT-SH-S 新增返工抛光售后：吊坠表面需要返工抛光')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('售后 处理中')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('无售后')).toBeInTheDocument()
@@ -696,7 +701,7 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('已将状态从 待设计 更新为 已完成')
     expect(screen.getByText('操作日志')).toBeInTheDocument()
-    expect(screen.getByText('将销售 OL-202604-001-03 从「待设计」改为「已完成」')).toBeInTheDocument()
+    expect(screen.getByText('将销售 NECK-CUSTOM-042 从「待设计」改为「已完成」')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('已完成')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('生产中')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('待财务确认')).toBeInTheDocument()
@@ -830,7 +835,7 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '保存物流' }))
 
     expect(screen.getByText('ZT-NECK-NEW-001')).toBeInTheDocument()
-    expect(screen.getByText('为销售 OL-202604-001-03 新增货品物流 ZT-NECK-NEW-001')).toBeInTheDocument()
+    expect(screen.getByText('为销售 NECK-CUSTOM-042 新增货品物流 ZT-NECK-NEW-001')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('物流 ZT-NECK-NEW-001')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('无物流')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('物流 SF202604280001')).toBeInTheDocument()
@@ -874,7 +879,7 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '保存售后' }))
 
     expect(screen.getByText('项链扣头需要维修')).toBeInTheDocument()
-    expect(screen.getByText('为销售 OL-202604-001-03 新增维修售后：项链扣头需要维修')).toBeInTheDocument()
+    expect(screen.getByText('为销售 NECK-CUSTOM-042 新增维修售后：项链扣头需要维修')).toBeInTheDocument()
     expect(within(necklaceRow as HTMLElement).getByText('售后 待寄回')).toBeInTheDocument()
     expect(within(ringRow as HTMLElement).getByText('售后 待处理')).toBeInTheDocument()
     expect(within(pendantRow as HTMLElement).getByText('无售后')).toBeInTheDocument()
