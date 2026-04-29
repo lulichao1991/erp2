@@ -88,7 +88,7 @@ const renderReferenceStatus = (status: ProductReferenceRecord['status']) =>
 const getReferencePurchaseLabel = (record: ProductReferenceRecord) => record.purchaseNo || record.transactionNo || '未关联购买记录'
 
 const getReferenceOrderLineLabel = (record: ProductReferenceRecord) =>
-  [record.orderLineCode, record.orderLineName].filter(Boolean).join(' · ') || '未关联商品行'
+  [record.orderLineCode, record.orderLineName].filter(Boolean).join(' · ') || '未关联销售'
 
 const renderReferencePurchaseLink = (record: ProductReferenceRecord) =>
   record.purchaseId ? <Link to={`/purchases/${record.purchaseId}`}>{getReferencePurchaseLabel(record)}</Link> : getReferencePurchaseLabel(record)
@@ -269,7 +269,7 @@ const productFieldDictionaryMeta: Array<{
   {
     key: 'supportedSpecialOptions',
     label: '特殊需求',
-    description: '用于客服与购买记录 / 商品行协同的特殊需求选项，后续可扩展到商品行侧字典。',
+    description: '用于客服与购买记录 / 销售协同的特殊需求选项，后续可扩展到销售侧字典。',
     placeholder: '例如：附加祝福卡、延保服务'
   }
 ]
@@ -876,7 +876,7 @@ export const ProductReferenceRecordSection = ({
   <SectionCard
     id="references"
     title="引用记录"
-    description="查看哪些商品行引用了当前模板，以及商品行侧是否已经在模板基础上做过调整。"
+    description="查看哪些销售引用了当前模板，以及销售侧是否已经在模板基础上做过调整。"
     actions={
       <button type="button" className="button secondary small" onClick={onOpen}>
         查看全部引用记录
@@ -901,7 +901,7 @@ export const ProductReferenceRecordSection = ({
               <InfoGrid columns={2}>
                 <InfoField label="购买记录" value={renderReferencePurchaseLink(record)} />
                 <InfoField label="客户" value={record.customerName} />
-                <InfoField label="商品行" value={getReferenceOrderLineLabel(record)} />
+                <InfoField label="销售" value={getReferenceOrderLineLabel(record)} />
                 <InfoField label="引用规格" value={record.selectedSpecValue || '—'} />
                 <InfoField label="备注" value={record.note || '—'} />
               </InfoGrid>
@@ -910,7 +910,7 @@ export const ProductReferenceRecordSection = ({
         ))}
       </div>
     ) : (
-      <div className="placeholder-block">当前产品还没有被商品行引用。</div>
+      <div className="placeholder-block">当前产品还没有被销售引用。</div>
     )}
   </SectionCard>
 )
@@ -1010,14 +1010,14 @@ export const ProductReferenceRecordsDrawer = ({
                   {renderReferenceStatus(record.status)}
                 </div>
                 <Link to="/order-lines" className="button ghost small">
-                  查看商品行
+                  查看销售
                 </Link>
               </div>
               <div className="spacer-top">
                 <InfoGrid columns={2}>
                   <InfoField label="购买记录" value={renderReferencePurchaseLink(record)} />
                   <InfoField label="客户" value={record.customerName} />
-                  <InfoField label="商品行" value={getReferenceOrderLineLabel(record)} />
+                  <InfoField label="销售" value={getReferenceOrderLineLabel(record)} />
                   <InfoField label="引用规格" value={record.selectedSpecValue || '—'} />
                   <InfoField label="引用时间" value={record.referencedAt} />
                 </InfoGrid>

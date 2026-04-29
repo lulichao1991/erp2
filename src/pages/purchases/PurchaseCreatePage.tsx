@@ -34,7 +34,7 @@ export const PurchaseCreatePage = () => {
         actions={
           <div className="row wrap">
             <Link to="/order-lines" className="button secondary">
-              返回商品行中心
+              返回销售中心
             </Link>
             <button type="button" className="button primary" onClick={saveDraft}>
               保存草稿
@@ -45,8 +45,8 @@ export const PurchaseCreatePage = () => {
 
       <div className="stack">
         <div className="subtle-panel">
-          <strong>先填写本次购买的公共信息，再逐件添加商品行。</strong>
-          <div className="text-caption">当前草稿：1 笔购买记录 + {orderLineDrafts.length} 条商品行。</div>
+          <strong>先填写本次购买的公共信息，再逐件添加销售。</strong>
+          <div className="text-caption">当前草稿：1 笔购买记录 + {orderLineDrafts.length} 条销售。</div>
         </div>
 
         {successMessage ? (
