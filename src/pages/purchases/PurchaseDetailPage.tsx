@@ -34,11 +34,10 @@ export const PurchaseDetailPage = () => {
         className="compact-page-header"
         actions={
           <Link to="/order-lines" className="button secondary">
-            返回商品行中心
+            返回销售中心
           </Link>
         }
       />
-      <p className="text-muted">购买记录详情是归组页，用来查看一次购买的公共信息和本次购买下的所有商品行。</p>
       <div className="stack">
         <PurchaseSummarySection purchase={purchase} customer={customer} />
         <PurchaseCustomerSection purchase={purchase} customer={customer} />

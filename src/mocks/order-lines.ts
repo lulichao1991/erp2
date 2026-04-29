@@ -88,6 +88,8 @@ export const ringOrderLine: OrderLine = {
     material: '18K金',
     process: '微镶',
     engraveText: 'ZS',
+    engraveImageFiles: ringEngraveImageFiles,
+    engravePltFiles: ringEngravePltFiles,
     sizeNote: '戒围 16 号，内圈略加厚',
     specialNotes: ['刻字靠内圈中部'],
     remark: '优先保证面宽一致性'
