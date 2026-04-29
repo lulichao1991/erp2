@@ -1471,6 +1471,35 @@ button.stat-card {
   letter-spacing: 0;
 }
 
+.order-line-product-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.order-line-product-thumb,
+.order-line-product-thumb-placeholder {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  background: var(--color-bg-muted);
+}
+
+.order-line-product-thumb {
+  object-fit: cover;
+}
+
+.order-line-product-thumb-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
 .card-grid {
   display: grid;
   gap: 16px;

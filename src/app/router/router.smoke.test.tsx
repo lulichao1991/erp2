@@ -176,6 +176,14 @@ describe('router smoke', () => {
     expect(screen.getByText('定制项链')).toBeInTheDocument()
     expect(screen.getByText('手链蜡版确认')).toBeInTheDocument()
     expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
+    const ringRow = screen.getByText('RING-SH-016').closest('tr') as HTMLElement
+    expect(ringRow).not.toBeNull()
+    expect(within(ringRow).queryByText('内部 OL-202604-001-01')).not.toBeInTheDocument()
+    expect(within(ringRow).getByRole('img', { name: '山形戒指缩略图' })).toBeInTheDocument()
+    expect(within(ringRow).getByText('v3')).toBeInTheDocument()
+    expect(within(ringRow).queryByText('山形素圈戒指')).not.toBeInTheDocument()
+    expect(within(ringRow).getByText('customer-zhang-001')).toBeInTheDocument()
+    expect(within(ringRow).queryByText('生产 生产中')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'PUR-202604-001' })).not.toBeInTheDocument()
   })
 
@@ -870,6 +878,7 @@ describe('router smoke', () => {
     expect(screen.getByText('销售 TEMP-01')).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('平台订单号'), 'TB-202604-NEW')
+    await user.type(screen.getByLabelText('客户ID'), 'customer-new-001')
     await user.type(screen.getByLabelText('客户姓名'), '张三')
     await user.type(screen.getByLabelText('应收总额'), '9000')
     await user.type(screen.getByLabelText('已收金额'), '3000')
@@ -951,7 +960,7 @@ describe('router smoke', () => {
       'purchaseDraft',
       expect.objectContaining({
         commonInfo: expect.objectContaining({ platformOrderNo: 'TB-202604-NEW' }),
-        customerShippingInfo: expect.objectContaining({ customerName: '张三' }),
+        customerShippingInfo: expect.objectContaining({ customerId: 'customer-new-001', customerName: '张三' }),
         paymentInfo: expect.objectContaining({ pendingAmount: 6000, paymentStatus: '部分收款', canShip: false })
       })
     )

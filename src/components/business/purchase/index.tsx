@@ -32,6 +32,7 @@ export type PurchaseDraftFormValue = {
   paymentAt: string
   ownerName: string
   remark: string
+  customerId: string
   customerName: string
   customerPhone: string
   customerWechat: string
@@ -80,7 +81,7 @@ type PurchaseDraftPayload = {
   commonInfo: Pick<PurchaseDraftFormValue, 'channel' | 'platformOrderNo' | 'paymentAt' | 'ownerName' | 'remark'>
   customerShippingInfo: Pick<
     PurchaseDraftFormValue,
-    'customerName' | 'customerPhone' | 'customerWechat' | 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'customerRemark'
+    'customerId' | 'customerName' | 'customerPhone' | 'customerWechat' | 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'customerRemark'
   >
   paymentInfo: {
     receivableAmount: number
@@ -126,6 +127,7 @@ const defaultPurchaseDraft: PurchaseDraftFormValue = {
   paymentAt: '',
   ownerName: '客服A',
   remark: '',
+  customerId: '',
   customerName: '',
   customerPhone: '',
   customerWechat: '',
@@ -344,6 +346,7 @@ const buildDraftPayload = (
       remark: draft.remark
     },
     customerShippingInfo: {
+      customerId: draft.customerId,
       customerName: draft.customerName,
       customerPhone: draft.customerPhone,
       customerWechat: draft.customerWechat,
@@ -825,6 +828,10 @@ export const PurchaseDraftCommonSection = ({ draft, onChange }: PurchaseDraftSec
 export const PurchaseDraftCustomerSection = ({ draft, onChange }: PurchaseDraftSectionProps) => (
   <SectionCard title="客户与收货信息">
     <div className="field-grid three">
+      <label className="field-control">
+        <span className="field-label">客户ID</span>
+        <input aria-label="客户ID" className="input" value={draft.customerId} onChange={(event) => onChange('customerId', event.target.value)} placeholder="例如：customer-zhang-001" />
+      </label>
       <label className="field-control">
         <span className="field-label">客户姓名（必填）</span>
         <input aria-label="客户姓名" className="input" value={draft.customerName} onChange={(event) => onChange('customerName', event.target.value)} />

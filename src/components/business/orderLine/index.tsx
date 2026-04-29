@@ -2078,6 +2078,8 @@ export const OrderLineTable = ({
         {rows.map(({ line, purchase }) => {
           const row = { line, purchase }
           const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
+          const product = mockProducts.find((item) => item.id === line.productId || item.id === line.sourceProduct?.sourceProductId)
+          const versionLabel = line.versionNo || line.sourceProduct?.sourceProductVersion || '无版本'
           const logistics = findCurrentLogisticsRecord(logisticsRecords, line.id)
           const afterSales = findCurrentAfterSalesCase(afterSalesCases, line.id)
           const pressure = getTimePressure(line, line.promisedDate)
@@ -2114,16 +2116,26 @@ export const OrderLineTable = ({
               <td>
                 <div className="stack order-line-goods-no-cell">
                   <strong>{line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</strong>
-                  <span className="text-caption">内部 {line.lineCode || line.id}</span>
                 </div>
               </td>
               <td>
-                <div>{line.name}</div>
-                <div className="text-caption">{line.styleName || line.sourceProduct?.sourceProductName || '非模板定制'}</div>
+                <div className="order-line-product-preview">
+                  {product?.coverImage ? (
+                    <img className="order-line-product-thumb" src={product.coverImage} alt={`${line.name}缩略图`} />
+                  ) : (
+                    <span className="order-line-product-thumb-placeholder" aria-hidden="true">
+                      {line.name.slice(0, 1) || '销'}
+                    </span>
+                  )}
+                  <div className="stack" style={{ gap: 4 }}>
+                    <div>{line.name}</div>
+                    <div className="text-caption">{versionLabel}</div>
+                  </div>
+                </div>
               </td>
               <td>
                 <div>{customer?.name || '—'}</div>
-                <div className="text-caption">{customer?.phone || '—'}</div>
+                <div className="text-caption">{customer?.id || line.customerId || purchase?.customerId || '—'}</div>
               </td>
               <td>
                 <div className="stack" style={{ gap: 4 }}>
@@ -2133,7 +2145,6 @@ export const OrderLineTable = ({
               </td>
               <td>
                 <StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />
-                <div className="text-caption">生产 {productionWorkflowStatusLabelMap[getOrderLineProductionStatus(line)]}</div>
               </td>
               <td>
                 <div>{line.currentOwner || purchase?.ownerName || '待分配'}</div>
