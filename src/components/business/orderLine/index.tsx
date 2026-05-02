@@ -1,7 +1,7 @@
-import { useEffect, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { CopyableText, EmptyState, InfoField, LargeModal, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge } from '@/components/common'
+import { CopyableText, EmptyState, InfoField, LargeModal, RiskTag, SideDrawer, StatusTag, TimePressureBadge } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import {
@@ -16,9 +16,9 @@ import {
   designWorkflowStatusLabelMap,
   modelingWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
-import { getCustomerServiceNextLineStatus, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
+import { hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
-import { getOrderLineCompleteness, getOrderLineRisks, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
+import { getOrderLineRisks, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import {
   buildOrderLineDesignModelingDraft,
   buildOrderLineDetailsDraft,
@@ -40,7 +40,6 @@ import {
   getFeedbackStatusLabel,
   getOutsourceStatusLabel,
   modelingStatusOptions,
-  orderLineStatusOptions,
   outsourceStatusOptions,
   priorityOptions,
   productionStatusOptions,
@@ -61,6 +60,12 @@ import {
   type OrderLineAfterSalesCreateHandler,
   type OrderLineAfterSalesUpdateHandler
 } from '@/components/business/orderLine/orderLineAfterSales'
+import { DetailSection } from '@/components/business/orderLine/orderLineDetailSection'
+import {
+  OrderLineLogSection,
+  OrderLineStatusUpdatePanel,
+  type OrderLineStatusUpdateHandler
+} from '@/components/business/orderLine/orderLineStatusLog'
 import type {
   OrderLine,
   OrderLineFinanceStatus,
@@ -77,8 +82,6 @@ import type { Purchase } from '@/types/purchase'
 import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
 
 export type { OrderLineCenterFilters, OrderLineRow } from '@/services/orderLine/orderLineWorkspace'
-
-type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
 
 type OrderLineDetailsUpdateHandler = (lineId: string, draft: OrderLineDetailsDraft) => void
 type OrderLineDesignModelingUpdateHandler = (lineId: string, draft: OrderLineDesignModelingDraft) => void
@@ -177,12 +180,6 @@ const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProduct
   specialOptions: line.selectedSpecialOptions
 })
 
-const DetailSection = ({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) => (
-  <SectionCard title={title} actions={actions} className="compact-card order-line-detail-section">
-    {children}
-  </SectionCard>
-)
-
 const useEditableSectionDraft = <Draft,>(line: OrderLine, buildDraft: (line: OrderLine) => Draft) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => buildDraft(line))
@@ -223,137 +220,6 @@ const getUploadedFileNames = (files?: OrderLineUploadedFile[], fallback?: string
   const fallbackName = fallback?.trim()
 
   return names.length > 0 ? names : fallbackName ? [fallbackName] : []
-}
-
-const OrderLineStatusUpdatePanel = ({
-  line,
-  onStatusChange
-}: {
-  line: OrderLine
-  onStatusChange?: OrderLineStatusUpdateHandler
-}) => {
-  const currentLineStatus = getOrderLineLineStatus(line)
-  const [nextStatus, setNextStatus] = useState(String(currentLineStatus))
-  const [statusMessage, setStatusMessage] = useState('')
-  const completeness = getOrderLineCompleteness(line)
-  const customerConfirmStatus = getCustomerServiceNextLineStatus({
-    requiresDesign: Boolean(line.requiresDesign),
-    requiresModeling: Boolean(line.requiresModeling)
-  })
-
-  useEffect(() => {
-    setNextStatus(String(getOrderLineLineStatus(line)))
-  }, [line])
-
-  useEffect(() => {
-    setStatusMessage('')
-  }, [line.id])
-
-  const handleUpdate = () => {
-    if (!onStatusChange) {
-      setStatusMessage('当前入口暂不支持前端状态更新。')
-      return
-    }
-
-    if (nextStatus === getOrderLineLineStatus(line)) {
-      setStatusMessage('状态未变化。')
-      return
-    }
-
-    const previousLabel = getStatusLabel(getOrderLineLineStatus(line))
-    const nextLabel = getStatusLabel(nextStatus)
-    onStatusChange(line.id, nextStatus)
-    setStatusMessage(`已将状态从 ${previousLabel} 更新为 ${nextLabel}`)
-  }
-
-  const handleCustomerConfirm = () => {
-    if (!onStatusChange || !completeness.complete) {
-      return
-    }
-
-    if (customerConfirmStatus === getOrderLineLineStatus(line)) {
-      setStatusMessage('当前销售已经在目标分流状态。')
-      return
-    }
-
-    onStatusChange(line.id, customerConfirmStatus)
-    setStatusMessage(`客服确认完成，已分流到 ${getStatusLabel(customerConfirmStatus)}`)
-  }
-
-  return (
-    <DetailSection title="更新状态">
-      <div className="field-grid three">
-        <InfoField label="当前状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
-        <InfoField label="资料完整度" value={`${completeness.completed}/${completeness.total}`} />
-        <InfoField label="资料检查" value={<StatusTag value={completeness.complete ? '资料完整' : '资料缺失'} />} />
-        <label className="field-control">
-          <span className="field-label">目标状态</span>
-          <select className="select" aria-label="目标状态" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}>
-            {orderLineStatusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="field-control">
-          <span className="field-label">操作</span>
-          <button type="button" className="button primary small" onClick={handleUpdate} disabled={!onStatusChange}>
-            更新状态
-          </button>
-          <button type="button" className="button secondary small" onClick={handleCustomerConfirm} disabled={!onStatusChange || !completeness.complete}>
-            客服确认完成
-          </button>
-        </div>
-      </div>
-      <div className="text-caption spacer-top">
-        {completeness.summary}
-        {completeness.complete ? `；客服确认后进入「${getStatusLabel(customerConfirmStatus)}」。` : '；请先补齐资料后再确认。'}
-      </div>
-      <div className="completeness-checklist" aria-label="资料完整度明细">
-        {completeness.fieldStatuses.map((item) => (
-          <span key={item.key} className={`completeness-pill ${item.complete ? 'complete' : 'missing'}`}>
-            <span className="completeness-pill-status">{item.complete ? '已填' : '缺少'}</span>
-            {item.label}
-          </span>
-        ))}
-      </div>
-      {statusMessage ? (
-        <div role="status" className="success-alert spacer-top">
-          {statusMessage}
-        </div>
-      ) : null}
-    </DetailSection>
-  )
-}
-
-const OrderLineLogSection = ({ line, logs }: { line: OrderLine; logs: OrderLineLog[] }) => {
-  const sortedLogs = [...logs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-
-  return (
-    <DetailSection title="操作日志">
-      {sortedLogs.length > 0 ? (
-        <RecordTimeline
-          items={sortedLogs.map((log) => {
-            const displayNote = log.note || ''
-
-            return {
-              id: log.id,
-              title: log.actionLabel,
-              meta: `${log.createdAt} · ${log.operatorName}`,
-              description:
-                displayNote ||
-                (log.fromStatus || log.toStatus
-                  ? `状态：${log.fromStatus ? getStatusLabel(String(log.fromStatus)) : '—'} → ${log.toStatus ? getStatusLabel(String(log.toStatus)) : '—'}`
-                  : '—')
-            }
-          })}
-        />
-      ) : (
-        <EmptyState title="暂无操作日志" description="当前销售还没有记录操作。" />
-      )}
-    </DetailSection>
-  )
 }
 
 const OrderLineDetailsSection = ({
@@ -1402,7 +1268,7 @@ export const OrderLineDetailDrawer = ({
           </DetailSection>
 
           <OrderLineStatusUpdatePanel line={line} onStatusChange={onStatusChange} />
-          <OrderLineLogSection line={line} logs={lineLogs} />
+          <OrderLineLogSection logs={lineLogs} />
           <OrderLineDetailsSection line={line} onUpdateLineDetails={onUpdateLineDetails} onOpenSourceProduct={sourceProduct ? () => setSourceProductOpen(true) : undefined} />
 
           <OrderLineDesignModelingSection line={line} onUpdateDesignModeling={onUpdateDesignModeling} />
