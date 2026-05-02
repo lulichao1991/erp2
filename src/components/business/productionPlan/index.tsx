@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FileList, InfoField, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
-import type { OrderLineProductionStatus } from '@/types/order-line'
+import type { OrderLineProductionFeedbackStatus } from '@/types/order-line'
 import type { ProductSpecRow } from '@/types/product'
 import type { ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
 
@@ -32,7 +32,7 @@ type ProductionOrderLineInfo = {
 }
 
 export type ProductionFeedbackValue = {
-  factoryStatus?: OrderLineProductionStatus | string
+  feedbackStatus?: OrderLineProductionFeedbackStatus | string
   totalWeight?: string
   qualityResult?: string
   factoryNote?: string
@@ -49,7 +49,7 @@ export type ProductionPlanFilterValue = {
 const getUniqueValues = (values: Array<string | undefined>) =>
   Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean))) as string[]
 
-const productionFeedbackStatusOptions: Array<{ value: OrderLineProductionStatus; label: string }> = [
+const productionFeedbackStatusOptions: Array<{ value: OrderLineProductionFeedbackStatus; label: string }> = [
   { value: 'not_started', label: '未开始' },
   { value: 'in_progress', label: '生产中' },
   { value: 'pending_feedback', label: '待回传' },
@@ -57,12 +57,12 @@ const productionFeedbackStatusOptions: Array<{ value: OrderLineProductionStatus;
   { value: 'issue', label: '异常' }
 ]
 
-const normalizeProductionFeedbackStatus = (status?: string): OrderLineProductionStatus | undefined => {
+const normalizeProductionFeedbackStatus = (status?: string): OrderLineProductionFeedbackStatus | undefined => {
   if (!status) {
     return undefined
   }
 
-  return productionFeedbackStatusOptions.some((option) => option.value === status) ? (status as OrderLineProductionStatus) : undefined
+  return productionFeedbackStatusOptions.some((option) => option.value === status) ? (status as OrderLineProductionFeedbackStatus) : undefined
 }
 
 export const getProductionFeedbackStatusLabel = (status?: string) => {
@@ -132,14 +132,14 @@ export const ProductionPlanSummaryCard = ({
   taskTitle,
   sourceProductName,
   sourceProductId,
-  factoryStatus
+  feedbackStatus
 }: {
   row: ProductionPlanRow
   taskId: string
   taskTitle: string
   sourceProductName: string
   sourceProductId: string
-  factoryStatus?: string
+  feedbackStatus?: string
 }) => {
   const topMetaFields = [
     { label: '任务编号', value: taskId },
@@ -147,7 +147,7 @@ export const ProductionPlanSummaryCard = ({
     { label: '当前责任人', value: row.assigneeName || '待分配' },
     { label: '下发时间', value: row.assignedAt },
     { label: '计划交期', value: row.plannedDueDate || '未设置' },
-    { label: '工厂状态', value: getProductionFeedbackStatusLabel(factoryStatus) }
+    { label: '工厂状态', value: getProductionFeedbackStatusLabel(feedbackStatus) }
   ]
   const specSummary = [row.specValue, row.material, row.process].filter(Boolean).join(' / ') || '待补充'
 
@@ -369,11 +369,11 @@ export const ProductionFeedbackBlock = ({
           <select
             id={`${idPrefix}-status`}
             className="select"
-            value={normalizeProductionFeedbackStatus(feedback?.factoryStatus) || 'pending_feedback'}
+            value={normalizeProductionFeedbackStatus(feedback?.feedbackStatus) || 'pending_feedback'}
             onChange={(event) =>
               onChange({
                 ...feedback,
-                factoryStatus: event.target.value as OrderLineProductionStatus
+                feedbackStatus: event.target.value as OrderLineProductionFeedbackStatus
               })
             }
           >

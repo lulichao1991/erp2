@@ -65,6 +65,8 @@
 
 - 页面待办、筛选和推进统一使用 `OrderLine.lineStatus`。
 - `OrderLine.status` 已删除。
+- 角色分流使用顶层 `designStatus / modelingStatus / productionStatus / factoryStatus / financeStatus`。
+- 工厂回传子状态使用 `productionInfo.feedbackStatus`。
 - 货号显示统一使用 `productionTaskNo`。
 - 来源款式编码统一来自 `Product.code` / `ProductSnapshot.sourceProductCode`。
 - 物流和售后展示按 `orderLineId` 查询。

@@ -74,14 +74,14 @@ export const ProductionPlanDetailPage = () => {
   const handleStartProduction = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: 'in_progress'
+      feedbackStatus: 'in_progress'
     })
   }
 
   const handleMarkPendingReport = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: 'pending_feedback'
+      feedbackStatus: 'pending_feedback'
     })
     updateTaskStatus('pending_confirm')
   }
@@ -89,7 +89,7 @@ export const ProductionPlanDetailPage = () => {
   const handleSubmitReport = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: 'completed'
+      feedbackStatus: 'completed'
     })
     updateTaskStatus('done')
   }
@@ -97,7 +97,7 @@ export const ProductionPlanDetailPage = () => {
   const handleMarkIssue = () => {
     updateProductionFeedback({
       ...productionFeedback,
-      factoryStatus: 'issue'
+      feedbackStatus: 'issue'
     })
   }
 
@@ -132,7 +132,7 @@ export const ProductionPlanDetailPage = () => {
           taskTitle={task.title}
           sourceProductName={sourceProduct.name}
           sourceProductId={sourceProduct.id}
-          factoryStatus={productionFeedback.factoryStatus}
+          feedbackStatus={productionFeedback.feedbackStatus}
         />
         <div className="production-plan-detail-grid">
           <div className="production-plan-detail-main stack">
@@ -155,7 +155,7 @@ export const ProductionPlanDetailPage = () => {
               <div className="stack">
                 <InfoGrid columns={2}>
                   <InfoField label="当前显示状态" value={<ProductionPlanStatusBadge stage={row.stage} />} />
-                  <InfoField label="工厂状态" value={getProductionFeedbackStatusLabel(productionFeedback.factoryStatus)} />
+                  <InfoField label="工厂状态" value={getProductionFeedbackStatusLabel(productionFeedback.feedbackStatus)} />
                   <InfoField label="回传重量" value={productionFeedback.totalWeight || '—'} />
                   <InfoField label="质检结论" value={productionFeedback.qualityResult || '—'} />
                 </InfoGrid>

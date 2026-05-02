@@ -198,6 +198,7 @@ legacy `/orders` 模块已经删除，不再作为可访问路由或兼容入口
 - `OrderLine.lineStatus` 是多角色工作流的主状态字段
 - `designStatus`、`modelingStatus`、`productionStatus`、`factoryStatus`、`financeStatus` 用于后续角色视图分流
 - `OrderLine.status` 已删除，不再作为兼容展示字段保留
+- `designInfo.designStatus` 已删除；工厂回传子状态使用 `productionInfo.feedbackStatus`，不再写 `productionInfo.factoryStatus`
 - 客服确认动作按 `requiresDesign / requiresModeling` 分流，不把单件执行状态塞回 `Purchase`
 
 ### 5. 旧模块不作为当前兼容层

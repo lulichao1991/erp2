@@ -52,7 +52,7 @@ describe('productionPlanAdapter', () => {
             ...line,
             productionInfo: {
               ...line.productionInfo,
-              factoryStatus: 'completed',
+              feedbackStatus: 'completed',
               factoryNote: 'current order line feedback'
             }
           }
@@ -84,7 +84,7 @@ describe('productionPlanAdapter', () => {
       stage: 'reported',
       stageLabel: '已回传'
     })
-    expect(detail?.orderLine.productionInfo?.factoryStatus).toBe('completed')
+    expect(detail?.orderLine.productionInfo?.feedbackStatus).toBe('completed')
     expect(detail?.orderLine.productionInfo?.factoryNote).toBe('current order line feedback')
   })
 
@@ -138,7 +138,7 @@ describe('productionPlanAdapter', () => {
       factoryStatus: 'not_assigned',
       productionInfo: {
         ...orderLine!.productionInfo,
-        factoryStatus: 'not_started'
+        feedbackStatus: 'not_started'
       }
     }
     const producingItem = {
@@ -148,7 +148,7 @@ describe('productionPlanAdapter', () => {
       factoryStatus: 'in_production',
       productionInfo: {
         ...orderLine!.productionInfo,
-        factoryStatus: 'in_progress'
+        feedbackStatus: 'in_progress'
       }
     }
     const pendingReportTask = { ...receivedTask, status: 'pending_confirm' as const }
@@ -159,7 +159,7 @@ describe('productionPlanAdapter', () => {
       factoryStatus: 'in_production',
       productionInfo: {
         ...orderLine!.productionInfo,
-        factoryStatus: 'pending_feedback'
+        feedbackStatus: 'pending_feedback'
       }
     }
     const reportedTask = { ...receivedTask, status: 'done' as const }
@@ -169,7 +169,7 @@ describe('productionPlanAdapter', () => {
       factoryStatus: 'abnormal',
       productionInfo: {
         ...orderLine!.productionInfo,
-        factoryStatus: 'issue'
+        feedbackStatus: 'issue'
       }
     }
     expect(getProductionPlanStage(factoryTask!, orderLine!)).toBe('in_production')

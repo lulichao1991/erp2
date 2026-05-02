@@ -79,16 +79,7 @@ export const financeWorkflowStatusLabelMap: Record<OrderLineFinanceStatus, strin
   abnormal: '财务异常'
 }
 
-const legacyDesignStatusMap: Record<string, OrderLineWorkflowDesignStatus> = {
-  not_required: 'not_required',
-  pending: 'pending',
-  in_progress: 'in_progress',
-  completed: 'completed',
-  delivered: 'completed',
-  rework: 'revision_requested'
-}
-
-const legacyFactoryStatusToFactoryStatus: Record<string, OrderLineFactoryStatus> = {
+const feedbackStatusToFactoryStatus: Record<string, OrderLineFactoryStatus> = {
   not_started: 'not_assigned',
   in_progress: 'in_production',
   pending_feedback: 'in_production',
@@ -110,11 +101,6 @@ export const getOrderLineLineStatusLabel = (status?: string) =>
 export const getOrderLineDesignStatus = (line: OrderLine): OrderLineWorkflowDesignStatus => {
   if (line.designStatus && line.designStatus in designWorkflowStatusLabelMap) {
     return line.designStatus as OrderLineWorkflowDesignStatus
-  }
-
-  const legacyStatus = line.designInfo?.designStatus ? legacyDesignStatusMap[String(line.designInfo.designStatus)] : undefined
-  if (legacyStatus) {
-    return legacyStatus
   }
 
   if (line.requiresDesign === false) {
@@ -151,13 +137,13 @@ export const getOrderLineProductionStatus = (line: OrderLine): OrderLineWorkflow
   if (lineStatus === 'factory_returned' || lineStatus === 'pending_finance_confirmation' || lineStatus === 'ready_to_ship' || lineStatus === 'completed') {
     return 'completed'
   }
-  if (line.productionInfo?.factoryStatus === 'issue') {
+  if (line.productionInfo?.feedbackStatus === 'issue') {
     return 'blocked'
   }
-  if (line.productionInfo?.factoryStatus === 'in_progress' || line.productionInfo?.factoryStatus === 'pending_feedback') {
+  if (line.productionInfo?.feedbackStatus === 'in_progress' || line.productionInfo?.feedbackStatus === 'pending_feedback') {
     return 'in_production'
   }
-  if (line.productionInfo?.factoryStatus === 'completed') {
+  if (line.productionInfo?.feedbackStatus === 'completed') {
     return 'completed'
   }
 
@@ -169,8 +155,8 @@ export const getOrderLineFactoryStatus = (line: OrderLine): OrderLineFactoryStat
     return line.factoryStatus as OrderLineFactoryStatus
   }
 
-  const legacyStatus = line.productionInfo?.factoryStatus ? legacyFactoryStatusToFactoryStatus[String(line.productionInfo.factoryStatus)] : undefined
-  return legacyStatus || 'not_assigned'
+  const feedbackFactoryStatus = line.productionInfo?.feedbackStatus ? feedbackStatusToFactoryStatus[String(line.productionInfo.feedbackStatus)] : undefined
+  return feedbackFactoryStatus || 'not_assigned'
 }
 
 export const getOrderLineFinanceStatus = (line: OrderLine): OrderLineFinanceStatus => {

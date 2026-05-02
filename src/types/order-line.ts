@@ -93,16 +93,7 @@ export type OrderLineActualRequirements = {
   remark?: string
 }
 
-export type OrderLineDesignStatus =
-  | 'not_required'
-  | 'pending'
-  | 'in_progress'
-  | 'completed'
-  | 'delivered'
-  | 'rework'
-
 export type OrderLineDesignInfo = {
-  designStatus?: OrderLineDesignStatus | string
   assignedDesigner?: string
   requiresRemodeling?: boolean
   designDeadline?: string
@@ -127,7 +118,7 @@ export type OrderLineOutsourceInfo = {
   outsourceNote?: string
 }
 
-export type OrderLineProductionStatus =
+export type OrderLineProductionFeedbackStatus =
   | 'not_started'
   | 'in_progress'
   | 'pending_feedback'
@@ -135,7 +126,7 @@ export type OrderLineProductionStatus =
   | 'issue'
 
 export type OrderLineProductionInfo = {
-  factoryStatus?: OrderLineProductionStatus | string
+  feedbackStatus?: OrderLineProductionFeedbackStatus | string
   actualMaterial?: string
   totalWeight?: string
   netWeight?: string

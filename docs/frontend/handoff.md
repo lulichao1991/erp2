@@ -26,6 +26,8 @@ Customer -> Purchase -> OrderLine -> Product
 - `TransactionRecord` runtime 兼容别名已删除。
 - `OrderLine.status` 兼容字段已删除，状态推进统一使用 `lineStatus`。
 - `skuCode / itemSku / transactionId / transactionNo / orderType / returnedWeight` 等旧字段已从 current runtime 清理。
+- `designInfo.designStatus` 已删除；设计/建模分流统一使用顶层 `designStatus / modelingStatus`。
+- `productionInfo.factoryStatus` 已改为 `productionInfo.feedbackStatus`；顶层 `factoryStatus` 只表示工厂工作流状态。
 - 销售中心、购买记录新建页、购买记录详情页、客户中心、任务中心、生产跟进、设计建模、工厂、财务、库存、管理看板和生产计划均已接入 current mock 主线。
 - 资料完整度、生产逾期、工厂回传异常、财务异常和角色待办徽标统一由 `orderLineRiskSelectors` 计算。
 - 路由、mock 文件清单、类型章节已加入文档一致性测试。
@@ -65,6 +67,7 @@ Customer -> Purchase -> OrderLine -> Product
 - 同一次购买下的多条销售必须允许分别推进状态、交期、物流和售后。
 - `OrderLine.lineStatus` 是主工作流状态。
 - `designStatus / modelingStatus / productionStatus / factoryStatus / financeStatus` 是角色分流状态。
+- `productionInfo.feedbackStatus` 只表示工厂回传子状态，不替代顶层 `factoryStatus`。
 - 客服确认按 `requiresDesign -> pending_design`、`requiresModeling -> pending_modeling`、否则 `pending_merchandiser_review` 分流。
 - 销售货号使用 `productionTaskNo`。
 - 新建购买记录时选中 `Product` 后，销售草稿使用 `product.code` 作为来源款式编码。
@@ -106,7 +109,6 @@ npm run analyze:dead
 |---|---|---|
 | P0 | 保持文档与代码同步 | 修改路由、类型、mock、核心字段时同步更新对应文档并跑测试 |
 | P1 | 继续拆小 `orderLine/index.tsx` | 表单/详情/列表组件拆出后行为不变，router smoke 通过 |
-| P1 | 收敛设计/生产子状态兼容命名 | 不再扩大 `designInfo.designStatus`、`productionInfo.factoryStatus` 的旧命名用途 |
 | P2 | 补充新建购买记录到销售中心的端到端样例 | 同一次购买多件商品、多状态、多物流、多售后路径可演示 |
 | P2 | 评估真实接口前的数据契约 | 只输出字段契约，不引入后端实现 |
 

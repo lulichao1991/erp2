@@ -95,7 +95,7 @@ export const FactoryTaskCenterPage = () => {
       productionStatus: line.productionStatus === 'not_started' ? 'dispatched' : line.productionStatus,
       productionInfo: {
         ...line.productionInfo,
-        factoryStatus: 'in_progress',
+        feedbackStatus: 'in_progress',
         factoryNote: '工厂已接收任务。'
       }
     })
@@ -109,7 +109,7 @@ export const FactoryTaskCenterPage = () => {
       productionStatus: 'in_production',
       productionInfo: {
         ...line.productionInfo,
-        factoryStatus: 'in_progress',
+        feedbackStatus: 'in_progress',
         factoryNote: '工厂已开始生产。'
       }
     })
@@ -128,7 +128,7 @@ export const FactoryTaskCenterPage = () => {
       },
       productionInfo: {
         ...line.productionInfo,
-        factoryStatus: 'pending_feedback',
+        feedbackStatus: 'pending_feedback',
         factoryNote: '生产完成，等待回传重量与结算资料。'
       }
     })
@@ -148,7 +148,7 @@ export const FactoryTaskCenterPage = () => {
       },
       productionInfo: {
         ...line.productionInfo,
-        factoryStatus: 'issue',
+        feedbackStatus: 'issue',
         factoryNote: draft.factoryNote || '工厂标记异常，等待跟单处理。'
       }
     })
@@ -191,7 +191,7 @@ export const FactoryTaskCenterPage = () => {
       productionData,
       productionInfo: {
         ...line.productionInfo,
-        factoryStatus: 'completed',
+        feedbackStatus: 'completed',
         actualMaterial: productionData.actualMaterial,
         totalWeight: productionData.totalWeight ? `${productionData.totalWeight}g` : line.productionInfo?.totalWeight,
         netWeight: productionData.netMetalWeight ? `${productionData.netMetalWeight}g` : line.productionInfo?.netWeight,

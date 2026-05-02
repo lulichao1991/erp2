@@ -62,7 +62,7 @@ describe('productionPlan current-only flow', () => {
     expect(appData.updateOrderLineProductionInfo).toHaveBeenCalledWith(
       'oi-ring-001',
       expect.objectContaining({
-        factoryStatus: 'pending_feedback'
+        feedbackStatus: 'pending_feedback'
       })
     )
   })

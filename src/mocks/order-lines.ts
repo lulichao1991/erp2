@@ -89,7 +89,6 @@ const ringOrderLine: OrderLine = {
     remark: '戒围 16 号，内圈略加厚 / 优先保证面宽一致性'
   },
   designInfo: {
-    designStatus: 'completed',
     assignedDesigner: '陈设计',
     requiresRemodeling: false,
     designDeadline: '2026-04-23',
@@ -102,7 +101,7 @@ const ringOrderLine: OrderLine = {
     outsourceNote: '已下厂生产。'
   },
   productionInfo: {
-    factoryStatus: 'in_progress',
+    feedbackStatus: 'in_progress',
     qualityResult: '',
     factoryNote: '工厂生产中，等待首轮回传。'
   },
@@ -182,7 +181,6 @@ const pendantOrderLine: OrderLine = {
     remark: '已完成质检，等待客户确认收件信息后发货。'
   },
   designInfo: {
-    designStatus: 'completed',
     assignedDesigner: '王设计',
     requiresRemodeling: false,
     designDeadline: '2026-04-24',
@@ -195,7 +193,7 @@ const pendantOrderLine: OrderLine = {
     outsourceNote: '已回传成品照。'
   },
   productionInfo: {
-    factoryStatus: 'completed',
+    feedbackStatus: 'completed',
     totalWeight: '2.3g',
     qualityResult: '通过',
     factoryNote: '质检通过，待发货。'
@@ -277,7 +275,6 @@ const necklaceOrderLine: OrderLine = {
     remark: '链长 42cm，吊牌 8mm / 客户希望项链与山形系列风格一致。'
   },
   designInfo: {
-    designStatus: 'rework',
     assignedDesigner: '陈设计',
     requiresRemodeling: true,
     designDeadline: '2026-04-25',
@@ -290,7 +287,7 @@ const necklaceOrderLine: OrderLine = {
     outsourceNote: '设计确认后再下厂。'
   },
   productionInfo: {
-    factoryStatus: 'not_started',
+    feedbackStatus: 'not_started',
     factoryNote: '未进入生产。'
   },
   quote: {
@@ -356,7 +353,6 @@ const waxOrderLine: OrderLine = {
     remark: '内径 58mm，开口 18mm / 设计稿已确认，等待建模出蜡。'
   },
   designInfo: {
-    designStatus: 'completed',
     assignedDesigner: '陈设计',
     requiresRemodeling: true,
     designDeadline: '2026-04-24',
@@ -369,7 +365,7 @@ const waxOrderLine: OrderLine = {
     outsourceNote: '建模完成后再下发生产。'
   },
   productionInfo: {
-    factoryStatus: 'not_started',
+    feedbackStatus: 'not_started',
     factoryNote: '未进入生产。'
   },
   quote: {
@@ -427,7 +423,7 @@ const earringReviewOrderLine: OrderLine = {
     outsourceNote: '待跟单复核。'
   },
   productionInfo: {
-    factoryStatus: 'not_started',
+    feedbackStatus: 'not_started',
     factoryNote: '待跟单审核。'
   },
   lineSalesAmount: 980,
@@ -477,7 +473,7 @@ const broochBlockedOrderLine: OrderLine = {
     outsourceNote: '工厂反馈缺少补石规格，等待跟单处理。'
   },
   productionInfo: {
-    factoryStatus: 'issue',
+    feedbackStatus: 'issue',
     factoryNote: '补石规格缺失，生产阻塞。'
   },
   lineSalesAmount: 1580,
@@ -531,7 +527,7 @@ const factoryPendingOrderLine: OrderLine = {
     }
   ],
   productionInfo: {
-    factoryStatus: 'not_started',
+    feedbackStatus: 'not_started',
     factoryNote: '已下发，等待工厂接收。'
   },
   productionData: {

@@ -15,7 +15,7 @@ import type {
   OrderLineLog,
   OrderLineOutsourceStatus,
   OrderLinePriority,
-  OrderLineProductionStatus,
+  OrderLineProductionFeedbackStatus,
   OrderLineWorkflowDesignStatus,
   OrderLineWorkflowModelingStatus,
   OrderLineUploadedFile
@@ -88,7 +88,7 @@ export type OrderLineOutsourceDraft = {
 }
 
 export type OrderLineProductionDraft = {
-  factoryStatus: OrderLineProductionStatus | string
+  feedbackStatus: OrderLineProductionFeedbackStatus | string
   actualMaterial: string
   totalWeight: string
   netWeight: string
@@ -359,7 +359,6 @@ export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDeta
     designInfo: {
       ...line.designInfo,
       requiresRemodeling: draft.requiresModeling,
-      designStatus: draft.requiresDesign ? draft.designStatus : 'not_required',
       assignedDesigner: draft.assignedDesignerName.trim() || undefined,
       modelingFileUrl: draft.modelingFiles[0]?.url || line.designInfo?.modelingFileUrl || undefined,
       waxFileUrl: draft.waxFiles[0]?.url || line.designInfo?.waxFileUrl || undefined,
@@ -408,7 +407,6 @@ export const applyOrderLineDesignModelingDraft = (line: OrderLine, draft: OrderL
   waxFiles: draft.waxFiles.length > 0 ? draft.waxFiles : undefined,
   designInfo: {
     ...line.designInfo,
-    designStatus: draft.designStatus,
     assignedDesigner: draft.assignedDesignerName.trim() || undefined,
     modelingFileUrl: draft.modelingFiles[0]?.url || line.designInfo?.modelingFileUrl || undefined,
     waxFileUrl: draft.waxFiles[0]?.url || line.designInfo?.waxFileUrl || undefined,
@@ -484,7 +482,7 @@ export const buildOrderLineOutsourceLog = ({
 })
 
 export const buildOrderLineProductionDraft = (line: OrderLine): OrderLineProductionDraft => ({
-  factoryStatus: line.productionInfo?.factoryStatus || 'not_started',
+  feedbackStatus: line.productionInfo?.feedbackStatus || 'not_started',
   actualMaterial: line.productionInfo?.actualMaterial || line.actualRequirements?.material || line.selectedMaterial || '',
   totalWeight: getProductionTotalWeight(line),
   netWeight: line.productionInfo?.netWeight || '',
@@ -498,20 +496,34 @@ export const buildOrderLineProductionDraft = (line: OrderLine): OrderLineProduct
 
 export const applyOrderLineProductionDraft = (line: OrderLine, draft: OrderLineProductionDraft): OrderLine => {
   const totalWeight = draft.totalWeight.trim()
-  const nextFactoryStatus = draft.factoryStatus === 'completed' ? 'returned' : draft.factoryStatus === 'issue' ? 'abnormal' : draft.factoryStatus === 'in_progress' || draft.factoryStatus === 'pending_feedback' ? 'in_production' : line.factoryStatus
-  const nextLineStatus = draft.factoryStatus === 'completed' ? 'pending_finance_confirmation' : draft.factoryStatus === 'issue' ? getOrderLineLineStatus(line) : getOrderLineLineStatus(line)
-  const nextProductionStatus = draft.factoryStatus === 'completed' ? 'completed' : draft.factoryStatus === 'issue' ? 'blocked' : draft.factoryStatus === 'in_progress' || draft.factoryStatus === 'pending_feedback' ? 'in_production' : line.productionStatus
+  const nextFactoryStatus =
+    draft.feedbackStatus === 'completed'
+      ? 'returned'
+      : draft.feedbackStatus === 'issue'
+        ? 'abnormal'
+        : draft.feedbackStatus === 'in_progress' || draft.feedbackStatus === 'pending_feedback'
+          ? 'in_production'
+          : line.factoryStatus
+  const nextLineStatus = draft.feedbackStatus === 'completed' ? 'pending_finance_confirmation' : draft.feedbackStatus === 'issue' ? getOrderLineLineStatus(line) : getOrderLineLineStatus(line)
+  const nextProductionStatus =
+    draft.feedbackStatus === 'completed'
+      ? 'completed'
+      : draft.feedbackStatus === 'issue'
+        ? 'blocked'
+        : draft.feedbackStatus === 'in_progress' || draft.feedbackStatus === 'pending_feedback'
+          ? 'in_production'
+          : line.productionStatus
 
   return {
     ...line,
     lineStatus: nextLineStatus,
     factoryStatus: nextFactoryStatus,
     productionStatus: nextProductionStatus,
-    financeStatus: draft.factoryStatus === 'completed' ? 'pending' : line.financeStatus,
-    productionCompletedAt: draft.factoryStatus === 'completed' ? draft.factoryShippedAt || line.productionCompletedAt : line.productionCompletedAt,
+    financeStatus: draft.feedbackStatus === 'completed' ? 'pending' : line.financeStatus,
+    productionCompletedAt: draft.feedbackStatus === 'completed' ? draft.factoryShippedAt || line.productionCompletedAt : line.productionCompletedAt,
     productionInfo: {
       ...line.productionInfo,
-      factoryStatus: draft.factoryStatus,
+      feedbackStatus: draft.feedbackStatus,
       actualMaterial: draft.actualMaterial.trim() || undefined,
       totalWeight: totalWeight || undefined,
       netWeight: draft.netWeight.trim() || undefined,

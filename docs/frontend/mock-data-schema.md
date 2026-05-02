@@ -15,6 +15,8 @@
 - `carrier / deliveredAt / note`
 - `manualAdjustment / manualAdjustmentReason / finalDisplayQuote`
 - `returnedWeight`
+- `designInfo.designStatus`
+- `productionInfo.factoryStatus`
 
 ## 2. Customer
 
@@ -159,6 +161,8 @@ type OrderLine = {
 - 货号使用 `productionTaskNo`。
 - 主工作流状态使用 `lineStatus`。
 - `OrderLine.status` 已删除。
+- 设计/建模/生产/工厂/财务角色分流状态使用顶层 `designStatus / modelingStatus / productionStatus / factoryStatus / financeStatus`。
+- 工厂回传子状态使用 `productionInfo.feedbackStatus`，不得写回 `productionInfo.factoryStatus`。
 - 销售成交金额使用 `lineSalesAmount`。
 - 系统参考报价使用 `quote.systemQuote`。
 

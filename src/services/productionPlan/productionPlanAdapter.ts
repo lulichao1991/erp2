@@ -1,4 +1,4 @@
-import type { OrderLine, OrderLineProductionStatus } from '@/types/order-line'
+import type { OrderLine, OrderLineProductionFeedbackStatus } from '@/types/order-line'
 import type { Product, ProductCategory, ProductAssetFile } from '@/types/product'
 import type { ProductionPlanDetail, ProductionPlanFile, ProductionPlanFileGroup, ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
 import type { Purchase, PurchaseTimelineRecord } from '@/types/purchase'
@@ -110,14 +110,14 @@ const buildProductionTimeline = (source: ProductionPlanSource): PurchaseTimeline
 
 const getLineFactoryFeedback = (orderLine: OrderLine) => orderLine.productionInfo
 
-const productionInfoFactoryStatuses: OrderLineProductionStatus[] = ['not_started', 'in_progress', 'pending_feedback', 'completed', 'issue']
+const productionInfoFeedbackStatuses: OrderLineProductionFeedbackStatus[] = ['not_started', 'in_progress', 'pending_feedback', 'completed', 'issue']
 
-const normalizeFactoryStatus = (status?: string): OrderLineProductionStatus | undefined => {
+const normalizeFeedbackStatus = (status?: string): OrderLineProductionFeedbackStatus | undefined => {
   if (!status) {
     return undefined
   }
 
-  return productionInfoFactoryStatuses.includes(status as OrderLineProductionStatus) ? (status as OrderLineProductionStatus) : undefined
+  return productionInfoFeedbackStatuses.includes(status as OrderLineProductionFeedbackStatus) ? (status as OrderLineProductionFeedbackStatus) : undefined
 }
 
 const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow => {
@@ -159,21 +159,21 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
 export const getProductionPlanStage = (task: Task, orderLine: OrderLine): ProductionPlanStage => {
   const workflowFactoryStatus = getOrderLineFactoryStatus(orderLine)
   const workflowProductionStatus = getOrderLineProductionStatus(orderLine)
-  const factoryStatus = normalizeFactoryStatus(getLineFactoryFeedback(orderLine)?.factoryStatus)
+  const feedbackStatus = normalizeFeedbackStatus(getLineFactoryFeedback(orderLine)?.feedbackStatus)
 
-  if (workflowFactoryStatus === 'abnormal' || workflowProductionStatus === 'blocked' || factoryStatus === 'issue') {
+  if (workflowFactoryStatus === 'abnormal' || workflowProductionStatus === 'blocked' || feedbackStatus === 'issue') {
     return 'issue'
   }
 
-  if (task.status === 'done' || workflowFactoryStatus === 'returned' || workflowProductionStatus === 'completed' || factoryStatus === 'completed') {
+  if (task.status === 'done' || workflowFactoryStatus === 'returned' || workflowProductionStatus === 'completed' || feedbackStatus === 'completed') {
     return 'reported'
   }
 
-  if (task.status === 'pending_confirm' || factoryStatus === 'pending_feedback') {
+  if (task.status === 'pending_confirm' || feedbackStatus === 'pending_feedback') {
     return 'pending_report'
   }
 
-  if (workflowFactoryStatus === 'in_production' || workflowProductionStatus === 'in_production' || factoryStatus === 'in_progress') {
+  if (workflowFactoryStatus === 'in_production' || workflowProductionStatus === 'in_production' || feedbackStatus === 'in_progress') {
     return 'in_production'
   }
 

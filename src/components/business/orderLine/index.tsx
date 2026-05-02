@@ -46,7 +46,7 @@ import type {
   OrderLineLog,
   OrderLineOutsourceStatus,
   OrderLinePriority,
-  OrderLineProductionStatus,
+  OrderLineProductionFeedbackStatus,
   OrderLineWorkflowDesignStatus,
   OrderLineWorkflowModelingStatus,
   OrderLineUploadedFile
@@ -118,7 +118,7 @@ const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus | string; 
   { value: 'rework', label: '返工中' }
 ]
 
-const productionStatusOptions: Array<{ value: OrderLineProductionStatus | string; label: string }> = [
+const productionStatusOptions: Array<{ value: OrderLineProductionFeedbackStatus | string; label: string }> = [
   { value: 'not_started', label: '未开始' },
   { value: 'in_progress', label: '生产中' },
   { value: 'pending_feedback', label: '待回传' },
@@ -128,7 +128,7 @@ const productionStatusOptions: Array<{ value: OrderLineProductionStatus | string
 
 const categoryLabelMap = Object.fromEntries(categoryOptions.map((item) => [item.value, item.label])) as Record<string, string>
 const outsourceStatusLabelMap = Object.fromEntries(outsourceStatusOptions.map((item) => [item.value, item.label])) as Record<string, string>
-const factoryStatusLabelMap = Object.fromEntries(productionStatusOptions.map((item) => [item.value, item.label])) as Record<string, string>
+const feedbackStatusLabelMap = Object.fromEntries(productionStatusOptions.map((item) => [item.value, item.label])) as Record<string, string>
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
@@ -212,7 +212,7 @@ const findCurrentAfterSalesCase = (records: AfterSalesCase[], orderLineId: strin
 const getAfterSalesReason = (record: AfterSalesCase) => record.reason || record.remark || '—'
 const getAfterSalesRemark = (record: AfterSalesCase) => record.remark || '—'
 
-const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || factoryWorkflowStatusLabelMap[status as keyof typeof factoryWorkflowStatusLabelMap] || status : '待确认')
+const getFactoryStatusLabel = (status?: string) => (status ? feedbackStatusLabelMap[status] || factoryWorkflowStatusLabelMap[status as keyof typeof factoryWorkflowStatusLabelMap] || status : '待确认')
 const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
 const getAfterSalesTypeLabel = (type?: string) => (type ? afterSalesTypeLabelMap[type] || type : '未分类')
 
@@ -946,7 +946,7 @@ const OrderLineProductionSection = ({
           <div className="field-grid three">
             <label className="field-control">
               <span className="field-label">工厂状态</span>
-              <select className="select" value={draft.factoryStatus} onChange={(event) => updateDraft('factoryStatus', event.target.value)}>
+              <select className="select" value={draft.feedbackStatus} onChange={(event) => updateDraft('feedbackStatus', event.target.value)}>
                 {productionStatusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -1002,7 +1002,7 @@ const OrderLineProductionSection = ({
         </div>
       ) : (
         <div className="info-grid order-line-drawer-grid">
-          <InfoField label="工厂状态" value={getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))} />
+          <InfoField label="工厂状态" value={getFactoryStatusLabel(String(line.productionInfo?.feedbackStatus || ''))} />
           <InfoField label="实际材质" value={line.productionInfo?.actualMaterial || line.actualRequirements?.material || line.selectedMaterial || '—'} />
           <InfoField label="总重" value={getProductionTotalWeight(line) || '—'} />
           <InfoField label="净重" value={line.productionInfo?.netWeight || '—'} />
