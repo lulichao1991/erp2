@@ -1,603 +1,69 @@
-# 前端任务板（Purchase + OrderLine 收口版）
+# Frontend Task Board
 
-## 1. 文档定位
+## 当前阶段
 
-本文档用于记录当前前端主线的真实完成情况、暂停项和后续清理任务。
+当前阶段是 **OrderLine workflow foundation 收口**。
 
-当前项目已经从旧订单中心口径收口为：
+已经完成 legacy `/orders` 删除，当前主线只围绕：
 
 ```text
 Customer -> Purchase -> OrderLine -> Product
 ```
 
-对象定义：
-
-- `Customer` = 客户
-- `Purchase` = 购买记录 / 一次购买公共信息
-- `OrderLine` = 销售 / 一件商品的执行对象
-- `Product` = 款式模板
-- `ProductSnapshot` = 来源款式快照
-
-当前主入口：
-
-- `/order-lines`
-- `/purchases/new`
-- `/purchases/:purchaseId`
-- `/products`
-- `/customers`
-- `/customers/:customerId`
-- `/tasks`
-- `/production-follow-up`
-- `/design-modeling`
-- `/factory`
-- `/finance`
-- `/inventory`
-- `/management`
-- `/production-plan`
-
-legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板主线存在。
-
----
-
-## 2. 当前阶段原则
-
-当前项目已经完成 legacy `/orders` 删除与 OrderLine-centered mock v1 工作台打底。
-
-当前阶段只做：
-
-1. 当前 `Purchase + OrderLine` 主线稳定性验证
-2. 销售资料完整性、风险、逾期和角色待办规则复用
-3. 文档与命名口径收口
-4. 后续真实后端 / 真实权限 / 真实文件上传前的边界说明
-
-本阶段不做：
-
-- 真实后端接口接入
-- 真实后端鉴权或复杂权限系统
-- 真实文件上传、真实财务导出或复杂对账
-- 复杂客户 CRM、客户画像或营销自动化
-- 旧 `/orders` 的重新引入
-- 款式管理模块重做
-- 新审批流或复杂流程引擎
-
----
-
-## 3. 状态说明
-
-- 已完成：当前主线中已有可访问页面、组件或前端态能力
-- 暂停：明确不在当前清理收口阶段推进
-- 待清理：不新增功能，只做命名、依赖、旧文件和兼容层收口
-- 兼容保留：为避免破坏已有页面、测试或演示，暂时保留但不作为主线
-
----
-
-## 4. 当前主线已完成能力
-
-### 4.1 销售中心 `/order-lines`
-
-状态：已完成
-
-当前能力：
-- 以 `OrderLine` 作为列表主对象
-- 一行代表一件商品，而不是一笔购买记录
-- 支持查看销售状态、客户、来源款式、负责人、交期和生产摘要
-- 支持以货号作为主识别码，并在货号下方展示款式名称和版本；商品列只展示缩略图
-- 可打开销售详情抽屉
-- 当前主入口已替代旧 `/orders` 导航入口
-
-验收口径：
-- `/order-lines` 是当前商品执行对象的主列表
-- 不再把旧订单中心写成当前主模块
-
-### 4.2 `OrderLineDetailDrawer` 销售详情抽屉
-
-状态：已完成
-
-当前能力：
-- 承载单件商品的执行详情
-- 展示基础信息、实际需求、规格报价、跟单 / 下厂、工厂回传、物流、售后和操作日志
-- 支持在 `/order-lines` 与 `/purchases/:purchaseId` 中复用
-- 所有操作优先按 `orderLineId` 定位当前销售
-
-验收口径：
-- 销售详情抽屉是单件商品执行信息的主要承载处
-- 购买记录详情页只做归组，不替代销售执行详情
-
-### 4.3 `/purchases/new` 新建购买记录草稿流
-
-状态：已完成
-
-当前能力：
-- 创建一笔 `Purchase` 草稿
-- 在同一笔购买记录下维护多条销售草稿
-- 每条销售草稿可独立引用款式、选择规格并生成参考报价
-- 每条销售草稿自动生成货号，可录入款式、版本、规格、印记、特殊需求、设计 / 建模 / 出蜡需求；来源款式编号不作为独立录入项
-- 保存草稿允许资料暂缺，资料完整度只阻断客服确认完成
-- 每条销售草稿展示资料完整度和缺失项
-- 客服确认完成后，按 `requiresDesign / requiresModeling` 分流到 `pending_design / pending_modeling / pending_merchandiser_review`
-- 页面语义已从旧“新建订单”收口为“新建购买记录”
-
-验收口径：
-- 页面创建的是 `Purchase`
-- 销售草稿后续落为 `OrderLine`
-- 不回退成旧 `order.items` 主线
-
-### 4.4 `/purchases/:purchaseId` 购买记录详情归组页
-
-状态：已完成
-
-当前能力：
-- 展示一次购买的公共信息
-- 汇总展示本次购买下的多条销售
-- 复用销售详情抽屉查看和维护单件商品
-- 购买记录只承载归组、摘要和公共信息，不承载单件商品执行字段
-
-验收口径：
-- 购买记录详情页清楚表达“购买记录归组，销售执行”
-- 单件商品状态、物流、售后和生产信息优先落在 `OrderLine`
-
-### 4.5 销售引用款式、选择规格、自动报价
-
-状态：已完成
-
-当前能力：
-- 销售可以引用 `Product` 款式模板
-- 引用后保留来源款式快照语义
-- 支持选择规格
-- 根据规格带出参数和基础价格
-- 叠加固定加价规则
-- 生成系统参考报价
-
-验收口径：
-- `Product` 是模板对象
-- `OrderLine` 是执行对象
-- 自动报价基于销售当前选择和来源款式价格规则
-
-### 4.6 来源款式详情抽屉
-
-状态：已完成
-
-当前能力：
-- 从销售或销售草稿中打开来源款式详情
-- 展示来源 `Product` 的模板信息
-- 展示来源款式与当前销售实际选择的轻量对比
-- 不把款式模板字段直接写回销售执行状态
-
-验收口径：
-- 来源款式详情展示的是模板，不是销售详情
-- 对比区用于核对，不改变主对象边界
-
-### 4.7 销售状态推进
-
-状态：已完成
-
-当前能力：
-- 在销售详情抽屉中推进当前销售状态
-- `/order-lines` 与 `/purchases/:purchaseId` 使用同一套销售状态更新语义
-- 状态更新按销售独立发生
-- `lineStatus` 已作为多角色工作流主状态字段接入 `/order-lines` 筛选、快捷视图、购买记录详情和任务分组
-- 销售详情抽屉展示客服资料完整度，并可执行客服确认分流
-- 设计 / 建模 / 生产 / 工厂 / 财务状态字段已落在 `OrderLine`，用于后续跟单、设计建模、工厂和财务视图
-- `OrderLine.status` 兼容字段已删除，后续新增逻辑统一使用 `lineStatus`
-
-验收口径：
-- 同一购买记录下的多件商品可以处于不同状态
-- 状态推进不以整笔购买记录作为唯一驱动对象
-
-### 4.8 `/production-follow-up` 生产跟进
-
-状态：已完成
-
-当前能力：
-- 基于 `OrderLine` 展示跟单生产推进列表
-- 支持按待跟单审核、待下发生产、生产中、待工厂回传、异常 / 逾期分组查看
-- 支持保存工厂与计划交期
-- 支持标记资料已齐、下发生产、标记生产中、标记阻塞
-- 支持退回客服补资料或退回设计 / 建模修改
-
-验收口径：
-- 跟单页面只读取和更新当前 `OrderLine`
-- 购买记录只作为归组跳转和编号展示
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-
-### 4.9 `/design-modeling` 设计 / 建模工作台
-
-状态：已完成
-
-当前能力：
-- 基于 `OrderLine` 展示待设计、设计中、待建模、建模中、待修改和已完成任务
-- 支持领取设计 / 建模任务
-- 支持标记设计中、设计完成、建模中、建模完成
-- 支持标记需修改，并记录修改原因
-- 支持记录出蜡文件名和发送出蜡厂时间
-
-验收口径：
-- 页面只展示商品执行需求、设计 / 建模状态和文件记录
-- 不展示客户联系方式、销售价格、定金、尾款或利润
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-- 任务分组来自 `OrderLine` 工作流状态，不回退到旧订单模型
-
-### 4.10 `/factory` 工厂协同中心
-
-状态：已完成
-
-当前能力：
-- 基于 `OrderLine.factoryId` 只展示分配给当前 mock 工厂的生产资料
-- 支持待接收、生产中、待回传、已回传、异常视图
-- 支持接收任务、标记开始生产、标记生产完成、提交工厂回传、标记异常
-- 支持记录总重、净金重、实际材质、主石 / 辅石、工费、成品图文件名和结算单文件名
-
-验收口径：
-- 页面不展示客户姓名、联系方式、地址、销售价格、定金、尾款、利润或财务备注
-- 回传后销售进入 `factory_returned`，`financeStatus` 进入 `pending`
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-
-### 4.11 `/finance` 财务中心
-
-状态：已完成
-
-当前能力：
-- 基于 `Purchase.finance` 展示应收、定金、尾款和收款确认状态
-- 基于 `OrderLine.productionData / financeStatus` 展示工厂回传、结算金额、成本和毛利摘要
-- 支持确认定金、确认尾款、确认工厂结算、标记财务异常、填写财务备注和锁定财务数据
-
-验收口径：
-- 财务可查看金额、成本和工厂回传数据
-- 财务确认后销售进入 `ready_to_ship`，`financeStatus` 进入 `confirmed`
-- 财务不负责推进设计、建模或生产执行字段
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-
-### 4.12 `/management` 管理看板
-
-状态：已完成
-
-当前能力：
-- 基于 `Purchase + OrderLine` 汇总业务总览、销售状态分布、生产风险、财务概览、角色负载和工厂表现
-- 统计逻辑集中在 `managementDashboard` selector 中，不堆在页面 JSX
-- 提供进入销售中心和财务中心的入口
-
-验收口径：
-- 管理看板只做汇总观察，不承接具体录入动作
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-
-### 4.13 `/inventory` 仓库商品管理
-
-状态：已完成
-
-当前能力：
-- 基于 `InventoryItem` 展示设计留样、客户退货、常备采购和其他库存
-- 支持总数、可用数和已占用数展示，方便库管判断真实可领用库存
-- 支持全部库存、可领用库存、设计留样、客户退货、待检 / 瑕疵、已占用、待出库、待盘点、低库存、不可用快捷视图
-- 支持按来源、库存状态、成色、库位和关键词筛选
-- 展示关联的 Product / Purchase / OrderLine / Customer 信息，用于来源追溯
-- 库存可用、待质检、待出库、低库存等工作台徽标由库存 selector 统一计算
-- 支持按库位汇总库存款数、总数、可用数、已占用数和待质检数
-- 支持查看单条库存详情和该库存自己的流转记录
-- 支持查看关联销售的库存占用、释放和出库追溯摘要
-- 支持客户退货、待检修和瑕疵库存的前端 mock 质检处置
-- 支持前端 mock 库存盘点，按实盘总数和实盘可用数调整库存台账，并生成调整流水
-- 支持前端 mock 入库、占用、释放、出库、报废和库位调整记录，并可把库存流转关联到具体销售
-- 支持按流转类型、关联销售和关键词筛选库存流转记录
-- 库管角色可见仓库商品入口
-
-验收口径：
-- 仓库商品管理是库存资产台账，不是 Product 模板页，也不是 OrderLine 执行页
-- 库存记录不推进销售生产、财务或售后状态
-- 质检处置只更新库存成色、状态、可用数量、库位和库存流转记录
-- 库存盘点只更新库存数量、可用数量、库位和库存流转记录
-- 关联销售的库存流转只用于库管追溯，不改写 `OrderLine.lineStatus`
-- 当前不做真实库存审批、盘点、条码系统或后端库存锁定
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-
-### 4.14 角色权限视图边界
-
-状态：已完成
-
-当前能力：
-- 新增前端 mock role capability 配置，覆盖客服、跟单、设计、建模、工厂、库管、财务、管理和管理员
-- 侧边栏按当前角色显示可见入口
-- 工厂、跟单、设计建模、财务页面的关键操作按钮按 role action 做前端禁用
-- 保留 mock role switcher，不接真实登录或后端鉴权
-
-验收口径：
-- 工厂角色看不到财务中心和管理看板入口
-- 库管角色可以看到仓库商品入口，但看不到财务中心或工厂协同入口
-- 财务角色可以看到财务中心
-- 设计 / 建模角色可以看到设计建模入口
-- 跟单角色可以看到生产跟进入口
-- 管理角色可以看到管理看板入口
-- 不恢复旧 `/orders` 路由、旧订单 store 或旧订单单件逻辑
-
-### 4.15 销售风险、逾期和资料完整性规则
-
-状态：已完成
-
-当前能力：
-- 新增 `orderLineRiskSelectors`，集中计算销售资料完整性、生产逾期、工厂回传异常、财务异常和角色待办徽标
-- `/order-lines`、购买记录详情、生产跟进、财务中心和管理看板复用同一套销售风险口径
-- 保留客服资料完整性字段要求：款式名称、品类、材质、尺寸 / 规格、工艺要求、货号
-- 财务风险统一覆盖工厂未回传重量、净金重大于总重、材质为空、工厂结算金额为空、工费为空和销售金额为空
-
-验收口径：
-- 新增风险、逾期、资料完整性判断优先复用 selector，不在页面 JSX 中重复散落
-- 规则只基于 current `OrderLine`、`Purchase` 和关联记录，不恢复旧 `/orders` 口径
-
-### 4.16 销售操作日志
-
-状态：已完成
-
-当前能力：
-- 记录销售状态变化和关键维护动作
-- 日志按销售独立展示
-- 不同销售的日志不会混在一起
-
-验收口径：
-- 操作追溯以 `OrderLine` 为主
-- 购买记录时间线只承载归组级或公共事件
-
-### 4.17 销售定制参数编辑
-
-状态：已完成
-
-当前能力：
-- 在销售详情抽屉中编辑定制参数
-- 保存后只更新当前销售
-- 购买记录详情页中的对应销售同步展示更新结果
-- 编辑后追加销售操作日志
-
-验收口径：
-- 单件商品的实际执行信息不塞回 `Purchase`
-- 变更以当前销售为边界
-
-### 4.17 跟单 / 下厂信息编辑
-
-状态：已完成
-
-当前能力：
-- 在销售详情抽屉中维护跟单与下厂信息
-- 支持维护跟单负责人、下厂相关字段和备注
-- 保存后只更新当前销售
-- 编辑后追加销售操作日志
-
-验收口径：
-- 跟单和下厂信息是销售级执行信息
-- 不扩展为独立工厂协同中心
-
-### 4.18 工厂回传信息编辑
-
-状态：已完成
-
-当前能力：
-- 在销售详情抽屉中维护工厂回传信息
-- 支持维护材料、重量、石料、工费和工厂发货相关信息
-- `/order-lines` 与 `/purchases/:purchaseId` 可同步查看更新后的销售生产摘要
-- 编辑后追加销售操作日志
-
-验收口径：
-- 工厂回传仍属于当前销售的生产执行信息
-- 当前不做完整工厂协同中心
-
-### 4.19 物流新增 / 编辑 / 作废
-
-状态：已完成
-
-当前能力：
-- 在销售详情抽屉中新增物流记录
-- 支持编辑已有物流记录
-- 支持作废物流记录并保留痕迹
-- 销售中心和购买记录详情页按 `orderLineId` 汇总物流摘要
-- 物流维护后追加销售操作日志
-
-验收口径：
-- `LogisticsRecord` 默认关联 `orderLineId`
-- 不把物流做成整笔购买唯一记录
-
-### 4.20 售后新增 / 编辑 / 关闭
-
-状态：已完成
-
-当前能力：
-- 在销售详情抽屉中新增售后记录
-- 支持编辑售后记录
-- 支持关闭售后记录
-- 销售中心和购买记录详情页按 `orderLineId` 汇总售后摘要
-- 售后维护后追加销售操作日志
-
-验收口径：
-- `AfterSalesCase` 默认关联 `orderLineId`
-- 同一购买记录中只有部分商品进入售后时，可以独立处理
-
----
-
-## 5. 暂停项与完成收口
-
-### 5.1 真实后端
-
-状态：暂停
-
-暂停说明：
-- 当前仍以前端 UI 和 mock 联调为主
-- 不做真实接口、鉴权、后端错误码、数据库设计或服务拆分
-
-恢复条件：
-- mock schema 收口
-- 兼容命名和旧模块依赖审计完成
-- 当前页面字段与数据边界稳定
-
-### 5.2 legacy `/orders` 删除
-
-状态：已完成
-
-完成说明：
-- `/orders`、`/orders/new`、`/orders/:orderId` 已删除
-- 旧 pages / components / services / types / mocks 已删除
-- 旧 orders runtime API 已删除
-- 当前新建和执行主流程入口是 `/purchases/new` 与 `/order-lines`
-- 如需回看旧实现，使用 git 历史 / 删除前 PR
-
-验收结果：
-- 所有当前主入口不再依赖旧 `/orders` 模块
-- 测试和演示路径已切到 `/order-lines`、`/purchases/*`、`/customers/*`、`/tasks`、`/production-follow-up`、`/design-modeling`、`/factory`、`/finance`、`/inventory`、`/management` 和 `/production-plan`
-- current workflow route smoke 保持覆盖
-
----
-
-## 6. 下一步清理任务
-
-### 6.1 类型命名收口
-
-状态：进行中
-
-目标：
-- 将当前主线类型统一到 `Customer / Purchase / OrderLine / Product / ProductSnapshot`
-- 删除旧交易记录 runtime 兼容别名
-- 删除旧订单单件 runtime 类型，并移除 current runtime 中的旧 `order*` 字段 fallback
-- 将 `SourceProductSnapshot` 收口为 `ProductSnapshot`
-
-检查范围：
-- `src/types/*`
-- `src/mocks/*`
-- `src/components/business/*`
-- `src/pages/*`
-- 测试文件
-- 文档示例
-
-验收标准：
-- 当前主线代码和文档不再保留旧交易记录 runtime 兼容别名
-- 新代码不继续扩大旧命名使用范围
-- 兼容别名有清晰注释或集中出口
-
-当前记录：
-- 销售货号展示与购买记录归属兼容读取已集中到 `src/services/orderLine/orderLineIdentity.ts`
-- 新增代码应优先使用 `getOrderLineGoodsNo / getOrderLinePurchaseId / isOrderLineInPurchase / findPurchaseForOrderLine`
-- `transactionId / transactionNo / itemSku` 已从 current runtime 类型、mock、helper 和测试中删除；历史兼容只保留在 archive 文档或 git 历史中
-- 客户聚合、购买记录草稿展示、销售中心 / 详情、生产跟进、财务和生产计划已改为复用上述 helper，不再散落购买归属或货号展示兜底逻辑
-- 任务关联购买记录的兼容读取已集中到 `src/services/task/taskIdentity.ts`
-- 新增任务页面、adapter 或 hooks 应优先使用 `getTaskPurchaseId / getTaskPurchaseNo / findPurchaseForTask`
-- `ProductReferenceRecord` 已只保留 `purchaseId / purchaseNo`，不再保留 `transactionId / transactionNo`
-
-### 6.2 旧 `/orders` 依赖迁移审计
-
-状态：已完成
-
-目标：
-- 确认当前 runtime 不再依赖旧 `/orders`
-- 确认旧模块已删除
-- 输出删除完成后的回滚口径
-
-当前记录：
-- 已删除 legacy route smoke，保留 current workflow smoke
-- 已梳理 productionPlan fallback 迁移顺序
-- productionPlan 页面正常路径已 current-only，不再传 `appData.orders`
-- productionPlan legacy write fallback 已迁移，生产反馈只写 `OrderLine.productionInfo`
-- productionPlan adapter legacy read fallback 已移除，生产计划视图只从 `tasks + purchases + orderLines + products` 生成
-- productionPlan 详情页直接使用 current `OrderLine`
-- `useAppData` legacy orders APIs 已移除
-- task timeline 已迁移到 current `Purchase.timeline`
-- current task 更新只写 current `Purchase.timeline`
-- legacy `/orders` route smoke 已移除，current workflow smoke 保留
-
-检查范围：
-- `src/app/router/*`
-- current workflow runtime 代码
-- 路由测试和 smoke 测试
-
-验收标准：
-- 当前导航不展示旧 `/orders`
-- `/orders` 不再作为可访问路由存在
-- productionPlan 和 task 当前路径不再依赖 legacy orders 写回或读取 fallback
-- current workflow route smoke 已覆盖主入口
-- 每个旧依赖都有“已删除 / 历史文档保留”的判断
-
-### 6.3 低风险删除旧页面 / 旧组件
-
-状态：已完成
-
-目标：
-- 删除不再被 current workflow 引用的旧页面、旧组件和旧 mock/type/service
-- 删除旧 route smoke
-- 保留 current workflow smoke
-
-当前记录：
-- 已删除未被 current runtime 引用的 `src/app/layout/AppTopbar.tsx`
-- 已删除未被 current runtime 引用的旧弹窗 / 抽屉辅助 hooks：`src/hooks/useModalState.ts`、`src/hooks/useProductPicker.ts`、`src/hooks/useSourceProductDrawer.ts`
-- 已删除未被 current runtime 引用的 `src/services/quote/quoteService.ts`
-- 已删除未被 current runtime 引用的 `src/styles/tokens.ts`
-- 删除项引用搜索仅剩 archive 历史文档或 docs-index 对归档文档的说明；current runtime 无引用
-
-验收标准：
-- 每轮删除前有引用搜索结果
-- 删除后测试通过
-- 不破坏 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products`、`/customers`、`/tasks`、`/production-follow-up`、`/design-modeling`、`/factory`、`/finance`、`/inventory`、`/management`、`/production-plan`
-
-### 6.4 静态分析与瘦身门禁
-
-状态：已完成
-
-目标：
-- 将未使用文件、未使用导出、未使用依赖检查变成可重复执行的命令
-- 避免每轮人工解释同一批历史兼容保留项
-
-当前记录：
-- 新增 `npm run analyze:dead`，底层使用 `knip`
-- 新增 `knip.json`
-- `npm test` 已加入 `src/app/router/router.docs.test.ts`，用于校验 runtime route 与 `docs/frontend/routes-and-pages.md` 的路由最小集一致
-- `npm test` 已加入 `src/mocks/mock-data-schema.docs.test.ts`，用于校验 `src/mocks` 数据文件与 `docs/frontend/mock-data-schema.md` 的 mock 文件清单一致
-- `npm test` 已加入 `src/types/mock-data-schema.docs.test.ts`，用于校验当前主领域类型文件与 `docs/frontend/mock-data-schema.md` 的对象章节一致；支撑 / 兼容类型文件必须在测试中显式列为例外
-- 旧交易记录类型和 mock 兼容出口已删除
-- `src/types/**` 中的领域类型导出暂不按当前页面引用情况删除
-- 已删除未使用的 `@playwright/test` 依赖；当前没有 Playwright 配置或 e2e 测试入口
-
-验收标准：
-- `npm run analyze:dead` 通过
-- `npm test` 通过
-- `npm run build` 通过
-- 修改 `src/app/router/index.tsx` 的路由时，必须同步更新 `docs/frontend/routes-and-pages.md`
-- 新增或删除 `src/mocks` 数据文件时，必须同步更新 `docs/frontend/mock-data-schema.md`
-- 新增当前主领域类型文件或对象章节时，必须同步更新 `docs/frontend/mock-data-schema.md`；新增支撑 / 兼容类型文件时，必须在对象级门禁中显式说明例外
-- 新增兼容例外必须写入 `knip.json` 并说明业务原因
-
----
-
-## 7. 当前不再作为任务板主线的内容
-
-以下内容如需出现，只能作为历史或兼容说明：
-
-- 旧“订单中心”
-- 旧“商品任务中心”
-- 旧 `/orders`
-- 旧 `/orders/new`
-- 旧 `/orders/:orderId`
-- 旧交易记录命名作为当前主模型
-- 旧订单单件模型作为当前主对象
-- `order.items` 作为当前主数据结构
-
-当前任务板不得再按旧订单中心继续拆 Sprint，不得把旧 `/orders` 写成当前主入口。
-
----
-
-## 8. 当前验收清单
-
-清理收口阶段的每轮修改，都应至少确认：
-
-1. 是否仍以 `Purchase + OrderLine` 为主线
-2. 是否避免把旧 `/orders` 写成当前主模块
-3. 是否没有把财务中心、工厂协同、客户中心或库存管理扩展成超出当前 mock v1 边界的复杂系统
-4. 是否没有修改款式管理模块的现有能力
-5. 是否只在必要范围内改文档、类型、mock、路由或兼容层
-6. 是否保留了必要旧模块，避免一次性破坏测试和演示
-
----
-
-## 9. 本文档总结
-
-当前前端任务板已经从“首轮订单中心建设计划”调整为“Purchase + OrderLine 收口任务板”。
-
-后续工作重点不是继续扩展 ERP 新模块，而是：
-
-```text
-主线命名收口
--> 旧依赖审计
--> 低风险删除
--> 保持当前主入口稳定
-```
+本任务板只记录后续需要做的事，不再保留历史流水账。
+
+## 已完成基线
+
+- `/order-lines` 销售中心：一行一件商品。
+- `/purchases/new` 新建购买记录：输出 `purchaseDraft + orderLineDrafts`。
+- `/purchases/:purchaseId` 购买记录详情：归组展示一次购买下的多条销售。
+- `/products` 款式管理：维护模板、规格、固定加价规则、文件和版本。
+- `/customers` 客户中心：按当前 Purchase / OrderLine / AfterSales 聚合。
+- `/production-follow-up`：跟单生产推进视图。
+- `/design-modeling`：设计 / 建模工作台。
+- `/factory`：工厂协同中心。
+- `/finance`：财务中心。
+- `/inventory`：库存资产台账。
+- `/management`：管理看板。
+- `/production-plan`：生产计划。
+- 文档一致性测试、dead-code 检查和主 smoke test 已接入。
+
+## 当前必须保持
+
+- `OrderLine.lineStatus` 是主工作流状态。
+- `OrderLine.status` 已删除。
+- 货号使用 `productionTaskNo`。
+- 来源款式编码来自 `Product.code`。
+- 系统参考报价使用 `quote.systemQuote`。
+- 销售成交金额使用 `lineSalesAmount`。
+- 物流、售后默认关联 `orderLineId`。
+- `/orders` 不可恢复。
+
+## 待办
+
+| 优先级 | 任务 | 验收 |
+|---|---|---|
+| P0 | 文档改动门禁 | 路由、类型、mock、核心字段变更时同步更新文档并跑 `npm test` |
+| P1 | 拆分 `src/components/business/orderLine/index.tsx` | 抽出列表、详情抽屉、表单区块；不改变页面行为 |
+| P1 | 收敛生产/设计旧子状态命名 | 明确哪些旧子字段仍需要，删除不再使用的 fallback |
+| P1 | 补齐购买记录创建后的销售样例说明 | 同一次购买多销售、多状态、多物流、多售后路径文档可追踪 |
+| P2 | 整理真实接口前字段契约 | 输出前端字段契约，不写后端实现 |
+| P2 | 评估产品平台店铺信息归属 | 当前 mock 在产品扩展区，后续决定是否进入正式 Product 类型 |
+
+## 暂不做
+
+- 真实后端接口。
+- 真实权限鉴权。
+- 真实文件上传。
+- 报价审批流。
+- 复杂 BI。
+- 完整工厂门户。
+- 小程序端。
+
+## 每次改动检查清单
+
+- 是否仍以 `OrderLine` 为单件执行对象。
+- 是否避免恢复 `/orders`、`OrderItem`、`TransactionRecord`。
+- 是否同步更新 `mock-data-schema.md`、`routes-and-pages.md` 或 `ui-structure.md`。
+- 是否跑过 `npm test`。
+- 如涉及构建或依赖，是否跑过 `npm run build` / `npm run analyze:dead`。
