@@ -70,7 +70,6 @@ export type PurchaseTimelineRecordType =
 export type PurchaseTimelineRecord = {
   id: string
   purchaseId?: string
-  transactionId?: string
   type: PurchaseTimelineRecordType
   title: string
   description?: string
@@ -83,13 +82,11 @@ export type PurchaseTimelineRecord = {
 export type Purchase = {
   id: string
   purchaseNo: string
-  transactionNo?: string
   platformOrderNo?: string
   sourceChannel: PurchaseSourceChannel
   shopName?: string
   customerId?: string
   purchaseType: PurchaseType
-  orderType?: PurchaseType
   ownerName: string
   recipientName?: string
   recipientPhone?: string
@@ -106,9 +103,3 @@ export type Purchase = {
   latestActivityAt?: string
   timeline: PurchaseTimelineRecord[]
 }
-
-export type OrderFinanceTransactionType = PurchaseFinanceTransactionType
-export type OrderFinanceTransaction = PurchaseFinanceTransaction
-export type OrderFinanceInfo = PurchaseFinanceInfo
-export type TimelineRecordType = PurchaseTimelineRecordType
-export type TimelineRecord = PurchaseTimelineRecord

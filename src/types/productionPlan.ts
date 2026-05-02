@@ -28,10 +28,8 @@ export type ProductionPlanRow = {
   purchaseId: string
   purchaseNo: string
   orderLineId: string
-  orderLineCode: string
   orderLineName: string
   goodsNo: string
-  styleName: string
   sourceProductId: string
   sourceProductCode: string
   sourceProductVersion: string
@@ -55,7 +53,6 @@ export type ProductionPlanDetail = {
   purchaseId: string
   purchaseNo: string
   orderLineId: string
-  orderLineCode: string
   orderLineName: string
   row: ProductionPlanRow
   task: Task

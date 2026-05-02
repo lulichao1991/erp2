@@ -22,6 +22,7 @@ import {
   type InventoryQuickView,
   type InventoryRow
 } from '@/services/inventory/inventorySelectors'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
 import type { OrderLine } from '@/types/order-line'
 
@@ -141,7 +142,7 @@ const createMovementDraft = (item?: InventoryItem): MovementDraft => ({
   note: ''
 })
 
-const formatOrderLineOption = (line: OrderLine) => [line.lineCode || line.productionTaskNo || line.id, line.name].filter(Boolean).join(' / ')
+const formatOrderLineOption = (line: OrderLine) => [getOrderLineGoodsNo(line), line.name].filter(Boolean).join(' / ')
 
 const getOrderLineDisplay = (orderLines: OrderLine[], orderLineId?: string) => {
   const line = orderLines.find((candidate) => candidate.id === orderLineId)

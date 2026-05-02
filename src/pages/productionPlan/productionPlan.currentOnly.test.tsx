@@ -40,7 +40,7 @@ describe('productionPlan current-only flow', () => {
 
     expect(screen.getByRole('heading', { name: '工厂生产计划' })).toBeInTheDocument()
     expect(screen.getByText('购买记录 PUR-202604-001')).toBeInTheDocument()
-    expect(screen.getByText('山形戒指')).toBeInTheDocument()
+    expect(screen.getByText('山形素圈戒指')).toBeInTheDocument()
     expect(screen.queryByText('SO-202604-001')).not.toBeInTheDocument()
   })
 

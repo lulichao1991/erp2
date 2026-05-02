@@ -3,6 +3,7 @@ import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, In
 import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 
 export type InventoryQuickView = 'all' | 'available' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'pending_outbound' | 'pending_stocktake' | 'low_stock' | 'unavailable'
 
@@ -54,13 +55,13 @@ export type InventoryRow = {
   conditionLabel: string
   productName?: string
   purchaseNo?: string
-  orderLineCode?: string
+  orderLineGoodsNo?: string
   orderLineName?: string
   customerName?: string
   linkedSummary: string
 }
 
-export type InventorySummary = {
+type InventorySummary = {
   skuCount: number
   totalQuantity: number
   availableQuantity: number
@@ -73,7 +74,7 @@ export type InventorySummary = {
   unavailableCount: number
 }
 
-export type InventoryLocationSummary = {
+type InventoryLocationSummary = {
   location: string
   skuCount: number
   totalQuantity: number
@@ -82,7 +83,7 @@ export type InventoryLocationSummary = {
   needsReviewCount: number
 }
 
-export type InventoryMovementInput = {
+type InventoryMovementInput = {
   type: InventoryMovementType
   quantity: number
   operatorName: string
@@ -92,12 +93,12 @@ export type InventoryMovementInput = {
   note?: string
 }
 
-export type InventoryMovementResult = {
+type InventoryMovementResult = {
   item: InventoryItem
   movement: InventoryMovement
 }
 
-export type InventoryOrderLineMovementSummary = {
+type InventoryOrderLineMovementSummary = {
   orderLineId: string
   orderLineDisplay: string
   reserveQuantity: number
@@ -107,11 +108,11 @@ export type InventoryOrderLineMovementSummary = {
   latestOccurredAt: string
 }
 
-export type InventoryAvailabilityStatus = 'available' | 'reserved' | 'unavailable'
+type InventoryAvailabilityStatus = 'available' | 'reserved' | 'unavailable'
 
-export type InventoryReviewStatus = 'clear' | 'needs_review' | 'stocktake_recommended'
+type InventoryReviewStatus = 'clear' | 'needs_review' | 'stocktake_recommended'
 
-export type InventoryReviewInput = {
+type InventoryReviewInput = {
   condition: InventoryItemCondition
   status: InventoryItemStatus
   availableQuantity: number
@@ -121,7 +122,7 @@ export type InventoryReviewInput = {
   note?: string
 }
 
-export type InventoryStocktakeInput = {
+type InventoryStocktakeInput = {
   countedQuantity: number
   countedAvailableQuantity: number
   operatorName: string
@@ -133,7 +134,7 @@ export type InventoryStocktakeInput = {
 
 const includesKeyword = (value: string | undefined, keyword: string) => value?.toLowerCase().includes(keyword) ?? false
 
-export const isLowStockInventoryRow = (row: InventoryRow) =>
+const isLowStockInventoryRow = (row: InventoryRow) =>
   ['stock_purchase', 'consignment', 'other'].includes(row.item.sourceType) &&
   row.item.status === 'in_stock' &&
   row.item.availableQuantity > 0 &&
@@ -201,11 +202,11 @@ export const getInventoryWorkbenchBadges = (row: InventoryRow) => {
   return badges
 }
 
-export const isAvailableInventoryRow = (row: InventoryRow) => getInventoryAvailabilityStatus(row.item) === 'available'
+const isAvailableInventoryRow = (row: InventoryRow) => getInventoryAvailabilityStatus(row.item) === 'available'
 
-export const isPendingOutboundInventoryRow = (row: InventoryRow) => getInventoryReservedQuantity(row.item) > 0 && Boolean(row.item.orderLineId)
+const isPendingOutboundInventoryRow = (row: InventoryRow) => getInventoryReservedQuantity(row.item) > 0 && Boolean(row.item.orderLineId)
 
-export const isPendingStocktakeInventoryRow = (row: InventoryRow) => getInventoryReviewStatus(row.item) !== 'clear'
+const isPendingStocktakeInventoryRow = (row: InventoryRow) => getInventoryReviewStatus(row.item) !== 'clear'
 
 export const buildInventoryRows = ({
   inventoryItems,
@@ -226,13 +227,13 @@ export const buildInventoryRows = ({
     const orderLine = orderLines.find((candidate) => candidate.id === item.orderLineId)
     const customer = customers.find((candidate) => candidate.id === item.customerId)
     const productName = item.productName || product?.name
-    const orderLineCode = orderLine?.lineCode || orderLine?.productionTaskNo
+    const orderLineGoodsNo = orderLine ? getOrderLineGoodsNo(orderLine) : undefined
     const orderLineName = orderLine?.name
     const purchaseNo = purchase?.purchaseNo
     const customerName = customer?.name
     const linkedSummary = [
       productName ? `产品：${productName}` : null,
-      orderLineCode ? `销售：${orderLineCode}` : null,
+      orderLineGoodsNo ? `销售：${orderLineGoodsNo}` : null,
       purchaseNo ? `购买记录：${purchaseNo}` : null,
       customerName ? `客户：${customerName}` : null
     ]
@@ -246,7 +247,7 @@ export const buildInventoryRows = ({
       conditionLabel: inventoryConditionLabelMap[item.condition],
       productName,
       purchaseNo,
-      orderLineCode,
+      orderLineGoodsNo,
       orderLineName,
       customerName,
       linkedSummary: linkedSummary || '无关联对象'
@@ -321,7 +322,7 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
       row.item.size,
       row.sourceLabel,
       row.productName,
-      row.orderLineCode,
+      row.orderLineGoodsNo,
       row.orderLineName,
       row.purchaseNo,
       row.customerName,
@@ -382,7 +383,7 @@ export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovem
     const orderLine = orderLines.find((line) => line.id === movement.relatedOrderLineId)
     const summary = summaries.get(movement.relatedOrderLineId) ?? {
       orderLineId: movement.relatedOrderLineId,
-      orderLineDisplay: [orderLine?.lineCode || orderLine?.productionTaskNo || movement.relatedOrderLineId, orderLine?.name].filter(Boolean).join(' / '),
+      orderLineDisplay: [getOrderLineGoodsNo(orderLine), orderLine?.name].filter(Boolean).join(' / '),
       reserveQuantity: 0,
       releaseQuantity: 0,
       outboundQuantity: 0,

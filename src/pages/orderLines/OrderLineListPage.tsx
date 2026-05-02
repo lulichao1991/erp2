@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  filterOrderLineRows,
   OrderLineFilterBar,
   OrderLineDetailDrawer,
   OrderLineQuickStats,
@@ -10,6 +9,8 @@ import {
 } from '@/components/business/orderLine'
 import { PageContainer, PageHeader } from '@/components/common'
 import { useOrderLineWorkspaceState } from '@/hooks/useOrderLineWorkspaceState'
+import { useAppData } from '@/hooks/useAppData'
+import { filterOrderLineRows } from '@/services/orderLine/orderLineWorkspace'
 
 export const OrderLineListPage = () => {
   const [filters, setFilters] = useState<OrderLineCenterFilters>({
@@ -26,7 +27,11 @@ export const OrderLineListPage = () => {
     quickView: 'all'
   })
   const workspace = useOrderLineWorkspaceState()
-  const filteredRows = useMemo(() => filterOrderLineRows(workspace.rows, filters, workspace.afterSalesCases), [filters, workspace.afterSalesCases, workspace.rows])
+  const appData = useAppData()
+  const filteredRows = useMemo(
+    () => filterOrderLineRows(workspace.rows, filters, workspace.afterSalesCases, appData.customers),
+    [appData.customers, filters, workspace.afterSalesCases, workspace.rows]
+  )
 
   return (
     <PageContainer>
@@ -55,11 +60,14 @@ export const OrderLineListPage = () => {
         onClose={workspace.closeOrderLineDetail}
         onStatusChange={workspace.handleStatusChange}
         onUpdateLineDetails={workspace.handleUpdateLineDetails}
+        onUpdateDesignModeling={workspace.handleUpdateDesignModelingInfo}
         onUpdateOutsourceInfo={workspace.handleUpdateOutsourceInfo}
         onUpdateProductionInfo={workspace.handleUpdateProductionInfo}
         logs={workspace.logs}
         logisticsRecords={workspace.logisticsRecords}
         afterSalesCases={workspace.afterSalesCases}
+        customers={appData.customers}
+        products={appData.products}
         onAddLogistics={workspace.handleAddLogistics}
         onAddAfterSales={workspace.handleAddAfterSales}
         onUpdateLogistics={workspace.handleUpdateLogistics}

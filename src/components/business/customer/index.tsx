@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { EmptyState, InfoField, InfoGrid, SectionCard, StatusTag } from '@/components/common'
+import { getOrderLineGoodsNo, getOrderLinePurchaseId } from '@/services/orderLine/orderLineIdentity'
 import { getOrderLineLineStatus, getOrderLineLineStatusLabel } from '@/services/orderLine/orderLineWorkflow'
 import type { Customer } from '@/types/customer'
 import type { OrderLine } from '@/types/order-line'
@@ -47,7 +48,10 @@ export const buildCustomerOverview = ({
 }): CustomerOverview => {
   const customerPurchases = purchases.filter((purchase) => purchase.customerId === customer.id)
   const purchaseIds = new Set(customerPurchases.map((purchase) => purchase.id))
-  const customerOrderLines = orderLines.filter((line) => line.customerId === customer.id || (line.purchaseId && purchaseIds.has(line.purchaseId)))
+  const customerOrderLines = orderLines.filter((line) => {
+    const purchaseId = getOrderLinePurchaseId(line)
+    return line.customerId === customer.id || Boolean(purchaseId && purchaseIds.has(purchaseId))
+  })
   const orderLineIds = new Set(customerOrderLines.map((line) => line.id))
   const customerAfterSalesCases = afterSalesCases.filter((item) => item.customerId === customer.id || orderLineIds.has(item.orderLineId))
 
@@ -125,17 +129,6 @@ export const CustomerBasicSection = ({ overview }: { overview: CustomerOverview 
   )
 }
 
-export const CustomerLegacyTotalsSection = ({ customer }: { customer: Customer }) => (
-  <SectionCard title="外部导入统计参考">
-    <p className="text-muted">以下为客户 mock 保留的历史兼容字段，不作为当前系统内购买记录、销售或售后列表的数量来源。</p>
-    <InfoGrid columns={3}>
-      <InfoField label="外部历史购买次数" value={customer.totalTransactionCount} />
-      <InfoField label="外部历史销售数量" value={customer.totalOrderLineCount} />
-      <InfoField label="外部历史售后次数" value={customer.totalAfterSalesCount} />
-    </InfoGrid>
-  </SectionCard>
-)
-
 export const CustomerPurchasesSection = ({ purchases }: { purchases: Purchase[] }) => (
   <SectionCard title="历史购买记录">
     {purchases.length > 0 ? (
@@ -180,7 +173,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
         <table className="table">
           <thead>
             <tr>
-              <th>销售编号</th>
+              <th>货号</th>
               <th>款式名称</th>
               <th>状态</th>
               <th>当前负责人</th>
@@ -191,7 +184,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
           <tbody>
             {orderLines.map((line) => (
               <tr key={line.id}>
-                <td>{line.lineCode || line.id}</td>
+                <td>{getOrderLineGoodsNo(line)}</td>
                 <td>{line.name}</td>
                 <td>
                   <StatusTag value={getOrderLineLineStatusLabel(getOrderLineLineStatus(line))} />

@@ -94,8 +94,6 @@ export const inventoryItemsMock: InventoryItem[] = [
   }
 ]
 
-export const mockInventoryItems = inventoryItemsMock
-
 export const inventoryMovementsMock: InventoryMovement[] = [
   {
     id: 'inventory-movement-design-sample-ring-001',
@@ -135,5 +133,3 @@ export const inventoryMovementsMock: InventoryMovement[] = [
     note: '常备链身采购入库。'
   }
 ]
-
-export const mockInventoryMovements = inventoryMovementsMock

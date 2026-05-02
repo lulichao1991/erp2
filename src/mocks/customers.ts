@@ -12,13 +12,7 @@ export const customerMock: Customer = {
   tags: ['returning', 'high_value'],
   remark: '希望三件商品同单记录，但按单件分别跟进生产、发货和售后。',
   firstTransactionAt: '2026-03-28 14:20',
-  lastTransactionAt: '2026-04-21 10:46',
-  totalTransactionCount: 2,
-  totalOrderLineCount: 3,
-  totalAfterSalesCount: 1
+  lastTransactionAt: '2026-04-21 10:46'
 }
 
 export const customersMock: Customer[] = [customerMock]
-
-// Compatibility export for existing imports.
-export const mockCustomers = customersMock

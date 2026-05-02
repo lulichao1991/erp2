@@ -10,7 +10,7 @@ type ProductionPlanUploadedFile = {
   url: string
 }
 
-export type ProductionOrderLineInfo = {
+type ProductionOrderLineInfo = {
   id: string
   goodsNo?: string
   sourceProductCode?: string
@@ -23,7 +23,6 @@ export type ProductionOrderLineInfo = {
   actualRequirements?: {
     material?: string
     process?: string
-    sizeNote?: string
     engraveText?: string
     specialNotes?: string[]
     remark?: string
@@ -34,7 +33,7 @@ export type ProductionOrderLineInfo = {
 
 export type ProductionFeedbackValue = {
   factoryStatus?: OrderLineProductionStatus | string
-  returnedWeight?: string
+  totalWeight?: string
   qualityResult?: string
   factoryNote?: string
 }
@@ -58,19 +57,12 @@ const productionFeedbackStatusOptions: Array<{ value: OrderLineProductionStatus;
   { value: 'issue', label: '异常' }
 ]
 
-const legacyProductionFeedbackStatusMap: Record<string, OrderLineProductionStatus> = {
-  待回传: 'pending_feedback',
-  生产中: 'in_progress',
-  已回传: 'completed',
-  有异常: 'issue'
-}
-
-export const normalizeProductionFeedbackStatus = (status?: string): OrderLineProductionStatus | undefined => {
+const normalizeProductionFeedbackStatus = (status?: string): OrderLineProductionStatus | undefined => {
   if (!status) {
     return undefined
   }
 
-  return legacyProductionFeedbackStatusMap[status] || (productionFeedbackStatusOptions.some((option) => option.value === status) ? (status as OrderLineProductionStatus) : undefined)
+  return productionFeedbackStatusOptions.some((option) => option.value === status) ? (status as OrderLineProductionStatus) : undefined
 }
 
 export const getProductionFeedbackStatusLabel = (status?: string) => {
@@ -81,7 +73,7 @@ export const getProductionFeedbackStatusLabel = (status?: string) => {
 export const ProductionPlanStatusBadge = ({ stage }: { stage: ProductionPlanStage }) =>
   stage === 'issue' ? <RiskTag value="异常" /> : <StatusTag value={getProductionPlanStageLabel(stage)} />
 
-export const getProductionPlanStageLabel = (stage: ProductionPlanStage) => {
+const getProductionPlanStageLabel = (stage: ProductionPlanStage) => {
   switch (stage) {
     case 'pending_receive':
       return '待接收'
@@ -192,9 +184,9 @@ export const ProductionPlanSummaryCard = ({
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">关联销售</span>
             <strong className="production-plan-trace-value">
-              <Link to="/order-lines">{row.orderLineName || row.styleName}</Link>
+              <Link to="/order-lines">{row.orderLineName}</Link>
             </strong>
-            <span className="text-caption">{row.orderLineCode}</span>
+            <span className="text-caption">货号 {row.goodsNo}</span>
           </li>
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">购买记录</span>
@@ -351,10 +343,7 @@ export const ProductionOrderLineInfoBlock = ({
           )}
         </div>
       ) : null}
-      <div className="field-grid two">
-        <InfoField label="尺寸/规格备注" value={line.actualRequirements?.sizeNote || '—'} />
-        <InfoField label="生产备注" value={line.actualRequirements?.remark || '—'} />
-      </div>
+      <InfoField label="生产备注" value={line.actualRequirements?.remark || '—'} />
     </div>
   )
 }
@@ -402,11 +391,11 @@ export const ProductionFeedbackBlock = ({
           <input
             id={`${idPrefix}-weight`}
             className="input"
-            value={feedback?.returnedWeight || ''}
+            value={feedback?.totalWeight || ''}
             onChange={(event) =>
               onChange({
                 ...feedback,
-                returnedWeight: event.target.value
+                totalWeight: event.target.value
               })
             }
           />
@@ -483,9 +472,9 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
             <td>
               <div className="production-plan-table-primary">
                 <Link to="/order-lines" className="production-plan-table-link">
-                  {row.orderLineName || row.styleName}
+                  {row.orderLineName}
                 </Link>
-                <span className="text-caption">{row.orderLineCode}</span>
+                <span className="text-caption">货号 {row.goodsNo}</span>
               </div>
             </td>
             <td>

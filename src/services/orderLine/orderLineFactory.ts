@@ -8,7 +8,6 @@ import {
 import type { OrderLine } from '@/types/order-line'
 
 export const currentFactoryId = 'factory-suzhou-gold-001'
-export const currentFactoryName = '苏州金工厂'
 
 export type FactoryTaskTab = 'pending_acceptance' | 'in_production' | 'pending_return' | 'returned' | 'abnormal'
 
@@ -26,7 +25,7 @@ export const factoryTaskTabs: Array<{ value: FactoryTaskTab; label: string }> = 
   { value: 'abnormal', label: '异常' }
 ]
 
-export const isFactoryVisibleLine = (line: OrderLine, factoryId = currentFactoryId) => line.factoryId === factoryId
+const isFactoryVisibleLine = (line: OrderLine, factoryId = currentFactoryId) => line.factoryId === factoryId
 
 export const buildFactoryTaskRows = (orderLines: OrderLine[], factoryId = currentFactoryId): FactoryTaskRow[] =>
   orderLines.filter((line) => isFactoryVisibleLine(line, factoryId)).map((line) => {

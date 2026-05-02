@@ -1,6 +1,7 @@
 import type { OrderLine, OrderLineLineStatus } from '@/types/order-line'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 
-export type OrderLineCompletenessInput = {
+type OrderLineCompletenessInput = {
   productName?: string
   category?: string
   material?: string
@@ -64,6 +65,11 @@ export const getOrderLineCompleteness = (input: OrderLineCompletenessInput) => {
     complete: missingFields.length === 0,
     completed,
     total,
+    fieldStatuses: activeRequiredFields.map((field) => ({
+      key: field.key,
+      label: field.label,
+      complete: hasValue(input[field.key])
+    })),
     missingFields: missingFields.map((field) => field.key),
     missingLabels: missingFields.map((field) => field.label),
     summary: missingFields.length === 0 ? '资料完整' : `缺失：${missingFields.map((field) => field.label).join('、')}`
@@ -78,9 +84,9 @@ export const buildOrderLineCompletenessInput = (line: OrderLine): OrderLineCompl
     productName: line.name,
     category: line.category,
     material: line.selectedMaterial || line.actualRequirements?.material,
-    size: line.selectedSpecValue || line.actualRequirements?.sizeNote || line.actualRequirements?.specNote,
+    size: line.selectedSpecValue,
     craftRequirements: line.selectedProcess || line.actualRequirements?.process,
-    productionTaskNo: line.productionTaskNo || line.skuCode || line.itemSku,
+    productionTaskNo: getOrderLineGoodsNo(line, ''),
     needsEngraving: hasEngravingRequirement({
       engraveText: line.actualRequirements?.engraveText,
       selectedSpecialOptions: line.selectedSpecialOptions,

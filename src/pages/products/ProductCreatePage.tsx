@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import {
   ProductBasicFormSection,
+  ProductAssetsFormSection,
+  ProductCustomRuleFormSection,
   ProductEditHeader,
   ProductEditSideNav,
   ProductParamFormSection,
   ProductPriceRuleFormSection,
+  ProductProductionRefFormSection,
   ProductSpecSection
 } from '@/components/business/product'
 import { PageContainer } from '@/components/common'
@@ -50,6 +53,9 @@ export const ProductCreatePage = () => {
             sizeParameterDefinitions={appData.productFieldOptions.sizeParameterDefinitions}
           />
           <ProductPriceRuleFormSection product={product} setProduct={setProduct} />
+          <ProductCustomRuleFormSection product={product} setProduct={setProduct} />
+          <ProductProductionRefFormSection product={product} setProduct={setProduct} />
+          <ProductAssetsFormSection product={product} setProduct={setProduct} />
         </div>
       </div>
     </PageContainer>

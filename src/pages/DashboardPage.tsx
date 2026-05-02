@@ -2,9 +2,10 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { PageContainer, PageHeader, StatusTag, SummaryCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { isOrderLineInPurchase } from '@/services/orderLine/orderLineIdentity'
 import { getOrderLineLineStatus } from '@/services/orderLine/orderLineWorkflow'
+import { getTaskPurchaseNo } from '@/services/task/taskIdentity'
 import { getTaskStatusLabel, getTaskTypeLabel } from '@/services/workflow/workflowMeta'
-import type { Task } from '@/types/task'
 
 const purchaseAggregateStatusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -17,8 +18,6 @@ const purchaseAggregateStatusLabelMap: Record<string, string> = {
 }
 
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '—')
-
-const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || '未关联购买记录'
 
 export const DashboardPage = () => {
   const { orderLines, products, purchases, tasks } = useAppData()
@@ -98,7 +97,7 @@ export const DashboardPage = () => {
                   <StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />
                 </div>
                 <div className="spacer-top text-caption">{purchase.recipientName || '未维护收件人'}</div>
-                <div className="spacer-top text-muted">销售：{orderLines.filter((line) => line.purchaseId === purchase.id || line.transactionId === purchase.id).length} 条</div>
+                <div className="spacer-top text-muted">销售：{orderLines.filter((line) => isOrderLineInPurchase(line, purchase.id)).length} 条</div>
                 <div className="spacer-top text-muted">最近活动：{purchase.latestActivityAt || '—'}</div>
                 <div className="spacer-top">
                   <Link to={`/purchases/${purchase.id}`} className="button ghost small">

@@ -8,20 +8,16 @@ export type LogisticsRecord = {
   id: string
   orderLineId: string
   purchaseId?: string
-  transactionId?: string
   recordStatus?: LogisticsRecordStatus
   logisticsType?: LogisticsType
   direction?: LogisticsDirection
   company?: string
-  carrier?: string
   trackingNo?: string
   shippedAt?: string
   signedAt?: string
-  deliveredAt?: string
   voidedAt?: string
   voidReason?: string
   remark?: string
-  note?: string
 }
 
 export type AfterSalesCaseType = 'resize' | 'repair' | 'repolish' | 'remake' | 'resend' | 'refund' | 'exchange' | 'other'
@@ -32,7 +28,6 @@ export type AfterSalesCase = {
   id: string
   orderLineId: string
   purchaseId?: string
-  transactionId?: string
   customerId?: string
   type?: AfterSalesCaseType
   reason?: string
@@ -41,5 +36,4 @@ export type AfterSalesCase = {
   createdAt?: string
   closedAt?: string
   remark?: string
-  note?: string
 }

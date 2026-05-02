@@ -37,7 +37,7 @@ export const ProductionPlanListPage = () => {
       rows.filter((row) => {
         const matchesKeyword =
           filters.keyword.trim().length === 0 ||
-          [row.goodsNo, row.orderLineName, row.orderLineCode, row.purchaseNo, row.sourceProductVersion, row.engraveText]
+          [row.goodsNo, row.orderLineName, row.purchaseNo, row.sourceProductVersion, row.engraveText]
             .filter(Boolean)
             .join(' ')
             .toLowerCase()

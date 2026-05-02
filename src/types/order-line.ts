@@ -22,22 +22,6 @@ export type OrderLineUploadedFile = {
 
 export type OrderLinePriority = 'normal' | 'high' | 'urgent' | 'vip'
 
-export type OrderLineStatus =
-  | 'draft'
-  | 'pending_confirm'
-  | 'pending_measurement'
-  | 'pending_design'
-  | 'designing'
-  | 'pending_outsource'
-  | 'in_production'
-  | 'pending_factory_feedback'
-  | 'pending_shipment'
-  | 'shipped'
-  | 'after_sales'
-  | 'completed'
-  | 'cancelled'
-  | 'exception'
-
 export type OrderLineLineStatus =
   | 'draft'
   | 'pending_customer_confirmation'
@@ -94,16 +78,14 @@ export type OrderLineLog = {
   actionLabel: string
   operatorName: string
   createdAt: string
-  fromStatus?: OrderLineStatus | string
-  toStatus?: OrderLineStatus | string
+  fromStatus?: OrderLineLineStatus | string
+  toStatus?: OrderLineLineStatus | string
   note?: string
 }
 
 export type OrderLineActualRequirements = {
   material?: string
   process?: string
-  specNote?: string
-  sizeNote?: string
   engraveText?: string
   engraveImageFiles?: OrderLineUploadedFile[]
   engravePltFiles?: OrderLineUploadedFile[]
@@ -156,7 +138,6 @@ export type OrderLineProductionInfo = {
   factoryStatus?: OrderLineProductionStatus | string
   actualMaterial?: string
   totalWeight?: string
-  returnedWeight?: string
   netWeight?: string
   mainStoneInfo?: string
   sideStoneInfo?: string
@@ -195,16 +176,12 @@ export type OrderLineProductionData = {
 export type OrderLine = {
   id: string
   lineNo?: number
-  lineCode?: string
   productionTaskNo?: string
   purchaseId?: string
-  transactionId?: string
   customerId?: string
   name: string
   category?: ProductCategory
-  styleName?: string
   versionNo?: string
-  skuCode?: string
   quantity: number
   lineStatus?: OrderLineLineStatus | string
   designStatus?: OrderLineWorkflowDesignStatus | string
@@ -228,7 +205,6 @@ export type OrderLine = {
   waxFactorySentAt?: string
   designCompletedAt?: string
   modelingCompletedAt?: string
-  status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority
   isUrgent?: boolean
@@ -269,10 +245,4 @@ export type OrderLine = {
   expectedDate?: string
   promisedDate?: string
   finishedAt?: string
-
-  // Compatibility fields kept for the existing page layer.
-  itemSku?: string
-  manualAdjustment?: number
-  manualAdjustmentReason?: string
-  finalDisplayQuote?: number
 }

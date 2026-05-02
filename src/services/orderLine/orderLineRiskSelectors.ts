@@ -14,15 +14,15 @@ import type { OrderLine } from '@/types/order-line'
 import type { AfterSalesCase } from '@/types/supporting-records'
 import type { TaskAssigneeRole } from '@/types/task'
 
-export type OrderLineRiskSeverity = 'info' | 'warning' | 'critical'
+type OrderLineRiskSeverity = 'info' | 'warning' | 'critical'
 
-export type OrderLineRisk = {
+type OrderLineRisk = {
   key: string
   label: string
   severity: OrderLineRiskSeverity
 }
 
-export type ProductionDelayStatus = {
+type ProductionDelayStatus = {
   status: 'no_due_date' | 'normal' | 'due_soon' | 'overdue' | 'completed'
   label: string
   variant: 'normal' | 'dueSoon' | 'overdue'
@@ -30,13 +30,13 @@ export type ProductionDelayStatus = {
   dueSoon: boolean
 }
 
-export type FinanceRiskStatus = {
+type FinanceRiskStatus = {
   status: 'normal' | 'warning' | 'abnormal'
   labels: string[]
   risks: OrderLineRisk[]
 }
 
-export type OrderLineRiskOptions = {
+type OrderLineRiskOptions = {
   afterSalesCases?: AfterSalesCase[]
   referenceDate?: Date
   dueDate?: string
@@ -103,9 +103,9 @@ export const getProductionDelayStatus = (
   return { status: 'normal', label: `剩余 ${diffDays} 天`, variant: 'normal', overdue: false, dueSoon: false }
 }
 
-export const getLineSalesAmountForRisk = (line: OrderLine) => line.lineSalesAmount ?? line.finalDisplayQuote ?? line.quote?.systemQuote ?? 0
+const getLineSalesAmountForRisk = (line: OrderLine) => line.lineSalesAmount ?? line.quote?.systemQuote ?? 0
 
-export const getFactorySettlementAmountForRisk = (line: OrderLine) =>
+const getFactorySettlementAmountForRisk = (line: OrderLine) =>
   line.factorySettlementAmount ?? line.productionData?.totalLaborCost ?? ((line.productionData?.baseLaborCost ?? 0) + (line.productionData?.extraLaborCost ?? 0) || 0)
 
 export const getFinanceRiskStatus = (line: OrderLine): FinanceRiskStatus => {

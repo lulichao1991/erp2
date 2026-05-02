@@ -11,6 +11,7 @@ import {
   type FactoryTaskRow,
   type FactoryTaskTab
 } from '@/services/orderLine/orderLineFactory'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine, OrderLineProductionData } from '@/types/order-line'
 
@@ -57,7 +58,7 @@ const createReturnDraft = (line: OrderLine): FactoryReturnDraft => ({
 })
 
 const getRequirementSummary = (line: OrderLine) =>
-  [line.actualRequirements?.material || line.selectedMaterial, line.actualRequirements?.sizeNote || line.selectedSpecValue, line.actualRequirements?.process || line.selectedProcess].filter(Boolean).join(' / ') || '待补充'
+  [line.actualRequirements?.material || line.selectedMaterial, line.selectedSpecValue, line.actualRequirements?.process || line.selectedProcess].filter(Boolean).join(' / ') || '待补充'
 
 export const FactoryTaskCenterPage = () => {
   const appData = useAppData()
@@ -194,7 +195,6 @@ export const FactoryTaskCenterPage = () => {
         actualMaterial: productionData.actualMaterial,
         totalWeight: productionData.totalWeight ? `${productionData.totalWeight}g` : line.productionInfo?.totalWeight,
         netWeight: productionData.netMetalWeight ? `${productionData.netMetalWeight}g` : line.productionInfo?.netWeight,
-        returnedWeight: productionData.totalWeight ? `${productionData.totalWeight}g` : line.productionInfo?.returnedWeight,
         laborCostDetail: productionData.totalLaborCost ? `${productionData.totalLaborCost}` : line.productionInfo?.laborCostDetail,
         factoryShippedAt: returnedAt,
         qualityResult: '待跟单 / 财务确认',
@@ -300,9 +300,9 @@ const FactoryTaskTable = ({
         <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
           <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
             <span className="workbench-task-main">
-              <strong>{line.productionTaskNo || line.lineCode}</strong>
+              <strong>{getOrderLineGoodsNo(line)}</strong>
               <span>{line.name}</span>
-              <span className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ') || getRequirementSummary(line)}</span>
+              <span className="text-caption">{[line.sourceProduct?.sourceProductCode, line.versionNo].filter(Boolean).join(' / ') || getRequirementSummary(line)}</span>
             </span>
             <span className="workbench-task-meta">
               <span>交期 {line.factoryPlannedDueDate || '待确认'}</span>

@@ -6,7 +6,9 @@ import {
   getTaskStatusLabel,
   getTaskTypeLabel
 } from '@/services/workflow/workflowMeta'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { getOrderLineTaskGroups } from '@/services/orderLine/orderLineWorkflow'
+import { getTaskPurchaseId, getTaskPurchaseNo } from '@/services/task/taskIdentity'
 import type { OrderLine } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 import type { Task, TaskStatus, TaskType } from '@/types/task'
@@ -66,12 +68,8 @@ type TaskFilterValue = {
 
 const getCurrentTaskTypeLabel = (type: TaskType) => (type === 'order_process' ? '购买处理' : getTaskTypeLabel(type))
 
-const getTaskPurchaseId = (task: Task) => task.purchaseId || task.transactionId
-
-const getTaskPurchaseNo = (task: Task) => task.purchaseNo || task.transactionNo || '未关联购买记录'
-
 const getTaskOrderLineLabel = (task: Task) =>
-  [task.orderLineCode, task.orderLineName].filter(Boolean).join(' · ') || '购买记录级任务'
+  task.orderLineName || '购买记录级任务'
 
 const purchaseAggregateStatusLabelMap: Record<string, string> = {
   draft: '草稿',
@@ -86,7 +84,7 @@ const purchaseAggregateStatusLabelMap: Record<string, string> = {
 const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseAggregateStatusLabelMap[status] || status : '—')
 
 const getOrderLineDisplayLabel = (task: Task, orderLine?: OrderLine) =>
-  [orderLine?.lineCode || task.orderLineCode, orderLine?.name || task.orderLineName].filter(Boolean).join(' · ') || '购买记录级任务'
+  [orderLine ? getOrderLineGoodsNo(orderLine) : undefined, orderLine?.name || task.orderLineName].filter(Boolean).join(' · ') || '购买记录级任务'
 
 const renderTaskPurchaseLink = (task: Task) => {
   const purchaseId = getTaskPurchaseId(task)
@@ -139,7 +137,7 @@ export const TaskFilterBar = ({
   </SectionCard>
 )
 
-export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
+export const TaskTable = ({ tasks, orderLines = [] }: { tasks: Task[]; orderLines?: OrderLine[] }) => (
   <div className="table-shell">
     <table className="table">
       <thead>
@@ -155,41 +153,46 @@ export const TaskTable = ({ tasks }: { tasks: Task[] }) => (
         </tr>
       </thead>
       <tbody>
-        {tasks.map((task) => (
-          <tr key={task.id}>
-            <td>{task.priority === 'normal' ? <span className="text-muted">普通</span> : <RiskTag value={getTaskPriorityLabel(task.priority)} />}</td>
-            <td>
-              <div className="stack" style={{ gap: 6 }}>
-                <Link to={`/tasks/${task.id}`} className="text-price">
-                  {task.title}
-                </Link>
-                <span className="text-caption">{getTaskOrderLineLabel(task)}</span>
-              </div>
-            </td>
-            <td>{getCurrentTaskTypeLabel(task.type)}</td>
-            <td>
-              <div className="stack" style={{ gap: 6 }}>
-                <Link to="/order-lines">{getTaskOrderLineLabel(task)}</Link>
-                <span className="text-caption">{renderTaskPurchaseLink(task)}</span>
-              </div>
-            </td>
-            <td>
-              <div>{task.assigneeName || '待分配'}</div>
-              <div className="text-caption">{getTaskAssigneeRoleLabel(task.assigneeRole)}</div>
-            </td>
-            <td>{task.dueAt || '未设置'}</td>
-            <td>
-              <StatusTag value={getTaskStatusLabel(task.status)} />
-            </td>
-            <td>
-              <div className="row wrap">
-                <Link to={`/tasks/${task.id}`} className="button ghost small">
-                  查看详情
-                </Link>
-              </div>
-            </td>
-          </tr>
-        ))}
+        {tasks.map((task) => {
+          const orderLine = orderLines.find((item) => item.id === task.orderLineId)
+          const orderLineLabel = getOrderLineDisplayLabel(task, orderLine)
+
+          return (
+            <tr key={task.id}>
+              <td>{task.priority === 'normal' ? <span className="text-muted">普通</span> : <RiskTag value={getTaskPriorityLabel(task.priority)} />}</td>
+              <td>
+                <div className="stack" style={{ gap: 6 }}>
+                  <Link to={`/tasks/${task.id}`} className="text-price">
+                    {task.title}
+                  </Link>
+                  <span className="text-caption">{orderLineLabel}</span>
+                </div>
+              </td>
+              <td>{getCurrentTaskTypeLabel(task.type)}</td>
+              <td>
+                <div className="stack" style={{ gap: 6 }}>
+                  <Link to="/order-lines">{orderLineLabel}</Link>
+                  <span className="text-caption">{renderTaskPurchaseLink(task)}</span>
+                </div>
+              </td>
+              <td>
+                <div>{task.assigneeName || '待分配'}</div>
+                <div className="text-caption">{getTaskAssigneeRoleLabel(task.assigneeRole)}</div>
+              </td>
+              <td>{task.dueAt || '未设置'}</td>
+              <td>
+                <StatusTag value={getTaskStatusLabel(task.status)} />
+              </td>
+              <td>
+                <div className="row wrap">
+                  <Link to={`/tasks/${task.id}`} className="button ghost small">
+                    查看详情
+                  </Link>
+                </div>
+              </td>
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   </div>

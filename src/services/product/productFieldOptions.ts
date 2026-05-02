@@ -2,7 +2,7 @@ import type { ProductCategory } from '@/types/product'
 
 const PRODUCT_FIELD_OPTIONS_STORAGE_KEY = 'erp2.product-field-options'
 
-export type BusinessDictionaryFieldKey =
+type BusinessDictionaryFieldKey =
   | 'styleTags'
   | 'sceneTags'
   | 'supportedMaterials'
@@ -28,7 +28,7 @@ export type ProductFieldOptionKey = BusinessDictionaryFieldKey
 
 const allCategories: ProductCategory[] = ['ring', 'pendant', 'necklace', 'earring', 'bracelet', 'other']
 
-export const defaultProductFieldOptions: ProductFieldOptions = {
+const defaultProductFieldOptions: ProductFieldOptions = {
   styleTags: ['简约', '时尚', '国风', '街头风', '轻奢', '极简'],
   sceneTags: ['日常佩戴', '礼赠', '订婚', '婚礼', '节日纪念', '门店陈列'],
   supportedMaterials: ['足金', '18K金', '足银', 'PT950', '钛钢'],
@@ -69,27 +69,14 @@ const normalizeSizeParameterDefinitions = (definitions?: ProductSizeParameterDef
     ).values()
   )
 
-const getLegacySizeParameterDefinitions = (value?: Partial<ProductFieldOptions> & { sizeParameterLabels?: string[] }) =>
-  normalizeValues(value?.sizeParameterLabels ?? []).map((label) => ({
-    label,
-    unit: '',
-    categories: [...allCategories]
-  }))
-
-const sanitizeProductFieldOptions = (
-  value?: Partial<ProductFieldOptions> & { sizeParameterLabels?: string[] }
-): ProductFieldOptions => ({
+const sanitizeProductFieldOptions = (value?: Partial<ProductFieldOptions>): ProductFieldOptions => ({
   styleTags: normalizeValues(value?.styleTags ?? defaultProductFieldOptions.styleTags),
   sceneTags: normalizeValues(value?.sceneTags ?? defaultProductFieldOptions.sceneTags),
   supportedMaterials: normalizeValues(value?.supportedMaterials ?? defaultProductFieldOptions.supportedMaterials),
   supportedProcesses: normalizeValues(value?.supportedProcesses ?? defaultProductFieldOptions.supportedProcesses),
   supportedSpecialOptions: normalizeValues(value?.supportedSpecialOptions ?? defaultProductFieldOptions.supportedSpecialOptions),
-  sizeParameterDefinitions: normalizeSizeParameterDefinitions(
-    value?.sizeParameterDefinitions?.length ? value.sizeParameterDefinitions : getLegacySizeParameterDefinitions(value)
-  ).length
-    ? normalizeSizeParameterDefinitions(
-        value?.sizeParameterDefinitions?.length ? value.sizeParameterDefinitions : getLegacySizeParameterDefinitions(value)
-      )
+  sizeParameterDefinitions: normalizeSizeParameterDefinitions(value?.sizeParameterDefinitions).length
+    ? normalizeSizeParameterDefinitions(value?.sizeParameterDefinitions)
     : defaultProductFieldOptions.sizeParameterDefinitions
 })
 
@@ -105,7 +92,7 @@ export const getProductFieldOptions = (): ProductFieldOptions => {
   }
 
   try {
-    return sanitizeProductFieldOptions(JSON.parse(stored) as Partial<ProductFieldOptions> & { sizeParameterLabels?: string[] })
+    return sanitizeProductFieldOptions(JSON.parse(stored) as Partial<ProductFieldOptions>)
   } catch {
     return sanitizeProductFieldOptions()
   }

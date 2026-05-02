@@ -31,7 +31,6 @@ mock 数据只用于：
 
 - `purchaseNo`
 - `platformOrderNo`
-- `lineCode`
 - `purchaseId`
 - `orderLineId`
 - `sourceProductId`
@@ -57,6 +56,7 @@ mock 数据只用于：
 - `ProductSnapshot`
 - `LogisticsRecord`
 - `AfterSalesCase`
+- `Task`
 - `QuoteResult`
 
 不要把款式模板、购买公共信息和单件商品执行对象混成一个对象。
@@ -98,9 +98,6 @@ type Customer = {
   remark?: string
   firstTransactionAt?: string
   lastTransactionAt?: string
-  totalTransactionCount: number
-  totalOrderLineCount: number
-  totalAfterSalesCount: number
 }
 ```
 
@@ -138,7 +135,7 @@ type PurchaseSourceChannel =
 
 type Purchase = {
   id: string
-  purchaseNo: string
+  purchaseNo: string // 系统生成的购买记录编号，前端不手动编辑
   platformOrderNo?: string
   sourceChannel: PurchaseSourceChannel
   shopName?: string
@@ -191,22 +188,6 @@ type Purchase = {
 ```ts
 type OrderLinePriority = 'normal' | 'high' | 'urgent' | 'vip'
 
-type OrderLineStatus =
-  | 'draft'
-  | 'pending_confirm'
-  | 'pending_measurement'
-  | 'pending_design'
-  | 'designing'
-  | 'pending_outsource'
-  | 'in_production'
-  | 'pending_factory_feedback'
-  | 'pending_shipment'
-  | 'shipped'
-  | 'after_sales'
-  | 'completed'
-  | 'cancelled'
-  | 'exception'
-
 type OrderLineLineStatus =
   | 'draft'
   | 'pending_customer_confirmation'
@@ -256,15 +237,12 @@ type OrderLineFinanceStatus =
 type OrderLine = {
   id: string
   lineNo?: number
-  lineCode?: string
   productionTaskNo?: string
   purchaseId?: string
   customerId?: string
   name: string
   category?: ProductCategory
-  styleName?: string
   versionNo?: string
-  skuCode?: string
   quantity: number
   lineStatus?: OrderLineLineStatus | string
   designStatus?: OrderLineWorkflowDesignStatus | string
@@ -289,7 +267,6 @@ type OrderLine = {
   waxFactorySentAt?: string
   designCompletedAt?: string
   modelingCompletedAt?: string
-  status: OrderLineStatus | string
   currentOwner?: string
   priority?: OrderLinePriority
   isUrgent?: boolean
@@ -333,6 +310,7 @@ type OrderLine = {
   expectedDate?: string
   promisedDate?: string
   finishedAt?: string
+
 }
 
 type OrderLineProductionData = {
@@ -357,9 +335,15 @@ type OrderLineProductionData = {
 
 说明：
 - `purchaseId` 是销售归属购买记录的主要字段
-- 如果历史代码里仍有 `transactionId`，只能作为兼容字段理解
+- `transactionId` 已从 current runtime 类型和 mock 中删除；历史资料只可在 archive 文档或 git 历史中查看
+- `productionTaskNo` 是当前销售货号，在 `/purchases/new` 自动生成并作为主识别码
+- 来源款式编号保存在 `sourceProduct.sourceProductCode` 或销售草稿的 `sourceProductCode` 中，不再保留独立旧 SKU 字段
+- `lineSalesAmount` 是销售成交金额
+- `quote.systemQuote` 是系统参考报价
+- `OrderLine` 货号展示和销售归属购买记录读取集中在 `src/services/orderLine/orderLineIdentity.ts`，页面和 selector 不应继续散落旧字段兜底逻辑
+- `Task` 关联购买记录读取集中在 `src/services/task/taskIdentity.ts`，页面和 adapter 不应继续散落购买记录归属读取逻辑
 - `lineStatus` 是多角色工作流主状态，页面筛选、状态推进和任务分组优先基于它
-- `status` 短期保留为兼容展示字段，新增逻辑不要继续扩大它的主流程用途
+- `OrderLine.status` 兼容字段已删除，状态筛选、状态推进和任务分组统一使用 `lineStatus`
 - 物流、售后、设计、建模、生产、工厂和财务信息都应优先落在 `OrderLine`
 - 客服资料完整度至少检查 `productName/name`、`category`、材质、尺寸 / 规格、工艺要求和 `productionTaskNo`
 - 客服确认完成后按设计 / 建模需求分流到后续 `lineStatus`
@@ -419,6 +403,8 @@ type Product = {
 - `Product` 是款式模板
 - 销售引用款式时保留来源快照
 - 销售的实际需求可以在模板基础上调整
+- `Product.version` 表示款式设计版本，只在款式外观结构、设计稿或设计方案变更时升级；补齐参数、价格规则、生产参考、图片或文件资料不生成新版本
+- 不同设计版本保存在同一个 `Product.versionHistory` 中，通过款式编辑页“设计版本”区块创建，不需要新建款式
 
 ---
 
@@ -599,11 +585,9 @@ type LogisticsRecord = {
   logisticsType?: 'measurement_tool' | 'goods' | 'after_sales' | 'other'
   direction?: 'outbound' | 'return'
   company?: string
-  carrier?: string
   trackingNo?: string
   shippedAt?: string
   signedAt?: string
-  deliveredAt?: string
   voidedAt?: string
   voidReason?: string
   remark?: string
@@ -641,37 +625,103 @@ type AfterSalesCase = {
 
 ---
 
-## 13. 当前 mock 文件建议
+## 14. Task（协作任务）
+
+```ts
+type TaskType =
+  | 'order_process'
+  | 'design_modeling'
+  | 'production_prep'
+  | 'factory_production'
+  | 'after_sales'
+
+type TaskStatus = 'todo' | 'in_progress' | 'pending_confirm' | 'done' | 'closed' | 'overdue'
+
+type TaskAssigneeRole =
+  | 'customer_service'
+  | 'merchandiser'
+  | 'designer'
+  | 'modeler'
+  | 'factory'
+  | 'warehouse'
+  | 'finance'
+  | 'manager'
+  | 'admin'
+
+type Task = {
+  id: string
+  type: TaskType
+  title: string
+  status: TaskStatus
+  purchaseId?: string
+  purchaseNo?: string
+  orderLineId?: string
+  orderLineName?: string
+  assigneeRole: TaskAssigneeRole
+  assigneeName: string
+  priority: 'normal' | 'high' | 'urgent'
+  dueAt?: string
+  description?: string
+  remark?: string
+  createdAt: string
+  createdBy: string
+  updatedAt: string
+  updatedBy: string
+  completedAt?: string
+}
+```
+
+说明：
+- `Task` 是协作提醒和跟进入口，不是 `OrderLine` 工作流状态本体
+- 任务可关联购买记录和单条销售，但任务完成不自动推进 `Purchase.aggregateStatus` 或 `OrderLine.lineStatus`
+- `transactionId / transactionNo` 已从 current runtime 类型和 mock 中删除
+- 任务关联购买记录读取集中在 `src/services/task/taskIdentity.ts`
+
+---
+
+## 15. 当前 mock 文件建议
 
 ```text
 src/mocks/
   customers.ts
+  inventory.ts
+  order-line-logs.ts
   purchases.ts
   order-lines.ts
   products.ts
   supporting-records.ts
-  transactions.ts # Purchase mock 的历史兼容别名
+  tasks.ts
 ```
 
 说明：
 - `purchases.ts` 是当前购买记录 mock 主线
 - `order-lines.ts` 是当前销售 mock 主线
-- `transactions.ts` 只能作为 `Purchase` 的历史兼容导出
+- `tasks.ts` 是协作任务 mock 主线，只作为任务中心和生产计划等入口的数据来源
+- `inventory.ts` 是仓库商品 / 库存资产台账 mock 主线
+- `order-line-logs.ts` 是销售操作日志 mock
 - legacy `orders.ts` 已删除，不再作为 mock 入口
 
 ---
 
-## 14. 历史兼容命名
+## 16. 历史兼容命名
 
-当前不再把 `TransactionRecord` 作为主模型。
+当前不再保留旧交易记录 runtime 兼容别名。
 
 允许保留的兼容关系：
-- `TransactionRecord` = `Purchase` 的历史兼容别名
 - `SourceProductSnapshot` = `ProductSnapshot` 的历史兼容命名
+
+已清理的报价兼容字段：
+- `manualAdjustment`
+- `manualAdjustmentReason`
+- `finalDisplayQuote`
+
+静态分析说明：
+- `knip.json` 已显式保留 `src/types/**` 领域类型导出
+- 新增兼容字段时，必须同步说明它对应的 current model 字段
 
 ---
 
-## 15. 必须覆盖的 mock 场景
+## 17. 必须覆盖的 mock 场景
 
 ### 场景 1：同一次购买，多件商品，多条销售
 - 购买记录 1 条
@@ -703,11 +753,11 @@ src/mocks/
 
 ---
 
-## 16. 验收标准
+## 18. 验收标准
 
 - mock 能表达 `Customer -> Purchase -> OrderLine`
 - `Purchase` 不承载单件商品执行字段
 - `OrderLine` 能承载来源款式、规格、报价、设计、委外、生产、物流、售后关联
 - `LogisticsRecord` 和 `AfterSalesCase` 默认关联 `orderLineId`
-- `TransactionRecord` 只作为兼容别名出现
+- `Task` 只作为协作入口，不替代 `OrderLine.lineStatus`
 - legacy `orders.ts` 不再作为 runtime mock 保留

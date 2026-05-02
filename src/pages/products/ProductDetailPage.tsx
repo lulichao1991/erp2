@@ -8,6 +8,7 @@ import {
   ProductCustomRuleSection,
   ProductHeaderBar,
   ProductParamConfigSection,
+  ProductPlatformListingSection,
   ProductPriceRuleSection,
   ProductReferenceRecordSection,
   ProductReferenceRecordsDrawer,
@@ -29,6 +30,7 @@ export const ProductDetailPage = () => {
   const anchors = useMemo(
     () => [
       { id: 'basic', label: '基础信息' },
+      { id: 'platforms', label: '平台商品' },
       { id: 'params', label: '参数配置' },
       { id: 'pricing', label: '价格规则' },
       { id: 'custom', label: '定制规则' },
@@ -63,6 +65,7 @@ export const ProductDetailPage = () => {
         <div className="section-stack">
           <ProductSummaryCard product={product} />
           <ProductBasicInfoSection product={product} />
+          <ProductPlatformListingSection product={product} />
           <ProductParamConfigSection product={product} />
           <ProductPriceRuleSection product={product} />
           <ProductCustomRuleSection product={product} />

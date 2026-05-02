@@ -4,10 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import {
   ProductBasicFormSection,
+  ProductAssetsFormSection,
+  ProductCustomRuleFormSection,
+  ProductDesignVersionFormSection,
   ProductEditHeader,
   ProductEditSideNav,
   ProductParamFormSection,
   ProductPriceRuleFormSection,
+  ProductProductionRefFormSection,
   ProductSpecSection
 } from '@/components/business/product'
 import { EmptyState, PageContainer } from '@/components/common'
@@ -46,9 +50,15 @@ export const ProductEditPage = () => {
   const handleSave = () => {
     appData.saveProduct({
       ...product,
+      version: sourceProduct?.version ?? product.version,
       updatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
     })
     navigate(`/products/${product.id}`)
+  }
+
+  const handleCreateDesignVersion = (nextProduct: Product) => {
+    appData.saveProduct(nextProduct)
+    navigate(`/products/${nextProduct.id}`)
   }
 
   return (
@@ -63,7 +73,7 @@ export const ProductEditPage = () => {
       />
       <ProductEditHeader mode="edit" onSave={handleSave} hasUnsavedChanges />
       <div className="editor-shell">
-        <ProductEditSideNav activeSection="basic-form" />
+        <ProductEditSideNav activeSection="basic-form" showVersionSection />
         <div className="section-stack">
           <ProductBasicFormSection
             product={product}
@@ -71,6 +81,7 @@ export const ProductEditPage = () => {
             fieldOptions={appData.productFieldOptions}
             onAddGlobalOption={appData.addGlobalProductFieldOption}
           />
+          <ProductDesignVersionFormSection product={product} onCreateVersion={handleCreateDesignVersion} />
           <ProductParamFormSection
             product={product}
             setProduct={setDraftProduct}
@@ -83,6 +94,9 @@ export const ProductEditPage = () => {
             sizeParameterDefinitions={appData.productFieldOptions.sizeParameterDefinitions}
           />
           <ProductPriceRuleFormSection product={product} setProduct={setDraftProduct} />
+          <ProductCustomRuleFormSection product={product} setProduct={setDraftProduct} />
+          <ProductProductionRefFormSection product={product} setProduct={setDraftProduct} />
+          <ProductAssetsFormSection product={product} setProduct={setDraftProduct} />
         </div>
       </div>
     </PageContainer>

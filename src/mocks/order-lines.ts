@@ -25,19 +25,15 @@ const ringEngravePltFiles: OrderLineUploadedFile[] = [
   }
 ]
 
-export const ringOrderLine: OrderLine = {
+const ringOrderLine: OrderLine = {
   id: 'oi-ring-001',
   lineNo: 1,
-  lineCode: 'OL-202604-001-01',
   productionTaskNo: 'RING-SH-016',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '山形戒指',
+  name: '山形素圈戒指',
   category: 'ring',
-  styleName: '山形素圈戒指',
   versionNo: 'v3',
-  skuCode: 'RING-SH-016',
   quantity: 1,
   lineStatus: 'in_production',
   designStatus: 'completed',
@@ -50,7 +46,6 @@ export const ringOrderLine: OrderLine = {
   factoryId: 'factory-suzhou-gold-001',
   productionSentAt: '2026-04-23 09:30',
   factoryPlannedDueDate: '2026-04-26',
-  status: 'in_production',
   currentOwner: '李生产',
   priority: 'urgent',
   isUrgent: true,
@@ -90,9 +85,8 @@ export const ringOrderLine: OrderLine = {
     engraveText: 'ZS',
     engraveImageFiles: ringEngraveImageFiles,
     engravePltFiles: ringEngravePltFiles,
-    sizeNote: '戒围 16 号，内圈略加厚',
     specialNotes: ['刻字靠内圈中部'],
-    remark: '优先保证面宽一致性'
+    remark: '戒围 16 号，内圈略加厚 / 优先保证面宽一致性'
   },
   designInfo: {
     designStatus: 'completed',
@@ -109,7 +103,6 @@ export const ringOrderLine: OrderLine = {
   },
   productionInfo: {
     factoryStatus: 'in_progress',
-    returnedWeight: '',
     qualityResult: '',
     factoryNote: '工厂生产中，等待首轮回传。'
   },
@@ -133,26 +126,18 @@ export const ringOrderLine: OrderLine = {
     specRequired: true
   }),
   expectedDate: '2026-04-26',
-  promisedDate: '2026-04-28',
-  itemSku: 'RING-SH-016',
-  manualAdjustment: 80,
-  manualAdjustmentReason: '客户要求加厚内圈，预留人工调整空间',
-  finalDisplayQuote: 2080
+  promisedDate: '2026-04-28'
 }
 
-export const pendantOrderLine: OrderLine = {
+const pendantOrderLine: OrderLine = {
   id: 'oi-pendant-001',
   lineNo: 2,
-  lineCode: 'OL-202604-001-02',
   productionTaskNo: 'PDT-SH-S',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '山形吊坠',
+  name: '如意吊坠',
   category: 'pendant',
-  styleName: '如意吊坠',
   versionNo: 'v2',
-  skuCode: 'PDT-SH-S',
   quantity: 1,
   lineStatus: 'pending_finance_confirmation',
   designStatus: 'completed',
@@ -166,7 +151,6 @@ export const pendantOrderLine: OrderLine = {
   productionSentAt: '2026-04-23 16:30',
   factoryPlannedDueDate: '2026-04-25',
   productionCompletedAt: '2026-04-25 15:20',
-  status: 'pending_shipment',
   currentOwner: '王客服',
   priority: 'high',
   isUrgent: false,
@@ -212,7 +196,7 @@ export const pendantOrderLine: OrderLine = {
   },
   productionInfo: {
     factoryStatus: 'completed',
-    returnedWeight: '2.3g',
+    totalWeight: '2.3g',
     qualityResult: '通过',
     factoryNote: '质检通过，待发货。'
   },
@@ -249,24 +233,18 @@ export const pendantOrderLine: OrderLine = {
     specRequired: true
   }),
   expectedDate: '2026-04-26',
-  promisedDate: '2026-04-28',
-  itemSku: 'PDT-SH-S',
-  finalDisplayQuote: 1280
+  promisedDate: '2026-04-28'
 }
 
-export const necklaceOrderLine: OrderLine = {
+const necklaceOrderLine: OrderLine = {
   id: 'ol-zhang-necklace-001',
   lineNo: 3,
-  lineCode: 'OL-202604-001-03',
   productionTaskNo: 'NECK-CUSTOM-042',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '定制项链',
+  name: '山形定制吊牌项链',
   category: 'necklace',
-  styleName: '山形定制吊牌项链',
   versionNo: 'v1',
-  skuCode: 'NECK-CUSTOM-042',
   quantity: 1,
   lineStatus: 'pending_design',
   designStatus: 'revision_requested',
@@ -280,7 +258,6 @@ export const necklaceOrderLine: OrderLine = {
   designNote: '第一版吊牌草图需要调整山形弧线。',
   modelingNote: '设计确认后进入建模。',
   revisionReason: '客户要求吊牌山形弧线更柔和。',
-  status: 'designing',
   currentOwner: '陈设计',
   priority: 'normal',
   isUrgent: false,
@@ -295,10 +272,9 @@ export const necklaceOrderLine: OrderLine = {
   actualRequirements: {
     material: '18K金',
     process: '手工錾刻',
-    sizeNote: '链长 42cm，吊牌 8mm',
     engraveText: 'ZS',
     specialNotes: ['吊牌需要手绘草图确认'],
-    remark: '客户希望项链与山形系列风格一致。'
+    remark: '链长 42cm，吊牌 8mm / 客户希望项链与山形系列风格一致。'
   },
   designInfo: {
     designStatus: 'rework',
@@ -328,25 +304,20 @@ export const necklaceOrderLine: OrderLine = {
     status: 'ready',
     warnings: []
   },
+  lineSalesAmount: 2360,
   expectedDate: '2026-04-30',
-  promisedDate: '2026-05-02',
-  itemSku: 'NECK-CUSTOM-042',
-  finalDisplayQuote: 2360
+  promisedDate: '2026-05-02'
 }
 
-export const waxOrderLine: OrderLine = {
+const waxOrderLine: OrderLine = {
   id: 'ol-zhang-wax-001',
   lineNo: 4,
-  lineCode: 'OL-202604-001-04',
   productionTaskNo: 'WAX-BR-001',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '手链蜡版确认',
+  name: '山形开口手链',
   category: 'bracelet',
-  styleName: '山形开口手链',
   versionNo: 'v1',
-  skuCode: 'WAX-BR-001',
   quantity: 1,
   lineStatus: 'pending_modeling',
   designStatus: 'completed',
@@ -367,7 +338,6 @@ export const waxOrderLine: OrderLine = {
   designNote: '设计稿已确认。',
   modelingNote: '等待建模领取任务。',
   designCompletedAt: '2026-04-24 17:00',
-  status: 'pending_design',
   currentOwner: '林建模',
   priority: 'normal',
   isUrgent: false,
@@ -382,9 +352,8 @@ export const waxOrderLine: OrderLine = {
   actualRequirements: {
     material: '18K金',
     process: '手工抛光',
-    sizeNote: '内径 58mm，开口 18mm',
     specialNotes: ['需先出蜡给客户确认佩戴弧度'],
-    remark: '设计稿已确认，等待建模出蜡。'
+    remark: '内径 58mm，开口 18mm / 设计稿已确认，等待建模出蜡。'
   },
   designInfo: {
     designStatus: 'completed',
@@ -414,25 +383,20 @@ export const waxOrderLine: OrderLine = {
     status: 'ready',
     warnings: []
   },
+  lineSalesAmount: 2680,
   expectedDate: '2026-05-01',
-  promisedDate: '2026-05-03',
-  itemSku: 'WAX-BR-001',
-  finalDisplayQuote: 2680
+  promisedDate: '2026-05-03'
 }
 
-export const earringReviewOrderLine: OrderLine = {
+const earringReviewOrderLine: OrderLine = {
   id: 'ol-zhang-earring-review-001',
   lineNo: 5,
-  lineCode: 'OL-202604-001-05',
   productionTaskNo: 'EAR-CUSTOM-005',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '复古耳钉',
+  name: '复古小花耳钉',
   category: 'other',
-  styleName: '复古小花耳钉',
   versionNo: 'v1',
-  skuCode: 'EAR-CUSTOM-005',
   quantity: 1,
   lineStatus: 'pending_merchandiser_review',
   designStatus: 'not_required',
@@ -441,7 +405,6 @@ export const earringReviewOrderLine: OrderLine = {
   factoryStatus: 'not_assigned',
   financeStatus: 'not_required',
   merchandiserId: 'merchandiser-li',
-  status: 'pending_outsource',
   currentOwner: '李生产',
   priority: 'normal',
   isUrgent: false,
@@ -455,8 +418,7 @@ export const earringReviewOrderLine: OrderLine = {
   actualRequirements: {
     material: '18K金',
     process: '手工抛光',
-    sizeNote: '单只花面约 6mm',
-    remark: '资料已齐，等待跟单复核后下发。'
+    remark: '单只花面约 6mm / 资料已齐，等待跟单复核后下发。'
   },
   outsourceInfo: {
     outsourceStatus: 'pending',
@@ -468,25 +430,20 @@ export const earringReviewOrderLine: OrderLine = {
     factoryStatus: 'not_started',
     factoryNote: '待跟单审核。'
   },
+  lineSalesAmount: 980,
   expectedDate: '2026-04-29',
-  promisedDate: '2026-05-01',
-  itemSku: 'EAR-CUSTOM-005',
-  finalDisplayQuote: 980
+  promisedDate: '2026-05-01'
 }
 
-export const broochBlockedOrderLine: OrderLine = {
+const broochBlockedOrderLine: OrderLine = {
   id: 'ol-zhang-brooch-blocked-001',
   lineNo: 6,
-  lineCode: 'OL-202604-001-06',
   productionTaskNo: 'BROOCH-CUSTOM-006',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '胸针补石',
+  name: '山形胸针',
   category: 'other',
-  styleName: '山形胸针',
   versionNo: 'v1',
-  skuCode: 'BROOCH-CUSTOM-006',
   quantity: 1,
   lineStatus: 'pending_factory_production',
   designStatus: 'completed',
@@ -497,7 +454,6 @@ export const broochBlockedOrderLine: OrderLine = {
   merchandiserId: 'merchandiser-wang',
   factoryId: 'factory-suzhou-gold-001',
   factoryPlannedDueDate: '2026-04-20',
-  status: 'exception',
   currentOwner: '王跟单',
   priority: 'urgent',
   isUrgent: true,
@@ -511,9 +467,8 @@ export const broochBlockedOrderLine: OrderLine = {
   actualRequirements: {
     material: '足银',
     process: '补石镶嵌',
-    sizeNote: '胸针主体 18mm',
     specialNotes: ['工厂反馈缺少补石规格'],
-    remark: '资料已下发但工厂反馈补石规格不完整。'
+    remark: '胸针主体 18mm / 资料已下发但工厂反馈补石规格不完整。'
   },
   outsourceInfo: {
     outsourceStatus: 'rework',
@@ -525,25 +480,20 @@ export const broochBlockedOrderLine: OrderLine = {
     factoryStatus: 'issue',
     factoryNote: '补石规格缺失，生产阻塞。'
   },
+  lineSalesAmount: 1580,
   expectedDate: '2026-04-25',
-  promisedDate: '2026-04-28',
-  itemSku: 'BROOCH-CUSTOM-006',
-  finalDisplayQuote: 1580
+  promisedDate: '2026-04-28'
 }
 
-export const factoryPendingOrderLine: OrderLine = {
+const factoryPendingOrderLine: OrderLine = {
   id: 'ol-zhang-factory-pending-001',
   lineNo: 7,
-  lineCode: 'OL-202604-001-07',
   productionTaskNo: 'PIN-SH-007',
   purchaseId,
-  transactionId: purchaseId,
   customerId: 'customer-zhang-001',
-  name: '山形胸针试产',
+  name: '山形胸针试产版',
   category: 'other',
-  styleName: '山形胸针试产版',
   versionNo: 'v1',
-  skuCode: 'PIN-SH-007',
   quantity: 1,
   lineStatus: 'pending_factory_production',
   designStatus: 'completed',
@@ -556,7 +506,6 @@ export const factoryPendingOrderLine: OrderLine = {
   factoryId: 'factory-suzhou-gold-001',
   productionSentAt: '2026-04-25 10:00',
   factoryPlannedDueDate: '2026-05-02',
-  status: 'pending_outsource',
   currentOwner: '苏州金工厂',
   priority: 'high',
   isUrgent: false,
@@ -570,10 +519,9 @@ export const factoryPendingOrderLine: OrderLine = {
   actualRequirements: {
     material: '18K金',
     process: '手工抛光',
-    sizeNote: '胸针主体 20mm',
     engraveText: 'ZS',
     specialNotes: ['边缘保留山形纹理'],
-    remark: '跟单已下发，等待工厂接收。'
+    remark: '胸针主体 20mm / 跟单已下发，等待工厂接收。'
   },
   designFiles: [
     {
@@ -595,35 +543,7 @@ export const factoryPendingOrderLine: OrderLine = {
   allocatedFinalPaymentAmount: 780,
   financeNote: '待工厂回传后核算。',
   expectedDate: '2026-05-02',
-  promisedDate: '2026-05-04',
-  itemSku: 'PIN-SH-007',
-  finalDisplayQuote: 1880
+  promisedDate: '2026-05-04'
 }
 
 export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine, earringReviewOrderLine, broochBlockedOrderLine, factoryPendingOrderLine]
-
-export const orderLineLegacyStatusMock: Record<string, string> = {
-  'oi-ring-001': '生产中',
-  'oi-pendant-001': '待财务确认',
-  'ol-zhang-necklace-001': '待设计',
-  'ol-zhang-wax-001': '待建模',
-  'ol-zhang-earring-review-001': '待跟单审核',
-  'ol-zhang-brooch-blocked-001': '异常/逾期',
-  'ol-zhang-factory-pending-001': '待工厂接收'
-}
-
-export const orderLineCompatibilityExtrasMock: Record<
-  string,
-  {
-    engraveImageFiles?: OrderLineUploadedFile[]
-    engravePltFiles?: OrderLineUploadedFile[]
-  }
-> = {
-  'oi-ring-001': {
-    engraveImageFiles: ringEngraveImageFiles,
-    engravePltFiles: ringEngravePltFiles
-  }
-}
-
-// Compatibility export for existing imports.
-export const mockOrderLines = orderLinesMock

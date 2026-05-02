@@ -23,12 +23,7 @@ export type Task = {
   purchaseId?: string
   purchaseNo?: string
   orderLineId?: string
-  orderLineCode?: string
   orderLineName?: string
-  /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseId。 */
-  transactionId?: string
-  /** @deprecated 兼容旧交易记录命名，请优先使用 purchaseNo。 */
-  transactionNo?: string
   assigneeRole: TaskAssigneeRole
   assigneeName: string
   priority: TaskPriority

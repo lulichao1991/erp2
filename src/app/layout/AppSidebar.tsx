@@ -75,9 +75,10 @@ export const AppSidebar = () => {
             to={item.path}
             end={item.path === '/'}
             className={({ isActive }) => `sidebar-nav-link${isActive ? ' active' : ''}`}
+            title={getSidebarShortLabel(item.label)}
           >
             <span className="sidebar-nav-icon" aria-hidden="true" />
-            <span>{getSidebarShortLabel(item.label)}</span>
+            <span className="sidebar-nav-label">{getSidebarShortLabel(item.label)}</span>
           </NavLink>
         ))}
       </nav>

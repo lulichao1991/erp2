@@ -5,13 +5,11 @@ import type { Purchase } from '@/types/purchase'
 export const purchaseMock: Purchase = {
   id: 'o-202604-001',
   purchaseNo: 'PUR-202604-001',
-  transactionNo: 'SO-202604-001',
   platformOrderNo: 'TB-9938201',
   sourceChannel: 'taobao',
   shopName: '珠宝定制旗舰店',
   customerId: customerMock.id,
   purchaseType: 'semi_custom',
-  orderType: 'semi_custom',
   ownerName: '王客服',
   recipientName: customerMock.defaultRecipientName,
   recipientPhone: customerMock.defaultRecipientPhone,
@@ -62,17 +60,15 @@ export const purchaseMock: Purchase = {
     {
       id: 'tl-purchase-001-created',
       purchaseId: 'o-202604-001',
-      transactionId: 'o-202604-001',
       type: 'purchase_created',
       title: '创建购买记录',
-      description: '同一次购买下创建山形戒指、山形吊坠、定制项链、手链蜡版等多条销售。',
+      description: '同一次购买下创建山形素圈戒指、如意吊坠、定制项链、手链蜡版等多条销售。',
       actorName: '王客服',
       createdAt: '2026-04-21 10:45'
     },
     {
       id: 'tl-purchase-001-ring-production',
       purchaseId: 'o-202604-001',
-      transactionId: 'o-202604-001',
       type: 'status_changed',
       title: '山形戒指进入生产',
       description: '戒指销售独立推进到生产中。',
@@ -83,7 +79,6 @@ export const purchaseMock: Purchase = {
     {
       id: 'tl-purchase-001-necklace-design',
       purchaseId: 'o-202604-001',
-      transactionId: 'o-202604-001',
       type: 'status_changed',
       title: '定制项链进入设计',
       description: '项链销售仍在设计中，不影响吊坠发货。',

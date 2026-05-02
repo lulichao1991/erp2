@@ -11,6 +11,7 @@ import {
   type FinanceRow,
   type FinanceTab
 } from '@/services/orderLine/orderLineFinance'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine } from '@/types/order-line'
 
@@ -243,7 +244,7 @@ const FinanceTable = ({
         <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
           <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
             <span className="workbench-task-main">
-              <strong>{line.productionTaskNo || line.lineCode}</strong>
+              <strong>{getOrderLineGoodsNo(line)}</strong>
               <span>{line.name}</span>
               <span className="text-caption">{row.purchaseNo}</span>
             </span>

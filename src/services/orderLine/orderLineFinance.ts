@@ -4,6 +4,7 @@ import {
   getOrderLineFinanceStatus,
   getOrderLineLineStatus
 } from '@/services/orderLine/orderLineWorkflow'
+import { findPurchaseForOrderLine, getOrderLinePurchaseId } from '@/services/orderLine/orderLineIdentity'
 import { getFinanceRiskStatus } from '@/services/orderLine/orderLineRiskSelectors'
 import type { OrderLine } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
@@ -30,9 +31,9 @@ export const financeTabs: Array<{ value: FinanceTab; label: string }> = [
   { value: 'confirmed', label: '已确认' }
 ]
 
-export const getLineSalesAmount = (line: OrderLine) => line.lineSalesAmount ?? line.finalDisplayQuote ?? line.quote?.systemQuote ?? 0
+export const getLineSalesAmount = (line: OrderLine) => line.lineSalesAmount ?? line.quote?.systemQuote ?? 0
 
-export const getFactorySettlementAmount = (line: OrderLine) =>
+const getFactorySettlementAmount = (line: OrderLine) =>
   line.factorySettlementAmount ?? line.productionData?.totalLaborCost ?? ((line.productionData?.baseLaborCost ?? 0) + (line.productionData?.extraLaborCost ?? 0) || 0)
 
 export const calculateFinanceSummary = (line: OrderLine) => {
@@ -57,14 +58,14 @@ export const getFinanceRiskLabels = (line: OrderLine) => getFinanceRiskStatus(li
 
 export const buildFinanceRows = (orderLines: OrderLine[], purchases: Purchase[]): FinanceRow[] =>
   orderLines.map((line) => {
-    const purchase = purchases.find((item) => item.id === line.purchaseId)
+    const purchase = findPurchaseForOrderLine(line, purchases)
     const financeStatus = getOrderLineFinanceStatus(line)
     const summary = calculateFinanceSummary(line)
 
     return {
       line,
       purchase,
-      purchaseNo: purchase?.purchaseNo || line.purchaseId || '未关联购买记录',
+      purchaseNo: purchase?.purchaseNo || getOrderLinePurchaseId(line) || '未关联购买记录',
       ...summary,
       financeStatusLabel: financeWorkflowStatusLabelMap[financeStatus],
       riskLabels: getFinanceRiskLabels(line)

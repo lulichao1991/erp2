@@ -56,11 +56,11 @@
 
 ---
 
-说明：本文后续早期段落保留了历史推进记录。如果早期“首轮 / 交易记录 / 商品任务”口径与本节冲突，以本节和 `README.md`、`AGENTS.md`、`routes-and-pages.md` 为准。
+说明：本文后续早期段落保留了历史推进记录。如果早期“首轮 / 交易记录 / 商品任务”口径与本节冲突，以本节和 `AGENTS.md`、`mock-data-schema.md`、`routes-and-pages.md` 为准。历史段落中的“交易记录”按当前口径理解为 `Purchase`，“商品任务”按当前口径理解为 `OrderLine`。
 
 ---
 
-## 3. 历史首轮核心结论（保留参考）
+## 3. 历史首轮核心结论（保留参考，非当前命名口径）
 
 ### 3.1 历史首轮核心模块
 首轮只优先开发两个模块：
@@ -142,7 +142,7 @@
 
 ---
 
-## 4. 当前页面结构共识
+## 4. 历史页面结构共识（保留参考，当前以 routes / ui 文档为准）
 
 ## 4.1 交易记录详情页
 交易记录详情页不是大表单，而是：
@@ -185,6 +185,10 @@
 6. 定制规则
 7. 生产参考
 8. 图片与文件
+
+款式编辑页应覆盖上述可维护资料；`Product.version` 只代表设计版本，补齐参数、价格规则、生产参考、图片或文件资料不触发升版。
+
+不同设计版本保存在同一个 `Product.versionHistory` 中，通过款式编辑页“设计版本”区块创建，并在款式详情的版本记录中查看；不需要为了新版本新建款式。
 
 ---
 
@@ -352,6 +356,13 @@
 
 ## 6. 当前路由结构共识
 
+### 工作台
+- `/`
+
+说明：
+- 工作台只做待办、近期购买记录和风险摘要入口
+- 具体执行动作仍回到对应业务主页面
+
 ### 销售中心 / 购买记录
 - `/order-lines`
 - `/purchases/new`
@@ -366,6 +377,23 @@
 ### 购买记录 / 销售上下文中的弹窗 / 抽屉
 - `?modal=product-picker`
 - `?drawer=source-product`
+
+### 协作 / 角色工作台
+- `/tasks`
+- `/tasks/:taskId`
+- `/production-follow-up`
+- `/design-modeling`
+- `/factory`
+- `/finance`
+- `/inventory`
+- `/management`
+- `/production-plan`
+- `/production-plan/:taskId`
+
+说明：
+- 任务中心只作为协作入口，不恢复旧订单时间线
+- 生产计划只从当前 `tasks + purchases + orderLines + products` 生成视图
+- 角色工作台的执行主语仍优先回到 `OrderLine`
 
 ---
 
@@ -431,7 +459,6 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - QuoteResult
 
 历史兼容命名：
-- `TransactionRecord` 只能作为 `Purchase` 的历史兼容别名
 - `SourceProductSnapshot` 只能作为 `ProductSnapshot` 的历史兼容命名
 
 关键字段语义不要改：
@@ -448,43 +475,25 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 
 ## 9. 当前任务推进顺序共识
 
-建议严格按下面顺序推进：
+当前只按 Purchase + OrderLine 主线推进：
 
-### Sprint 0
-- 框架与通用组件
-
-### Sprint 1
-- 产品查看能力
-
-### Sprint 2
-- 产品编辑最小可用版（含规格明细与固定加价规则）
-
-### Sprint 3
-- 交易记录查看与骨架
-
-### Sprint 4
-- 交易记录 / 商品任务 × 产品桥接（产品引用选择器 + 来源款式详情抽屉）
-
-### Sprint 5
-- 规格选择与自动报价
-
-### Sprint 6
-- 联调与演示
+1. 类型与 mock schema 对齐
+2. 销售中心和购买记录页面联调
+3. 角色工作台复用 OrderLine 状态与风险 selector
+4. 文档回写与静态分析门禁
+5. 删除不再使用的旧字段、旧文档和旧入口说明
 
 ---
 
 ## 10. 当前最推荐给 Codex 的输入方式
 
 不要一次性把所有需求丢给 Codex。
-建议按 `docs/frontend/archive/codex-prompts-v1.md` 的顺序，一轮一轮喂：
+建议直接引用当前主文档和一个明确目标，例如：
 
-1. 框架与通用组件
-2. 款式列表页与款式详情页
-3. 产品编辑页最小版
-4. 交易记录页骨架
-5. 产品引用与来源款式抽屉
-6. 规格选择与自动带价
-7. 联调与演示
+1. 检查某个页面是否仍混用 Purchase / OrderLine
+2. 删除某个已确认未使用的兼容字段
+3. 补一条文档与代码一致性测试
+4. 更新 handoff、mock schema 和任务板中的对应口径
 
 ---
 
@@ -715,8 +724,8 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - `purchaseId`
 - `purchaseNo`
 - `orderLineId`
-- `orderLineCode`
 - `orderLineName`
+- `goodsNo`
 
 注意：
 
@@ -767,7 +776,10 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 本轮已在 `/purchases/new` 的销售草稿卡中接入产品引用第一版：
 
 - 每条销售草稿可独立引用现有产品 mock
-- 选择产品后自动带出款式名称、品类、默认材质、默认工艺和来源款式快照
+- 购买记录编号在新建购买记录时按 `PUR-YYYYMM-序号` 自动生成，只读展示并随 `purchaseDraft.commonInfo.purchaseNo` 输出
+- 选择产品后自动带出来源款式名称、品类、默认材质、默认工艺和来源款式快照
+- 销售货号由系统自动生成；来源款式编号保留在 `sourceProductCode` 中，不在销售草稿卡单独录入
+- 保存草稿不因款式名称、规格等资料缺失阻断；资料完整度只用于客服确认完成动作
 - 选择单轴规格后自动展示规格参数摘要与基础价
 - 材质、工艺、特殊需求选项来自来源款式
 - 系统参考报价复用现有 `buildQuoteResult`
@@ -872,9 +884,9 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 实现口径：
 
 - 销售列表和购买记录详情页都以 mock 作为初始值
-- 状态更新通过 `updateOrderLineStatusInRows` 按 `line.id` 定位
+- 状态更新通过 `useAppData.updateOrderLine` 按 `line.id` 定位
 - 当前工作流主状态使用 `OrderLine.lineStatus`
-- `OrderLine.status` 短期保留为兼容展示字段，新筛选、任务分组和后续角色视图优先使用 `lineStatus`
+- `OrderLine.status` 兼容字段已删除，新筛选、任务分组和后续角色视图统一使用 `lineStatus`
 - 设计 / 建模 / 生产 / 工厂 / 财务分流字段已落在 `OrderLine`
 - 客服资料完整度统一检查款式名称、品类、材质、尺寸 / 规格、工艺要求、货号
 - 客服确认完成后按 `requiresDesign / requiresModeling` 分流到待设计、待建模或待跟单审核
@@ -970,11 +982,11 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - `signedAt`
 - `remark`
 
-兼容保留：
+已清理旧兼容别名：
 
-- `carrier`
-- `deliveredAt`
-- `note`
+- `carrier`：统一使用 `company`
+- `deliveredAt`：统一使用 `signedAt`
+- `note`：统一使用 `remark`
 
 实现口径：
 
@@ -1016,7 +1028,10 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - `refund`
 - `exchange`
 - `in_progress`
-- `note`
+
+已清理旧兼容别名：
+
+- `note`：统一使用 `remark`
 
 实现口径：
 
@@ -1059,22 +1074,15 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - 款式名称
 - 品类
 - 规格
-- 规格备注
 - 材质
 - 工艺
 - 特殊需求
-- 尺寸备注
 - 刻字 / 印记
-- 客服备注
-- 生产备注
+- 特殊需求备注
 - 是否加急
 - 是否需要设计
 - 当前负责人
 - 承诺交期
-
-新增 / 扩展字段：
-
-- `OrderLineActualRequirements.specNote`
 
 实现口径：
 
@@ -1139,7 +1147,7 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - 新增 `updateOrderLineOutsourceInfoInRows`
 - 新增 `buildOrderLineOutsourceLog`
 - 跟单负责人复用当前销售的 `currentOwner`
-- 货号复用 `itemSku`
+- 货号统一使用 `productionTaskNo`，当前委外草稿不再保留 `itemSku` 兼容输入字段
 - 状态更新仍按 `line.id` 定位当前销售
 - 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
 - 不直接 mutate mock、rows 数组或 line 对象
@@ -1204,7 +1212,7 @@ legacy `/orders` 页面、组件、service、mock 和类型已经删除。
 - 新增 `applyOrderLineProductionDraft`
 - 新增 `updateOrderLineProductionInfoInRows`
 - 新增 `buildOrderLineProductionLog`
-- 总重保留兼容写入 `returnedWeight`
+- 总重统一写入 `totalWeight`，不再兼容写入 `returnedWeight`
 - 状态更新仍按 `line.id` 定位当前销售
 - 更新时使用 `map` 返回新数组，并复制当前 `line` 对象
 - 不直接 mutate mock、rows 数组或 line 对象

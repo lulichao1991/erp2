@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { EmptyState, InfoField, InfoGrid, LargeModal, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge, VersionBadge } from '@/components/common'
-import { afterSalesMock, customersMock, logisticsMock, purchasesMock } from '@/mocks'
+import { CopyableText, EmptyState, InfoField, LargeModal, RecordTimeline, RiskTag, SectionCard, SideDrawer, StatusTag, TimePressureBadge } from '@/components/common'
+import { afterSalesMock, customersMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import {
-  buildOrderLineStatusPatch,
   factoryWorkflowStatusLabelMap,
   getOrderLineFactoryStatus,
   getOrderLineFinanceStatus,
@@ -14,18 +13,35 @@ import {
   getOrderLineModelingStatus,
   getOrderLineLineStatusLabel,
   getOrderLineProductionStatus,
-  getLegacyStatusForLineStatus,
-  orderLineLineStatusLabelMap,
   orderLineLineStatusOptions,
   productionWorkflowStatusLabelMap,
   designWorkflowStatusLabelMap,
-  modelingWorkflowStatusLabelMap,
-  financeWorkflowStatusLabelMap
+  modelingWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
 import { getCustomerServiceNextLineStatus, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { getOrderLineCompleteness, getOrderLineRisks, getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
+import {
+  buildOrderLineAfterSalesCase,
+  buildOrderLineAfterSalesDraft,
+  buildOrderLineDesignModelingDraft,
+  buildOrderLineDetailsDraft,
+  buildOrderLineLogisticsDraft,
+  buildOrderLineLogisticsRecord,
+  buildOrderLineOutsourceDraft,
+  buildOrderLineProductionDraft,
+  type OrderLineAfterSalesDraft,
+  type OrderLineCenterFilters,
+  type OrderLineDesignModelingDraft,
+  type OrderLineDetailsDraft,
+  type OrderLineLogisticsDraft,
+  type OrderLineOutsourceDraft,
+  type OrderLineProductionDraft,
+  type OrderLineRow
+} from '@/services/orderLine/orderLineWorkspace'
 import type {
   OrderLine,
+  OrderLineFinanceStatus,
   OrderLineLineStatus,
   OrderLineLog,
   OrderLineOutsourceStatus,
@@ -35,124 +51,31 @@ import type {
   OrderLineWorkflowModelingStatus,
   OrderLineUploadedFile
 } from '@/types/order-line'
-import type { ProductCategory } from '@/types/product'
+import type { Product, ProductCategory } from '@/types/product'
+import type { Customer } from '@/types/customer'
 import type { Purchase } from '@/types/purchase'
 import type { AfterSalesCase, AfterSalesCaseStatus, AfterSalesCaseType, LogisticsDirection, LogisticsRecord, LogisticsType } from '@/types/supporting-records'
 
-export type OrderLineCenterFilters = {
-  keyword: string
-  status: 'all' | OrderLineLineStatus | string
-  owner: string
-  category: 'all' | ProductCategory | string
-  urgent: 'all' | 'yes' | 'no'
-  afterSales: 'all' | 'yes' | 'no'
-  overdue: 'all' | 'yes' | 'no'
-  factory: string
-  purchase: string
-  customer: string
-  quickView: 'all' | OrderLineLineStatus | string
-}
+export type { OrderLineCenterFilters, OrderLineRow } from '@/services/orderLine/orderLineWorkspace'
 
-export type OrderLineRow = {
-  line: OrderLine
-  purchase?: Purchase
-}
+type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
 
-export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
+type OrderLineDetailsUpdateHandler = (lineId: string, draft: OrderLineDetailsDraft) => void
+type OrderLineDesignModelingUpdateHandler = (lineId: string, draft: OrderLineDesignModelingDraft) => void
 
-export type OrderLineDetailsDraft = {
-  lineCode: string
-  productionTaskNo: string
-  skuCode: string
-  name: string
-  styleName: string
-  versionNo: string
-  category: ProductCategory | string
-  selectedSpecValue: string
-  specNote: string
-  selectedMaterial: string
-  selectedProcess: string
-  selectedSpecialOptionsText: string
-  sizeNote: string
-  engraveText: string
-  engraveImageFiles: OrderLineUploadedFile[]
-  engravePltFiles: OrderLineUploadedFile[]
-  customerRemark: string
-  productionRemark: string
-  priority: OrderLinePriority
-  requiresDesign: boolean
-  requiresModeling: boolean
-  requiresWax: boolean
-  designStatus: OrderLineWorkflowDesignStatus
-  modelingStatus: OrderLineWorkflowModelingStatus
-  assignedDesignerId: string
-  assignedModelerId: string
-  assignedDesignerName: string
-  modelingFileUrl: string
-  waxFileUrl: string
-  designNote: string
-  currentOwner: string
-  promisedDate: string
-}
+type OrderLineOutsourceUpdateHandler = (lineId: string, draft: OrderLineOutsourceDraft) => void
 
-export type OrderLineDetailsUpdateHandler = (lineId: string, draft: OrderLineDetailsDraft) => void
+type OrderLineProductionUpdateHandler = (lineId: string, draft: OrderLineProductionDraft) => void
 
-export type OrderLineOutsourceDraft = {
-  followUpOwner: string
-  supplierName: string
-  outsourcedAt: string
-  itemSku: string
-  plannedDeliveryDate: string
-  outsourceNote: string
-  outsourceStatus: OrderLineOutsourceStatus | string
-}
+type OrderLineLogisticsCreateHandler = (record: LogisticsRecord) => void
+type OrderLineLogisticsUpdateHandler = (recordId: string, draft: OrderLineLogisticsDraft) => void
+type OrderLineLogisticsVoidHandler = (recordId: string, voidReason: string) => void
 
-export type OrderLineOutsourceUpdateHandler = (lineId: string, draft: OrderLineOutsourceDraft) => void
+type OrderLineAfterSalesCreateHandler = (record: AfterSalesCase) => void
+type OrderLineAfterSalesUpdateHandler = (recordId: string, draft: OrderLineAfterSalesDraft) => void
+type OrderLineAfterSalesCloseHandler = (recordId: string) => void
 
-export type OrderLineProductionDraft = {
-  factoryStatus: OrderLineProductionStatus | string
-  actualMaterial: string
-  totalWeight: string
-  netWeight: string
-  mainStoneInfo: string
-  sideStoneInfo: string
-  laborCostDetail: string
-  factoryShippedAt: string
-  qualityResult: string
-  factoryNote: string
-}
-
-export type OrderLineProductionUpdateHandler = (lineId: string, draft: OrderLineProductionDraft) => void
-
-export type OrderLineLogisticsDraft = {
-  logisticsType: LogisticsType
-  direction: LogisticsDirection
-  company: string
-  trackingNo: string
-  shippedAt: string
-  signedAt: string
-  remark: string
-}
-
-export type OrderLineLogisticsCreateHandler = (record: LogisticsRecord) => void
-export type OrderLineLogisticsUpdateHandler = (recordId: string, draft: OrderLineLogisticsDraft) => void
-export type OrderLineLogisticsVoidHandler = (recordId: string, voidReason: string) => void
-
-export type OrderLineAfterSalesDraft = {
-  type: AfterSalesCaseType
-  reason: string
-  status: AfterSalesCaseStatus
-  responsibleParty: string
-  createdAt: string
-  closedAt: string
-  remark: string
-}
-
-export type OrderLineAfterSalesCreateHandler = (record: AfterSalesCase) => void
-export type OrderLineAfterSalesUpdateHandler = (recordId: string, draft: OrderLineAfterSalesDraft) => void
-export type OrderLineAfterSalesCloseHandler = (recordId: string) => void
-
-export const orderLineStatusOptions = orderLineLineStatusOptions
+const orderLineStatusOptions = orderLineLineStatusOptions
 
 const statusFilterOptions = [{ value: 'all', label: '全部状态' }, ...orderLineLineStatusOptions]
 
@@ -209,10 +132,14 @@ const factoryStatusLabelMap = Object.fromEntries(productionStatusOptions.map((it
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
-const formatDateTime = (date: Date) => {
-  const pad = (value: number) => String(value).padStart(2, '0')
+const getOrderLineDealPrice = (line: OrderLine) => line.lineSalesAmount ?? line.quote?.systemQuote
 
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+const getOrderLinePaidAmount = (line: OrderLine) => {
+  const depositAmount = line.allocatedDepositAmount ?? 0
+  const finalPaymentAmount = getOrderLineFinanceStatus(line) === 'confirmed' || line.financeLocked ? line.allocatedFinalPaymentAmount ?? 0 : 0
+  const paidAmount = depositAmount + finalPaymentAmount
+
+  return paidAmount > 0 ? paidAmount : undefined
 }
 
 const getStatusLabel = getOrderLineLineStatusLabel
@@ -239,9 +166,9 @@ const defaultLogisticsDraft: OrderLineLogisticsDraft = {
   remark: ''
 }
 
-const getLogisticsCompany = (record: LogisticsRecord) => record.company || record.carrier || '未填写承运商'
-const getLogisticsRemark = (record: LogisticsRecord) => record.remark || record.note || '—'
-const getLogisticsSignedAt = (record: LogisticsRecord) => record.signedAt || record.deliveredAt || ''
+const getLogisticsCompany = (record: LogisticsRecord) => record.company || '未填写承运商'
+const getLogisticsRemark = (record: LogisticsRecord) => record.remark || '—'
+const getLogisticsSignedAt = (record: LogisticsRecord) => record.signedAt || ''
 const isActiveLogisticsRecord = (record?: LogisticsRecord) => record?.recordStatus !== 'voided'
 const findCurrentLogisticsRecord = (records: LogisticsRecord[], orderLineId: string) => records.find((item) => item.orderLineId === orderLineId && isActiveLogisticsRecord(item))
 
@@ -282,8 +209,8 @@ const isActiveAfterSalesCase = (record?: AfterSalesCase) => Boolean(record?.stat
 const findCurrentAfterSalesCase = (records: AfterSalesCase[], orderLineId: string) =>
   records.find((item) => item.orderLineId === orderLineId && isActiveAfterSalesCase(item)) || records.find((item) => item.orderLineId === orderLineId)
 
-const getAfterSalesReason = (record: AfterSalesCase) => record.reason || record.remark || record.note || '—'
-const getAfterSalesRemark = (record: AfterSalesCase) => record.remark || record.note || '—'
+const getAfterSalesReason = (record: AfterSalesCase) => record.reason || record.remark || '—'
+const getAfterSalesRemark = (record: AfterSalesCase) => record.remark || '—'
 
 const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || factoryWorkflowStatusLabelMap[status as keyof typeof factoryWorkflowStatusLabelMap] || status : '待确认')
 const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
@@ -291,38 +218,44 @@ const getAfterSalesTypeLabel = (type?: string) => (type ? afterSalesTypeLabelMap
 
 const getTimePressure = (line: OrderLine, promisedDate?: string) => getProductionDelayStatus(line, new Date(), promisedDate, { respectCompleted: false })
 
-const normalizeParameterText = (value: string) => value.replace(/\s+/g, '')
-
 const getParameterSummary = (line: OrderLine) => {
   const spec = line.selectedSpecValue?.trim()
-  const size = line.actualRequirements?.sizeNote?.trim()
-  const shouldShowSpec = Boolean(spec && (!size || !normalizeParameterText(size).includes(normalizeParameterText(spec))))
+  const specialRemark = line.actualRequirements?.remark?.trim()
 
   return (
     [
-      shouldShowSpec ? `规格 ${spec}` : null,
-      line.selectedMaterial ? `材质 ${line.selectedMaterial}` : line.actualRequirements?.material ? `材质 ${line.actualRequirements.material}` : null,
-      line.selectedProcess ? `工艺 ${line.selectedProcess}` : line.actualRequirements?.process ? `工艺 ${line.actualRequirements.process}` : null,
-      size ? `尺寸 ${size}` : null
+      spec || null,
+      line.selectedMaterial || line.actualRequirements?.material || null,
+      line.selectedProcess || line.actualRequirements?.process || null,
+      specialRemark || null
     ]
       .filter(Boolean)
       .join(' / ') || '待补充参数'
   )
 }
 
+const getOrderLineRegisteredAt = (lineLogs: OrderLineLog[], purchase?: Purchase) =>
+  lineLogs.find((log) => log.actionType === 'created')?.createdAt ||
+  purchase?.timeline.find((item) => item.type === 'purchase_created')?.createdAt ||
+  purchase?.paymentAt ||
+  '—'
+
+const orderLineFinanceSummaryLabelMap: Record<OrderLineFinanceStatus, string> = {
+  not_required: '暂未进入核算',
+  pending: '待财务核算',
+  confirmed: '财务已核算',
+  abnormal: '财务异常'
+}
+
 const getFactorySummary = (line: OrderLine) =>
   line.outsourceInfo?.supplierName && line.outsourceInfo.supplierName !== '待定' ? line.outsourceInfo.supplierName : '待确认工厂'
 
 const getOutsourceStatusLabel = (status?: string) => (status ? outsourceStatusLabelMap[status] || status : '待确认')
+const getProductionTotalWeight = (line: OrderLine) => line.productionInfo?.totalWeight || ''
 
 const getLineRiskLabels = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) => {
   return getOrderLineRisks(line, { afterSalesCases, dueDate: line.promisedDate }).map((risk) => risk.label)
 }
-
-const getLineOwner = (line: OrderLine, purchase?: Purchase) => line.currentOwner || purchase?.ownerName || ''
-
-const getLineHasActiveAfterSales = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
-  getOrderLineLineStatus(line) === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
 
 const isInteractiveTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement && Boolean(target.closest('a, button, input, select, textarea, label'))
@@ -342,22 +275,10 @@ const buildUploadedFiles = (files: FileList | null, prefix: string): OrderLineUp
     url: `mock-upload:${encodeURIComponent(file.name)}`
   }))
 
-const getOrderLineGoodsNo = (line: Pick<OrderLine, 'productionTaskNo' | 'skuCode' | 'itemSku' | 'lineCode' | 'id'>) =>
-  line.productionTaskNo || line.skuCode || line.itemSku || line.lineCode || line.id
-
-const formatOrderLineLogNote = (line: OrderLine, note?: string) => {
-  if (!note) {
-    return ''
-  }
-
-  const goodsNo = getOrderLineGoodsNo(line)
-  const legacyIds = [line.lineCode, line.id].filter((value): value is string => Boolean(value && value !== goodsNo))
-
-  return legacyIds.reduce((current, legacyId) => current.split(legacyId).join(goodsNo), note)
-}
+const getOrderLineDisplayName = (line: OrderLine) => line.name || '未命名款式'
 
 const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProductCompareValue => ({
-  sourceLabel: `${getOrderLineGoodsNo(line)} ${line.name}`,
+  sourceLabel: `${getOrderLineGoodsNo(line)} ${getOrderLineDisplayName(line)}`,
   specValue: line.selectedSpecValue || line.sourceProduct?.sourceSpecValue,
   material: line.selectedMaterial || line.actualRequirements?.material,
   process: line.selectedProcess || line.actualRequirements?.process,
@@ -365,530 +286,52 @@ const buildOrderLineSourceProductCompareValue = (line: OrderLine): SourceProduct
 })
 
 const DetailSection = ({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) => (
-  <SectionCard title={title} actions={actions} className="compact-card">
+  <SectionCard title={title} actions={actions} className="compact-card order-line-detail-section">
     {children}
   </SectionCard>
 )
 
-export const buildOrderLineStatusLog = ({
-  line,
-  purchase,
-  nextStatus,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  nextStatus: OrderLineLineStatus | string
-  operatorName?: string
-}): OrderLineLog => {
-  const fromStatus = getOrderLineLineStatus(line)
-  const toStatus = String(nextStatus)
+const useEditableSectionDraft = <Draft,>(line: OrderLine, buildDraft: (line: OrderLine) => Draft) => {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<Draft>(() => buildDraft(line))
+  const [message, setMessage] = useState('')
 
-  return {
-    id: `log-${line.id}-${Date.now()}`,
-    orderLineId: line.id,
-    purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-    actionType: 'status_changed',
-    actionLabel: '状态变更',
-    operatorName,
-    createdAt: formatDateTime(new Date()),
-    fromStatus,
-    toStatus,
-    note: `将销售 ${getOrderLineGoodsNo(line)} 从「${getStatusLabel(fromStatus)}」改为「${getStatusLabel(toStatus)}」`
+  useEffect(() => {
+    setDraft(buildDraft(line))
+    setEditing(false)
+    setMessage('')
+  }, [buildDraft, line.id])
+
+  const updateDraft = <K extends keyof Draft>(field: K, value: Draft[K]) => {
+    setDraft((current) => ({ ...current, [field]: value }))
   }
+
+  const handleEdit = () => {
+    setDraft(buildDraft(line))
+    setMessage('')
+    setEditing(true)
+  }
+
+  const handleCancel = () => {
+    setDraft(buildDraft(line))
+    setEditing(false)
+    setMessage('')
+  }
+
+  const markSaved = (successMessage: string) => {
+    setEditing(false)
+    setMessage(successMessage)
+  }
+
+  return { editing, draft, message, updateDraft, handleEdit, handleCancel, markSaved }
 }
 
-export const buildOrderLineDetailsDraft = (line: OrderLine): OrderLineDetailsDraft => ({
-  lineCode: line.lineCode || '',
-  productionTaskNo: line.productionTaskNo || line.itemSku || '',
-  skuCode: line.skuCode || line.itemSku || '',
-  name: line.name,
-  styleName: line.styleName || '',
-  versionNo: line.versionNo || '',
-  category: line.category || 'other',
-  selectedSpecValue: line.selectedSpecValue || '',
-  specNote: line.actualRequirements?.specNote || line.selectedSpecSnapshot?.note || '',
-  selectedMaterial: line.selectedMaterial || line.actualRequirements?.material || '',
-  selectedProcess: line.selectedProcess || line.actualRequirements?.process || '',
-  selectedSpecialOptionsText: (line.selectedSpecialOptions || line.actualRequirements?.specialNotes || []).join(' / '),
-  sizeNote: line.actualRequirements?.sizeNote || '',
-  engraveText: line.actualRequirements?.engraveText || '',
-  engraveImageFiles: line.actualRequirements?.engraveImageFiles ?? [],
-  engravePltFiles: line.actualRequirements?.engravePltFiles ?? [],
-  customerRemark: line.actualRequirements?.remark || '',
-  productionRemark: line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '',
-  priority: line.priority || 'normal',
-  requiresDesign: Boolean(line.requiresDesign ?? line.designInfo?.requiresRemodeling),
-  requiresModeling: Boolean(line.requiresModeling ?? line.designInfo?.requiresRemodeling),
-  requiresWax: Boolean(line.requiresWax ?? line.designInfo?.waxFileUrl),
-  designStatus: getOrderLineDesignStatus(line),
-  modelingStatus: getOrderLineModelingStatus(line),
-  assignedDesignerId: line.assignedDesignerId || '',
-  assignedModelerId: line.assignedModelerId || '',
-  assignedDesignerName: line.designInfo?.assignedDesigner || '',
-  modelingFileUrl: line.designInfo?.modelingFileUrl || '',
-  waxFileUrl: line.designInfo?.waxFileUrl || '',
-  designNote: line.designInfo?.designNote || '',
-  currentOwner: line.currentOwner || '',
-  promisedDate: line.promisedDate || ''
-})
+const getUploadedFileNames = (files?: OrderLineUploadedFile[], fallback?: string) => {
+  const names = files?.map((file) => file.name).filter(Boolean) ?? []
+  const fallbackName = fallback?.trim()
 
-export const applyOrderLineDetailsDraft = (line: OrderLine, draft: OrderLineDetailsDraft): OrderLine => {
-  const selectedSpecialOptions = splitTextList(draft.selectedSpecialOptionsText)
-  const selectedMaterial = draft.selectedMaterial.trim()
-  const selectedProcess = draft.selectedProcess.trim()
-  const selectedSpecValue = draft.selectedSpecValue.trim()
-
-  const nextLineStatus = draft.requiresDesign
-    ? getOrderLineLineStatus(line)
-    : getOrderLineLineStatus(line) === 'pending_design'
-      ? 'pending_merchandiser_review'
-      : getOrderLineLineStatus(line)
-
-  return {
-    ...line,
-    lineStatus: nextLineStatus,
-    status: getLegacyStatusForLineStatus(nextLineStatus),
-    lineCode: draft.lineCode.trim() || undefined,
-    productionTaskNo: draft.productionTaskNo.trim() || undefined,
-    skuCode: draft.skuCode.trim() || undefined,
-    name: draft.name.trim() || line.name,
-    styleName: draft.styleName.trim() || undefined,
-    versionNo: draft.versionNo.trim() || undefined,
-    category: draft.category as ProductCategory,
-    currentOwner: draft.currentOwner.trim() || undefined,
-    promisedDate: draft.promisedDate || undefined,
-    priority: draft.priority,
-    isUrgent: draft.priority === 'urgent' || draft.priority === 'vip',
-    requiresDesign: draft.requiresDesign,
-    requiresModeling: draft.requiresModeling,
-    requiresWax: draft.requiresWax,
-    designStatus: draft.designStatus,
-    modelingStatus: draft.modelingStatus,
-    assignedDesignerId: draft.assignedDesignerId.trim() || undefined,
-    assignedModelerId: draft.assignedModelerId.trim() || undefined,
-    selectedSpecValue: selectedSpecValue || undefined,
-    selectedMaterial: selectedMaterial || undefined,
-    selectedProcess: selectedProcess || undefined,
-    selectedSpecialOptions: selectedSpecialOptions.length > 0 ? selectedSpecialOptions : undefined,
-    actualRequirements: {
-      ...line.actualRequirements,
-      material: selectedMaterial || undefined,
-      process: selectedProcess || undefined,
-      specNote: draft.specNote.trim() || undefined,
-      sizeNote: draft.sizeNote.trim() || undefined,
-      engraveText: draft.engraveText.trim() || undefined,
-      engraveImageFiles: draft.engraveImageFiles.length > 0 ? draft.engraveImageFiles : undefined,
-      engravePltFiles: draft.engravePltFiles.length > 0 ? draft.engravePltFiles : undefined,
-      specialNotes: selectedSpecialOptions.length > 0 ? selectedSpecialOptions : undefined,
-      remark: draft.customerRemark.trim() || undefined
-    },
-    designInfo: {
-      ...line.designInfo,
-      requiresRemodeling: draft.requiresModeling,
-      designStatus: draft.requiresDesign ? draft.designStatus : 'not_required',
-      assignedDesigner: draft.assignedDesignerName.trim() || undefined,
-      modelingFileUrl: draft.modelingFileUrl.trim() || undefined,
-      waxFileUrl: draft.waxFileUrl.trim() || undefined,
-      designNote: draft.designNote.trim() || undefined
-    },
-    productionInfo: {
-      ...line.productionInfo,
-      factoryNote: draft.productionRemark.trim() || undefined
-    }
-  }
+  return names.length > 0 ? names : fallbackName ? [fallbackName] : []
 }
-
-export const updateOrderLineDetailsInRows = <T extends OrderLineRow>(rows: T[], lineId: string, draft: OrderLineDetailsDraft): T[] =>
-  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: applyOrderLineDetailsDraft(row.line, draft) } as T) : row))
-
-export const buildOrderLineDetailsLog = ({
-  line,
-  purchase,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-details-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'order_line_updated',
-  actionLabel: '编辑销售需求',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: '修改了销售定制参数'
-})
-
-export const buildOrderLineOutsourceDraft = (line: OrderLine): OrderLineOutsourceDraft => ({
-  followUpOwner: line.currentOwner || '',
-  supplierName: line.outsourceInfo?.supplierName || '',
-  outsourcedAt: line.outsourceInfo?.outsourcedAt || '',
-  itemSku: line.productionTaskNo || line.skuCode || line.itemSku || line.lineCode || '',
-  plannedDeliveryDate: line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '',
-  outsourceNote: line.outsourceInfo?.outsourceNote || '',
-  outsourceStatus: line.outsourceInfo?.outsourceStatus || 'pending'
-})
-
-export const applyOrderLineOutsourceDraft = (line: OrderLine, draft: OrderLineOutsourceDraft): OrderLine => ({
-  ...line,
-  currentOwner: draft.followUpOwner.trim() || undefined,
-  productionTaskNo: draft.itemSku.trim() || undefined,
-  skuCode: draft.itemSku.trim() || line.skuCode,
-  itemSku: draft.itemSku.trim() || undefined,
-  merchandiserId: draft.followUpOwner.trim() || line.merchandiserId,
-  factoryId: draft.supplierName.trim() || line.factoryId,
-  factoryPlannedDueDate: draft.plannedDeliveryDate || line.factoryPlannedDueDate,
-  productionSentAt: draft.outsourcedAt || line.productionSentAt,
-  productionStatus: draft.outsourceStatus === 'in_progress' ? 'in_production' : draft.outsourceStatus === 'pending' ? 'pending_dispatch' : line.productionStatus,
-  outsourceInfo: {
-    ...line.outsourceInfo,
-    outsourceStatus: draft.outsourceStatus,
-    supplierName: draft.supplierName.trim() || undefined,
-    outsourcedAt: draft.outsourcedAt || undefined,
-    plannedDeliveryDate: draft.plannedDeliveryDate || undefined,
-    outsourceNote: draft.outsourceNote.trim() || undefined
-  }
-})
-
-export const updateOrderLineOutsourceInfoInRows = <T extends OrderLineRow>(rows: T[], lineId: string, draft: OrderLineOutsourceDraft): T[] =>
-  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: applyOrderLineOutsourceDraft(row.line, draft) } as T) : row))
-
-export const buildOrderLineOutsourceLog = ({
-  line,
-  purchase,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-outsource-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'outsource_info_updated',
-  actionLabel: '编辑跟单 / 下厂信息',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: '修改了销售跟单 / 下厂信息'
-})
-
-const getProductionTotalWeight = (line: OrderLine) => line.productionInfo?.totalWeight || line.productionInfo?.returnedWeight || ''
-
-export const buildOrderLineProductionDraft = (line: OrderLine): OrderLineProductionDraft => ({
-  factoryStatus: line.productionInfo?.factoryStatus || 'not_started',
-  actualMaterial: line.productionInfo?.actualMaterial || line.actualRequirements?.material || line.selectedMaterial || '',
-  totalWeight: getProductionTotalWeight(line),
-  netWeight: line.productionInfo?.netWeight || '',
-  mainStoneInfo: line.productionInfo?.mainStoneInfo || '',
-  sideStoneInfo: line.productionInfo?.sideStoneInfo || '',
-  laborCostDetail: line.productionInfo?.laborCostDetail || '',
-  factoryShippedAt: line.productionInfo?.factoryShippedAt || '',
-  qualityResult: line.productionInfo?.qualityResult || '',
-  factoryNote: line.productionInfo?.factoryNote || ''
-})
-
-export const applyOrderLineProductionDraft = (line: OrderLine, draft: OrderLineProductionDraft): OrderLine => {
-  const totalWeight = draft.totalWeight.trim()
-  const nextFactoryStatus = draft.factoryStatus === 'completed' ? 'returned' : draft.factoryStatus === 'issue' ? 'abnormal' : draft.factoryStatus === 'in_progress' || draft.factoryStatus === 'pending_feedback' ? 'in_production' : line.factoryStatus
-  const nextLineStatus = draft.factoryStatus === 'completed' ? 'pending_finance_confirmation' : draft.factoryStatus === 'issue' ? getOrderLineLineStatus(line) : getOrderLineLineStatus(line)
-  const nextProductionStatus = draft.factoryStatus === 'completed' ? 'completed' : draft.factoryStatus === 'issue' ? 'blocked' : draft.factoryStatus === 'in_progress' || draft.factoryStatus === 'pending_feedback' ? 'in_production' : line.productionStatus
-
-  return {
-    ...line,
-    lineStatus: nextLineStatus,
-    status: getLegacyStatusForLineStatus(nextLineStatus),
-    factoryStatus: nextFactoryStatus,
-    productionStatus: nextProductionStatus,
-    financeStatus: draft.factoryStatus === 'completed' ? 'pending' : line.financeStatus,
-    productionCompletedAt: draft.factoryStatus === 'completed' ? draft.factoryShippedAt || line.productionCompletedAt : line.productionCompletedAt,
-    productionInfo: {
-      ...line.productionInfo,
-      factoryStatus: draft.factoryStatus,
-      actualMaterial: draft.actualMaterial.trim() || undefined,
-      totalWeight: totalWeight || undefined,
-      returnedWeight: totalWeight || undefined,
-      netWeight: draft.netWeight.trim() || undefined,
-      mainStoneInfo: draft.mainStoneInfo.trim() || undefined,
-      sideStoneInfo: draft.sideStoneInfo.trim() || undefined,
-      laborCostDetail: draft.laborCostDetail.trim() || undefined,
-      factoryShippedAt: draft.factoryShippedAt || undefined,
-      qualityResult: draft.qualityResult.trim() || undefined,
-      factoryNote: draft.factoryNote.trim() || undefined
-    }
-  }
-}
-
-export const updateOrderLineProductionInfoInRows = <T extends OrderLineRow>(rows: T[], lineId: string, draft: OrderLineProductionDraft): T[] =>
-  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: applyOrderLineProductionDraft(row.line, draft) } as T) : row))
-
-export const buildOrderLineProductionLog = ({
-  line,
-  purchase,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-production-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'production_info_updated',
-  actionLabel: '编辑工厂回传信息',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: '修改了销售工厂回传信息'
-})
-
-export const buildOrderLineLogisticsLog = ({
-  line,
-  purchase,
-  record,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  record: LogisticsRecord
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-logistics-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'logistics_created',
-  actionLabel: '新增物流',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: `为销售 ${getOrderLineGoodsNo(line)} 新增${logisticsTypeLabelMap[record.logisticsType || 'goods']}物流 ${record.trackingNo || '无单号'}`
-})
-
-export const buildOrderLineLogisticsDraft = (record?: LogisticsRecord): OrderLineLogisticsDraft => ({
-  logisticsType: record?.logisticsType || 'goods',
-  direction: record?.direction || 'outbound',
-  company: record?.company || record?.carrier || '',
-  trackingNo: record?.trackingNo || '',
-  shippedAt: record?.shippedAt || '',
-  signedAt: record?.signedAt || record?.deliveredAt || '',
-  remark: record?.remark || record?.note || ''
-})
-
-export const buildOrderLineLogisticsRecord = ({
-  line,
-  purchase,
-  draft
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  draft: OrderLineLogisticsDraft
-}): LogisticsRecord => ({
-  id: `logistics-${line.id}-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  transactionId: line.transactionId || purchase?.id,
-  recordStatus: 'active',
-  logisticsType: draft.logisticsType,
-  direction: draft.direction,
-  company: draft.company,
-  carrier: draft.company,
-  trackingNo: draft.trackingNo,
-  shippedAt: draft.shippedAt,
-  signedAt: draft.signedAt,
-  remark: draft.remark,
-  note: draft.remark
-})
-
-export const addLogisticsRecord = (records: LogisticsRecord[], record: LogisticsRecord) => [record, ...records]
-
-export const applyOrderLineLogisticsDraft = (record: LogisticsRecord, draft: OrderLineLogisticsDraft): LogisticsRecord => ({
-  ...record,
-  logisticsType: draft.logisticsType,
-  direction: draft.direction,
-  company: draft.company.trim() || undefined,
-  carrier: draft.company.trim() || undefined,
-  trackingNo: draft.trackingNo.trim() || undefined,
-  shippedAt: draft.shippedAt || undefined,
-  signedAt: draft.signedAt || undefined,
-  deliveredAt: draft.signedAt || undefined,
-  remark: draft.remark.trim() || undefined,
-  note: draft.remark.trim() || undefined
-})
-
-export const updateLogisticsRecordInList = (records: LogisticsRecord[], recordId: string, draft: OrderLineLogisticsDraft) =>
-  records.map((record) => (record.id === recordId ? applyOrderLineLogisticsDraft(record, draft) : record))
-
-export const voidLogisticsRecordInList = (records: LogisticsRecord[], recordId: string, voidReason: string, voidedAt = formatDateTime(new Date())) =>
-  records.map((record) =>
-    record.id === recordId
-      ? {
-          ...record,
-          recordStatus: 'voided' as const,
-          voidedAt,
-          voidReason: voidReason.trim() || '未填写作废原因'
-        }
-      : record
-  )
-
-export const buildOrderLineLogisticsEditLog = ({
-  line,
-  purchase,
-  record,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  record: LogisticsRecord
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-logistics-edit-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'logistics_updated',
-  actionLabel: '编辑物流',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: `编辑了销售 ${getOrderLineGoodsNo(line)} 的物流记录 ${record.trackingNo || record.id}`
-})
-
-export const buildOrderLineLogisticsVoidLog = ({
-  line,
-  purchase,
-  record,
-  voidReason,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  record: LogisticsRecord
-  voidReason: string
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-logistics-void-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'logistics_voided',
-  actionLabel: '作废物流',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: `作废了销售 ${getOrderLineGoodsNo(line)} 的物流记录 ${record.trackingNo || record.id}：${voidReason.trim() || '未填写作废原因'}`
-})
-
-export const buildOrderLineAfterSalesLog = ({
-  line,
-  purchase,
-  record,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  record: AfterSalesCase
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-after-sales-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'after_sales_created',
-  actionLabel: '新增售后',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: `为销售 ${getOrderLineGoodsNo(line)} 新增${getAfterSalesTypeLabel(record.type)}售后：${getAfterSalesReason(record)}`
-})
-
-export const buildOrderLineAfterSalesCase = ({
-  line,
-  purchase,
-  draft
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  draft: OrderLineAfterSalesDraft
-}): AfterSalesCase => ({
-  id: `after-sales-${line.id}-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  transactionId: line.transactionId || purchase?.id,
-  customerId: line.customerId || purchase?.customerId,
-  type: draft.type,
-  reason: draft.reason,
-  status: draft.status,
-  responsibleParty: draft.responsibleParty,
-  createdAt: draft.createdAt,
-  closedAt: draft.closedAt,
-  remark: draft.remark,
-  note: draft.remark
-})
-
-export const addAfterSalesCase = (records: AfterSalesCase[], record: AfterSalesCase) => [record, ...records]
-
-export const buildOrderLineAfterSalesDraft = (record?: AfterSalesCase): OrderLineAfterSalesDraft => ({
-  type: record?.type || 'repair',
-  reason: record?.reason || '',
-  status: record?.status || 'open',
-  responsibleParty: record?.responsibleParty || '王客服',
-  createdAt: record?.createdAt || '',
-  closedAt: record?.closedAt || '',
-  remark: record?.remark || record?.note || ''
-})
-
-export const applyOrderLineAfterSalesDraft = (record: AfterSalesCase, draft: OrderLineAfterSalesDraft): AfterSalesCase => ({
-  ...record,
-  type: draft.type,
-  reason: draft.reason.trim() || undefined,
-  status: draft.status,
-  responsibleParty: draft.responsibleParty.trim() || undefined,
-  createdAt: draft.createdAt || undefined,
-  closedAt: draft.closedAt || undefined,
-  remark: draft.remark.trim() || undefined,
-  note: draft.remark.trim() || undefined
-})
-
-export const updateAfterSalesCaseInList = (records: AfterSalesCase[], recordId: string, draft: OrderLineAfterSalesDraft) =>
-  records.map((record) => (record.id === recordId ? applyOrderLineAfterSalesDraft(record, draft) : record))
-
-export const closeAfterSalesCaseInList = (records: AfterSalesCase[], recordId: string, closedAt = formatDateTime(new Date())) =>
-  records.map((record) => (record.id === recordId ? { ...record, status: 'closed' as const, closedAt } : record))
-
-export const buildOrderLineAfterSalesEditLog = ({
-  line,
-  purchase,
-  record,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  record: AfterSalesCase
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-after-sales-edit-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'after_sales_updated',
-  actionLabel: '编辑售后',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: `编辑了销售 ${getOrderLineGoodsNo(line)} 的售后记录：${getAfterSalesReason(record)}`
-})
-
-export const buildOrderLineAfterSalesCloseLog = ({
-  line,
-  purchase,
-  record,
-  operatorName = '系统用户'
-}: {
-  line: OrderLine
-  purchase?: Purchase
-  record: AfterSalesCase
-  operatorName?: string
-}): OrderLineLog => ({
-  id: `log-${line.id}-after-sales-close-${Date.now()}`,
-  orderLineId: line.id,
-  purchaseId: line.purchaseId || line.transactionId || purchase?.id,
-  actionType: 'after_sales_closed',
-  actionLabel: '关闭售后',
-  operatorName,
-  createdAt: formatDateTime(new Date()),
-  note: `关闭了销售 ${getOrderLineGoodsNo(line)} 的售后记录：${getAfterSalesReason(record)}`
-})
 
 const OrderLineStatusUpdatePanel = ({
   line,
@@ -975,6 +418,14 @@ const OrderLineStatusUpdatePanel = ({
         {completeness.summary}
         {completeness.complete ? `；客服确认后进入「${getStatusLabel(customerConfirmStatus)}」。` : '；请先补齐资料后再确认。'}
       </div>
+      <div className="completeness-checklist" aria-label="资料完整度明细">
+        {completeness.fieldStatuses.map((item) => (
+          <span key={item.key} className={`completeness-pill ${item.complete ? 'complete' : 'missing'}`}>
+            <span className="completeness-pill-status">{item.complete ? '已填' : '缺少'}</span>
+            {item.label}
+          </span>
+        ))}
+      </div>
       {statusMessage ? (
         <div role="status" className="success-alert spacer-top">
           {statusMessage}
@@ -992,7 +443,7 @@ const OrderLineLogSection = ({ line, logs }: { line: OrderLine; logs: OrderLineL
       {sortedLogs.length > 0 ? (
         <RecordTimeline
           items={sortedLogs.map((log) => {
-            const displayNote = formatOrderLineLogNote(line, log.note)
+            const displayNote = log.note || ''
 
             return {
               id: log.id,
@@ -1015,10 +466,12 @@ const OrderLineLogSection = ({ line, logs }: { line: OrderLine; logs: OrderLineL
 
 const OrderLineDetailsSection = ({
   line,
-  onUpdateLineDetails
+  onUpdateLineDetails,
+  onOpenSourceProduct
 }: {
   line: OrderLine
   onUpdateLineDetails?: OrderLineDetailsUpdateHandler
+  onOpenSourceProduct?: () => void
 }) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<OrderLineDetailsDraft>(() => buildOrderLineDetailsDraft(line))
@@ -1100,10 +553,6 @@ const OrderLineDetailsSection = ({
               <input className="input" value={draft.name} onChange={(event) => updateDraft('name', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">款式别名</span>
-              <input className="input" value={draft.styleName} onChange={(event) => updateDraft('styleName', event.target.value)} />
-            </label>
-            <label className="field-control">
               <span className="field-label">版本号</span>
               <input className="input" value={draft.versionNo} onChange={(event) => updateDraft('versionNo', event.target.value)} />
             </label>
@@ -1122,10 +571,6 @@ const OrderLineDetailsSection = ({
               <input className="input" value={draft.selectedSpecValue} onChange={(event) => updateDraft('selectedSpecValue', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">规格备注</span>
-              <input className="input" value={draft.specNote} onChange={(event) => updateDraft('specNote', event.target.value)} />
-            </label>
-            <label className="field-control">
               <span className="field-label">材质</span>
               <input className="input" value={draft.selectedMaterial} onChange={(event) => updateDraft('selectedMaterial', event.target.value)} />
             </label>
@@ -1136,10 +581,6 @@ const OrderLineDetailsSection = ({
             <label className="field-control">
               <span className="field-label">特殊需求</span>
               <input className="input" value={draft.selectedSpecialOptionsText} onChange={(event) => updateDraft('selectedSpecialOptionsText', event.target.value)} />
-            </label>
-            <label className="field-control">
-              <span className="field-label">尺寸备注</span>
-              <input className="input" value={draft.sizeNote} onChange={(event) => updateDraft('sizeNote', event.target.value)} />
             </label>
             <label className="field-control">
               <span className="field-label">刻字 / 印记</span>
@@ -1199,12 +640,8 @@ const OrderLineDetailsSection = ({
               </select>
             </label>
             <label className="field-control">
-              <span className="field-label">客服备注</span>
+              <span className="field-label">特殊需求备注</span>
               <textarea className="textarea" value={draft.customerRemark} onChange={(event) => updateDraft('customerRemark', event.target.value)} />
-            </label>
-            <label className="field-control">
-              <span className="field-label">生产备注</span>
-              <textarea className="textarea" value={draft.productionRemark} onChange={(event) => updateDraft('productionRemark', event.target.value)} />
             </label>
           </div>
           <div className="row">
@@ -1217,18 +654,27 @@ const OrderLineDetailsSection = ({
           </div>
         </div>
       ) : (
-        <InfoGrid columns={3}>
-          <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
-          <InfoField label="款式名称" value={line.name} />
-          <InfoField label="款式别名" value={line.styleName || '—'} />
+        <div className="info-grid order-line-drawer-grid">
+          <InfoField label="货号" value={getOrderLineGoodsNo(line, '—')} />
+          <InfoField
+            label="款式名称"
+            value={
+              line.sourceProduct?.sourceProductCode && onOpenSourceProduct ? (
+                <button type="button" className="inline-link-button" aria-label={`查看来源款式：${getOrderLineDisplayName(line)}`} onClick={onOpenSourceProduct}>
+                  {getOrderLineDisplayName(line)}
+                </button>
+              ) : (
+                getOrderLineDisplayName(line)
+              )
+            }
+          />
+          <InfoField label="来源款式编号" value={line.sourceProduct?.sourceProductCode || '—'} />
           <InfoField label="版本号" value={line.versionNo || line.sourceProduct?.sourceProductVersion || '—'} />
           <InfoField label="品类" value={categoryLabelMap[line.category || 'other'] || line.category || '其他'} />
           <InfoField label="规格" value={line.selectedSpecValue || '—'} />
-          <InfoField label="规格备注" value={line.actualRequirements?.specNote || line.selectedSpecSnapshot?.note || '—'} />
           <InfoField label="材质" value={line.selectedMaterial || line.actualRequirements?.material || '—'} />
           <InfoField label="工艺" value={line.selectedProcess || line.actualRequirements?.process || '—'} />
           <InfoField label="特殊需求" value={<TextList values={line.selectedSpecialOptions || line.actualRequirements?.specialNotes} />} />
-          <InfoField label="尺寸备注" value={line.actualRequirements?.sizeNote || '—'} />
           <InfoField label="刻字 / 印记" value={line.actualRequirements?.engraveText || '—'} />
           {needsEngraving ? (
             <>
@@ -1236,15 +682,13 @@ const OrderLineDetailsSection = ({
               <InfoField label="刻字 PLT 文件" value={<TextList values={line.actualRequirements?.engravePltFiles?.map((file) => file.name)} />} />
             </>
           ) : null}
-          <InfoField label="客服备注" value={line.actualRequirements?.remark || '—'} />
-          <InfoField label="生产备注" value={line.productionInfo?.factoryNote || line.outsourceInfo?.outsourceNote || '—'} />
+          <InfoField label="特殊需求备注" value={line.actualRequirements?.remark || '—'} />
           <InfoField label="是否加急" value={line.isUrgent || line.priority === 'urgent' ? '加急' : line.priority === 'vip' ? 'VIP' : line.priority === 'high' ? '高优先' : '否'} />
+          <InfoField label="当前负责人" value={line.currentOwner || '待分配'} />
           <InfoField label="是否需要设计" value={(line.requiresDesign ?? line.designInfo?.requiresRemodeling) ? '是' : '否'} />
           <InfoField label="是否需要建模" value={(line.requiresModeling ?? line.designInfo?.requiresRemodeling) ? '是' : '否'} />
           <InfoField label="是否需要出蜡" value={line.requiresWax ? '是' : '否'} />
-          <InfoField label="当前负责人" value={line.currentOwner || '待分配'} />
-          <InfoField label="承诺交期" value={line.promisedDate || '—'} />
-        </InfoGrid>
+        </div>
       )}
       {message ? (
         <div role="status" className="success-alert spacer-top">
@@ -1262,31 +706,7 @@ const OrderLineOutsourceSection = ({
   line: OrderLine
   onUpdateOutsourceInfo?: OrderLineOutsourceUpdateHandler
 }) => {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<OrderLineOutsourceDraft>(() => buildOrderLineOutsourceDraft(line))
-  const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    setDraft(buildOrderLineOutsourceDraft(line))
-    setEditing(false)
-    setMessage('')
-  }, [line.id])
-
-  const updateDraft = <K extends keyof OrderLineOutsourceDraft>(field: K, value: OrderLineOutsourceDraft[K]) => {
-    setDraft((current) => ({ ...current, [field]: value }))
-  }
-
-  const handleEdit = () => {
-    setDraft(buildOrderLineOutsourceDraft(line))
-    setMessage('')
-    setEditing(true)
-  }
-
-  const handleCancel = () => {
-    setDraft(buildOrderLineOutsourceDraft(line))
-    setEditing(false)
-    setMessage('')
-  }
+  const { editing, draft, message, updateDraft, handleEdit, handleCancel, markSaved } = useEditableSectionDraft(line, buildOrderLineOutsourceDraft)
 
   const handleSave = () => {
     if (!onUpdateOutsourceInfo) {
@@ -1294,8 +714,7 @@ const OrderLineOutsourceSection = ({
     }
 
     onUpdateOutsourceInfo(line.id, draft)
-    setEditing(false)
-    setMessage('已保存跟单 / 下厂信息')
+    markSaved('已保存跟单 / 下厂信息')
   }
 
   return (
@@ -1314,7 +733,7 @@ const OrderLineOutsourceSection = ({
           <div className="field-grid three">
             <label className="field-control">
               <span className="field-label">货号</span>
-              <input className="input" value={draft.itemSku} onChange={(event) => updateDraft('itemSku', event.target.value)} />
+              <input className="input" value={draft.productionTaskNo} onChange={(event) => updateDraft('productionTaskNo', event.target.value)} />
             </label>
             <label className="field-control">
               <span className="field-label">跟单负责人</span>
@@ -1357,15 +776,15 @@ const OrderLineOutsourceSection = ({
           </div>
         </div>
       ) : (
-        <InfoGrid columns={3}>
-          <InfoField label="货号" value={line.productionTaskNo || line.itemSku || line.lineCode || '—'} />
+        <div className="info-grid order-line-drawer-grid">
+          <InfoField label="货号" value={getOrderLineGoodsNo(line, '—')} />
           <InfoField label="跟单负责人" value={line.currentOwner || '待分配'} />
           <InfoField label="工厂" value={getFactorySummary(line)} />
           <InfoField label="下厂时间" value={line.outsourceInfo?.outsourcedAt || '待补充'} />
           <InfoField label="工厂计划交期" value={line.outsourceInfo?.plannedDeliveryDate || line.expectedDate || '—'} />
           <InfoField label="委外状态" value={getOutsourceStatusLabel(String(line.outsourceInfo?.outsourceStatus || ''))} />
           <InfoField label="跟单备注 / 委外备注" value={line.outsourceInfo?.outsourceNote || '—'} />
-        </InfoGrid>
+        </div>
       )}
       {message ? (
         <div role="status" className="success-alert spacer-top">
@@ -1378,45 +797,28 @@ const OrderLineOutsourceSection = ({
 
 const OrderLineDesignModelingSection = ({
   line,
-  onUpdateLineDetails
+  onUpdateDesignModeling
 }: {
   line: OrderLine
-  onUpdateLineDetails?: OrderLineDetailsUpdateHandler
+  onUpdateDesignModeling?: OrderLineDesignModelingUpdateHandler
 }) => {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<OrderLineDetailsDraft>(() => buildOrderLineDetailsDraft(line))
-  const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    setDraft(buildOrderLineDetailsDraft(line))
-    setEditing(false)
-    setMessage('')
-  }, [line.id])
-
-  const updateDraft = <K extends keyof OrderLineDetailsDraft>(field: K, value: OrderLineDetailsDraft[K]) => {
-    setDraft((current) => ({ ...current, [field]: value }))
-  }
-
-  const handleEdit = () => {
-    setDraft(buildOrderLineDetailsDraft(line))
-    setMessage('')
-    setEditing(true)
-  }
-
-  const handleCancel = () => {
-    setDraft(buildOrderLineDetailsDraft(line))
-    setEditing(false)
-    setMessage('')
-  }
+  const { editing, draft, message, updateDraft, handleEdit, handleCancel, markSaved } = useEditableSectionDraft(line, buildOrderLineDesignModelingDraft)
 
   const handleSave = () => {
-    if (!onUpdateLineDetails) {
+    if (!onUpdateDesignModeling) {
       return
     }
 
-    onUpdateLineDetails(line.id, draft)
-    setEditing(false)
-    setMessage('已保存设计建模信息')
+    onUpdateDesignModeling(line.id, draft)
+    markSaved('已保存设计建模信息')
+  }
+
+  const handleModelingFileUpload = (files: FileList | null) => {
+    updateDraft('modelingFiles', buildUploadedFiles(files, `${line.id}-modeling`))
+  }
+
+  const handleWaxFileUpload = (files: FileList | null) => {
+    updateDraft('waxFiles', buildUploadedFiles(files, `${line.id}-wax`))
   }
 
   return (
@@ -1424,7 +826,7 @@ const OrderLineDesignModelingSection = ({
       title="设计建模"
       actions={
         !editing ? (
-          <button type="button" className="button ghost small" aria-label="编辑设计建模" onClick={handleEdit} disabled={!onUpdateLineDetails}>
+          <button type="button" className="button ghost small" aria-label="编辑设计建模" onClick={handleEdit} disabled={!onUpdateDesignModeling}>
             编辑
           </button>
         ) : null
@@ -1432,28 +834,7 @@ const OrderLineDesignModelingSection = ({
     >
       {editing ? (
         <div className="stack">
-          <div className="field-grid three">
-            <label className="field-control">
-              <span className="field-label">是否需要设计</span>
-              <select className="select" value={draft.requiresDesign ? 'true' : 'false'} onChange={(event) => updateDraft('requiresDesign', event.target.value === 'true')}>
-                <option value="true">是</option>
-                <option value="false">否</option>
-              </select>
-            </label>
-            <label className="field-control">
-              <span className="field-label">是否需要建模</span>
-              <select className="select" value={draft.requiresModeling ? 'true' : 'false'} onChange={(event) => updateDraft('requiresModeling', event.target.value === 'true')}>
-                <option value="true">是</option>
-                <option value="false">否</option>
-              </select>
-            </label>
-            <label className="field-control">
-              <span className="field-label">是否需要出蜡</span>
-              <select className="select" value={draft.requiresWax ? 'true' : 'false'} onChange={(event) => updateDraft('requiresWax', event.target.value === 'true')}>
-                <option value="true">是</option>
-                <option value="false">否</option>
-              </select>
-            </label>
+          <div className="field-grid three order-line-design-modeling-edit-grid">
             <label className="field-control">
               <span className="field-label">设计状态</span>
               <select className="select" value={draft.designStatus} onChange={(event) => updateDraft('designStatus', event.target.value as OrderLineWorkflowDesignStatus)}>
@@ -1487,12 +868,14 @@ const OrderLineDesignModelingSection = ({
               <input className="input" value={draft.assignedModelerId} onChange={(event) => updateDraft('assignedModelerId', event.target.value)} />
             </label>
             <label className="field-control">
-              <span className="field-label">建模文件</span>
-              <input className="input" value={draft.modelingFileUrl} onChange={(event) => updateDraft('modelingFileUrl', event.target.value)} />
+              <span className="field-label">建模文件上传</span>
+              <input aria-label="建模文件上传" className="input" type="file" accept=".3dm,.stl,.obj,.step,.zip,.rar,.pdf" multiple onChange={(event) => handleModelingFileUpload(event.target.files)} />
+              <span className="text-caption">{draft.modelingFiles.length > 0 ? draft.modelingFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
             </label>
             <label className="field-control">
-              <span className="field-label">出蜡文件</span>
-              <input className="input" value={draft.waxFileUrl} onChange={(event) => updateDraft('waxFileUrl', event.target.value)} />
+              <span className="field-label">出蜡文件上传</span>
+              <input aria-label="出蜡文件上传" className="input" type="file" accept=".stl,.3dm,.obj,.step,.zip,.rar,.pdf" multiple onChange={(event) => handleWaxFileUpload(event.target.files)} />
+              <span className="text-caption">{draft.waxFiles.length > 0 ? draft.waxFiles.map((file) => file.name).join(' / ') : '未上传'}</span>
             </label>
             <label className="field-control">
               <span className="field-label">设计流转备注</span>
@@ -1509,19 +892,16 @@ const OrderLineDesignModelingSection = ({
           </div>
         </div>
       ) : (
-        <InfoGrid columns={3}>
-          <InfoField label="是否需要设计" value={line.requiresDesign ? '是' : '否'} />
-          <InfoField label="是否需要建模" value={line.requiresModeling ? '是' : '否'} />
-          <InfoField label="是否需要出蜡" value={line.requiresWax ? '是' : '否'} />
+        <div className="info-grid order-line-drawer-grid">
           <InfoField label="设计状态" value={designWorkflowStatusLabelMap[getOrderLineDesignStatus(line)]} />
           <InfoField label="建模状态" value={modelingWorkflowStatusLabelMap[getOrderLineModelingStatus(line)]} />
           <InfoField label="设计负责人" value={line.designInfo?.assignedDesigner || '—'} />
           <InfoField label="设计人 ID" value={line.assignedDesignerId || '—'} />
           <InfoField label="建模人 ID" value={line.assignedModelerId || '—'} />
-          <InfoField label="建模文件" value={line.designInfo?.modelingFileUrl || '暂无文件'} />
-          <InfoField label="出蜡文件" value={line.designInfo?.waxFileUrl || '暂无文件'} />
+          <InfoField label="建模文件" value={<TextList values={getUploadedFileNames(line.modelingFiles, line.designInfo?.modelingFileUrl)} />} />
+          <InfoField label="出蜡文件" value={<TextList values={getUploadedFileNames(line.waxFiles, line.designInfo?.waxFileUrl)} />} />
           <InfoField label="设计流转备注" value={line.designInfo?.designNote || '—'} />
-        </InfoGrid>
+        </div>
       )}
       {message ? (
         <div role="status" className="success-alert spacer-top">
@@ -1539,31 +919,7 @@ const OrderLineProductionSection = ({
   line: OrderLine
   onUpdateProductionInfo?: OrderLineProductionUpdateHandler
 }) => {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<OrderLineProductionDraft>(() => buildOrderLineProductionDraft(line))
-  const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    setDraft(buildOrderLineProductionDraft(line))
-    setEditing(false)
-    setMessage('')
-  }, [line.id])
-
-  const updateDraft = <K extends keyof OrderLineProductionDraft>(field: K, value: OrderLineProductionDraft[K]) => {
-    setDraft((current) => ({ ...current, [field]: value }))
-  }
-
-  const handleEdit = () => {
-    setDraft(buildOrderLineProductionDraft(line))
-    setMessage('')
-    setEditing(true)
-  }
-
-  const handleCancel = () => {
-    setDraft(buildOrderLineProductionDraft(line))
-    setEditing(false)
-    setMessage('')
-  }
+  const { editing, draft, message, updateDraft, handleEdit, handleCancel, markSaved } = useEditableSectionDraft(line, buildOrderLineProductionDraft)
 
   const handleSave = () => {
     if (!onUpdateProductionInfo) {
@@ -1571,8 +927,7 @@ const OrderLineProductionSection = ({
     }
 
     onUpdateProductionInfo(line.id, draft)
-    setEditing(false)
-    setMessage('已保存工厂回传信息')
+    markSaved('已保存工厂回传信息')
   }
 
   return (
@@ -1646,7 +1001,7 @@ const OrderLineProductionSection = ({
           </div>
         </div>
       ) : (
-        <InfoGrid columns={3}>
+        <div className="info-grid order-line-drawer-grid">
           <InfoField label="工厂状态" value={getFactoryStatusLabel(String(line.productionInfo?.factoryStatus || ''))} />
           <InfoField label="实际材质" value={line.productionInfo?.actualMaterial || line.actualRequirements?.material || line.selectedMaterial || '—'} />
           <InfoField label="总重" value={getProductionTotalWeight(line) || '—'} />
@@ -1657,7 +1012,7 @@ const OrderLineProductionSection = ({
           <InfoField label="工厂出货日期" value={line.productionInfo?.factoryShippedAt || '—'} />
           <InfoField label="质检结果" value={line.productionInfo?.qualityResult || '—'} />
           <InfoField label="工厂备注" value={line.productionInfo?.factoryNote || '—'} />
-        </InfoGrid>
+        </div>
       )}
       {message ? (
         <div role="status" className="success-alert spacer-top">
@@ -2008,77 +1363,6 @@ const OrderLineAfterSalesRecordItem = ({
   )
 }
 
-export const buildOrderLineRows = (): OrderLineRow[] =>
-  purchasesMock.flatMap((purchase) =>
-    purchase.orderLines.map((line) => ({
-      line,
-      purchase
-    }))
-  )
-
-export const filterOrderLineRows = (rows: OrderLineRow[], filters: OrderLineCenterFilters, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
-  rows.filter(({ line, purchase }) => {
-    const customer = customersMock.find((item) => item.id === line.customerId || item.id === purchase?.customerId)
-    const keyword = filters.keyword.trim().toLowerCase()
-    const owner = getLineOwner(line, purchase)
-    const factoryKeyword = filters.factory.trim().toLowerCase()
-    const purchaseKeyword = filters.purchase.trim().toLowerCase()
-    const customerKeyword = filters.customer.trim().toLowerCase()
-    const factoryText = [line.outsourceInfo?.supplierName, line.productionInfo?.factoryNote].filter(Boolean).join(' ').toLowerCase()
-    const purchaseText = [purchase?.purchaseNo, purchase?.platformOrderNo, purchase?.id].filter(Boolean).join(' ').toLowerCase()
-    const customerText = [customer?.name, customer?.phone, customer?.wechat, customer?.id].filter(Boolean).join(' ').toLowerCase()
-    const hasActiveAfterSales = getLineHasActiveAfterSales(line, afterSalesCases)
-    const overdue = getTimePressure(line, line.promisedDate).overdue
-    const lineStatus = getOrderLineLineStatus(line)
-    const matchesKeyword =
-      keyword.length === 0 ||
-      [
-        line.lineCode,
-        line.id,
-        line.name,
-        line.sourceProduct?.sourceProductName,
-        customer?.name,
-        customer?.phone,
-        purchase?.purchaseNo,
-        purchase?.platformOrderNo
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(keyword)
-    const matchesStatus = filters.status === 'all' || lineStatus === filters.status
-    const matchesOwner = filters.owner.trim().length === 0 || owner.includes(filters.owner.trim())
-    const matchesCategory = filters.category === 'all' || line.category === filters.category
-    const lineIsUrgent = Boolean(line.isUrgent || line.priority === 'urgent' || line.priority === 'vip')
-    const matchesUrgent = filters.urgent === 'all' || (filters.urgent === 'yes' ? lineIsUrgent : !lineIsUrgent)
-    const matchesAfterSales = filters.afterSales === 'all' || (filters.afterSales === 'yes' ? hasActiveAfterSales : !hasActiveAfterSales)
-    const matchesOverdue = filters.overdue === 'all' || (filters.overdue === 'yes' ? overdue : !overdue)
-    const matchesFactory = factoryKeyword.length === 0 || factoryText.includes(factoryKeyword)
-    const matchesPurchase = purchaseKeyword.length === 0 || purchaseText.includes(purchaseKeyword)
-    const matchesCustomer = customerKeyword.length === 0 || customerText.includes(customerKeyword)
-    const matchesQuickView =
-      filters.quickView === 'all' ||
-      (filters.quickView === 'after_sales' && hasActiveAfterSales) ||
-      (filters.quickView in orderLineLineStatusLabelMap && lineStatus === filters.quickView)
-
-    return (
-      matchesKeyword &&
-      matchesStatus &&
-      matchesOwner &&
-      matchesCategory &&
-      matchesUrgent &&
-      matchesAfterSales &&
-      matchesOverdue &&
-      matchesFactory &&
-      matchesPurchase &&
-      matchesCustomer &&
-      matchesQuickView
-    )
-  })
-
-export const updateOrderLineStatusInRows = <T extends OrderLineRow>(rows: T[], lineId: string, nextStatus: OrderLineLineStatus | string): T[] =>
-  rows.map((row) => (row.line.id === lineId ? ({ ...row, line: { ...row.line, ...buildOrderLineStatusPatch(nextStatus) } } as T) : row))
-
 export const OrderLineQuickStats = ({ rows, afterSalesCases = afterSalesMock }: { rows: OrderLineRow[]; afterSalesCases?: AfterSalesCase[] }) => {
   const stats = [
     { label: '全部销售', value: rows.length },
@@ -2114,36 +1398,33 @@ export const OrderLineFilterBar = ({
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   return (
-    <SectionCard
-      title="搜索与筛选"
-      className="compact-card order-line-filter-card"
-      actions={
+    <section className="section-card compact-card order-line-filter-card" aria-label="销售筛选">
+      <div className="order-line-filter-toolbar">
+        <div className="order-line-filter-strip">
+          {quickViewOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`button small ${value.quickView === option.value ? 'primary' : 'ghost'}`}
+              onClick={() => onChange({ ...value, quickView: option.value })}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <button type="button" className="button secondary small" onClick={() => setAdvancedOpen((current) => !current)}>
           {advancedOpen ? '收起筛选' : '展开筛选'}
         </button>
-      }
-    >
-      <div className="order-line-filter-strip">
-        {quickViewOptions.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className={`button small ${value.quickView === option.value ? 'primary' : 'ghost'}`}
-            onClick={() => onChange({ ...value, quickView: option.value })}
-          >
-            {option.label}
-          </button>
-        ))}
       </div>
       <div className="order-line-filter-primary">
         <div className="field-control">
-          <label className="field-label">搜索货号 / 款式名称 / 客户 / 内部编号 / 购买记录 / 平台单号</label>
+          <label className="field-label">搜索货号 / 款式名称 / 客户 / 购买记录 / 平台单号</label>
           <input
             className="input"
-            aria-label="搜索货号 / 款式名称 / 客户 / 内部编号 / 购买记录 / 平台单号"
+            aria-label="搜索货号 / 款式名称 / 客户 / 购买记录 / 平台单号"
             value={value.keyword}
             onChange={(event) => onChange({ ...value, keyword: event.target.value })}
-            placeholder="例如：RING-SH-016 / 山形戒指 / 张三"
+            placeholder="例如：RING-SH-016 / 山形素圈戒指 / 张三"
           />
         </div>
         <div className="field-control">
@@ -2236,7 +1517,7 @@ export const OrderLineFilterBar = ({
           </div>
         </div>
       ) : null}
-    </SectionCard>
+    </section>
   )
 }
 
@@ -2265,8 +1546,9 @@ export const OrderLineTable = ({
               <th>客户</th>
               <th>参数摘要</th>
               <th>状态</th>
-              <th>当前负责人</th>
+              <th>负责人</th>
               <th>承诺交期</th>
+              <th>价格</th>
               <th>物流 / 售后</th>
               <th>操作</th>
             </tr>
@@ -2274,7 +1556,7 @@ export const OrderLineTable = ({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={10}>
+                <td colSpan={11}>
                   <EmptyState title="暂无匹配销售" description="当前筛选条件下没有销售，请放宽筛选或切回全部销售。" />
                 </td>
               </tr>
@@ -2285,12 +1567,14 @@ export const OrderLineTable = ({
           const product = mockProducts.find((item) => item.id === line.productId || item.id === line.sourceProduct?.sourceProductId)
           const coverImage = product?.coverImage
           const versionLabel = line.versionNo || line.sourceProduct?.sourceProductVersion || '无版本'
-          const styleLabel = line.styleName || line.sourceProduct?.sourceProductName || line.name || '未命名款式'
-          const goodsNo = line.productionTaskNo || line.skuCode || line.itemSku || '待生成'
+          const styleLabel = getOrderLineDisplayName(line)
+          const goodsNo = getOrderLineGoodsNo(line)
           const logistics = findCurrentLogisticsRecord(logisticsRecords, line.id)
           const afterSales = findCurrentAfterSalesCase(afterSalesCases, line.id)
           const pressure = getTimePressure(line, line.promisedDate)
           const riskLabels = getLineRiskLabels(line, afterSalesCases)
+          const paidAmount = getOrderLinePaidAmount(line)
+          const dealPrice = getOrderLineDealPrice(line)
           const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
             if (!onOpenDetail || isInteractiveTarget(event.target)) {
               return
@@ -2322,7 +1606,11 @@ export const OrderLineTable = ({
               </td>
               <td>
                 <div className="stack order-line-goods-no-cell">
-                  <strong>{goodsNo}</strong>
+                  <strong>
+                    <CopyableText value={goodsNo} label="货号">
+                      {goodsNo}
+                    </CopyableText>
+                  </strong>
                   <span>{styleLabel}</span>
                   <span className="text-caption">{versionLabel}</span>
                 </div>
@@ -2346,8 +1634,16 @@ export const OrderLineTable = ({
                 </div>
               </td>
               <td>
-                <div>{customer?.name || '—'}</div>
-                <div className="text-caption">{customer?.id || line.customerId || purchase?.customerId || '—'}</div>
+                <div>
+                  <CopyableText value={customer?.name} label="客户姓名">
+                    {customer?.name || '—'}
+                  </CopyableText>
+                </div>
+                <div className="text-caption">
+                  <CopyableText value={customer?.id || line.customerId || purchase?.customerId} label="客户 ID">
+                    {customer?.id || line.customerId || purchase?.customerId || '—'}
+                  </CopyableText>
+                </div>
               </td>
               <td>
                 <div className="stack" style={{ gap: 4 }}>
@@ -2358,7 +1654,14 @@ export const OrderLineTable = ({
                 <StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />
               </td>
               <td>
-                <div>{line.currentOwner || purchase?.ownerName || '待分配'}</div>
+                <div>
+                  <span className="text-caption">客服：</span>
+                  <span>{purchase?.ownerName || '待分配'}</span>
+                </div>
+                <div>
+                  <span className="text-caption">当前：</span>
+                  <span>{line.currentOwner || purchase?.ownerName || '待分配'}</span>
+                </div>
                 {getOrderLineLineStatus(line) === 'pending_factory_production' ||
                 getOrderLineLineStatus(line) === 'in_production' ||
                 getOrderLineLineStatus(line) === 'factory_returned' ||
@@ -2374,8 +1677,20 @@ export const OrderLineTable = ({
                 </div>
               </td>
               <td>
+                <div className="order-line-price-stack">
+                  <div className="order-line-price-paid">
+                    <span className="text-caption">已付</span>
+                    <strong>{formatPrice(paidAmount)}</strong>
+                  </div>
+                  <div className="order-line-price-deal">
+                    <span className="text-caption">成交</span>
+                    <span>{formatPrice(dealPrice)}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
                 <div className="stack" style={{ gap: 4 }}>
-                  <StatusTag value={logistics ? `物流 ${logistics.trackingNo || '已创建'}` : '未发货'} />
+                  <StatusTag value={logistics ? '物流已创建' : '未发货'} />
                   <span className="text-caption">{afterSales ? `售后 ${getAfterSalesStatusLabel(afterSales.status)}` : '无售后'}</span>
                 </div>
               </td>
@@ -2409,7 +1724,10 @@ export const OrderLineDetailDrawer = ({
   logs = [],
   logisticsRecords = logisticsMock,
   afterSalesCases = afterSalesMock,
+  customers = customersMock,
+  products = mockProducts,
   onUpdateLineDetails,
+  onUpdateDesignModeling,
   onUpdateOutsourceInfo,
   onAddLogistics,
   onAddAfterSales,
@@ -2429,27 +1747,30 @@ export const OrderLineDetailDrawer = ({
   logs?: OrderLineLog[]
   logisticsRecords?: LogisticsRecord[]
   afterSalesCases?: AfterSalesCase[]
+  customers?: Customer[]
+  products?: Product[]
   onAddLogistics?: OrderLineLogisticsCreateHandler
   onAddAfterSales?: OrderLineAfterSalesCreateHandler
   onUpdateLogistics?: OrderLineLogisticsUpdateHandler
   onVoidLogistics?: OrderLineLogisticsVoidHandler
   onUpdateAfterSales?: OrderLineAfterSalesUpdateHandler
   onCloseAfterSales?: OrderLineAfterSalesCloseHandler
+  onUpdateDesignModeling?: OrderLineDesignModelingUpdateHandler
 }) => {
   const [sourceProductOpen, setSourceProductOpen] = useState(false)
   const [logisticsFormOpen, setLogisticsFormOpen] = useState(false)
   const [afterSalesFormOpen, setAfterSalesFormOpen] = useState(false)
   const line = row?.line
   const purchase = row?.purchase
-  const customer = customersMock.find((item) => item.id === line?.customerId || item.id === purchase?.customerId)
+  const customer = customers.find((item) => item.id === line?.customerId || item.id === purchase?.customerId)
   const lineLogisticsRecords = line ? logisticsRecords.filter((item) => item.orderLineId === line.id) : []
   const lineAfterSalesCases = line ? afterSalesCases.filter((item) => item.orderLineId === line.id) : []
   const riskLabels = line ? getLineRiskLabels(line, afterSalesCases) : []
   const lineLogs = line ? logs.filter((log) => log.orderLineId === line.id) : []
-  const sourceProduct = line ? mockProducts.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
+  const sourceProduct = line ? products.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
   const sourceProductCompareValue = line ? buildOrderLineSourceProductCompareValue(line) : undefined
-  const listPrice = line?.quote?.systemQuote ?? line?.lineSalesAmount ?? line?.finalDisplayQuote
-  const dealPrice = line?.finalDisplayQuote ?? line?.lineSalesAmount ?? line?.quote?.systemQuote
+  const listPrice = line?.quote?.systemQuote ?? line?.lineSalesAmount
+  const dealPrice = line?.lineSalesAmount ?? line?.quote?.systemQuote
   const depositAmount = line?.allocatedDepositAmount
   const finalPaymentAmount =
     line?.allocatedFinalPaymentAmount ??
@@ -2466,27 +1787,39 @@ export const OrderLineDetailDrawer = ({
   }
 
   return (
-    <SideDrawer open={open} title="销售详情" onClose={handleClose}>
+    <SideDrawer
+      open={open}
+      title={
+        <div className="order-line-drawer-title">
+          <h2 className="section-card-title">销售详情</h2>
+          {purchase ? (
+            <div className="order-line-drawer-purchase-entry" aria-label="购买记录入口">
+              <span className="text-caption">{purchase.purchaseNo}</span>
+              <Link to={`/purchases/${purchase.id}`} className="button secondary small">
+                打开购买记录
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      }
+      onClose={handleClose}
+    >
       {!line ? (
         <EmptyState title="未选择销售" description="请选择一条销售查看详情。" />
       ) : (
-        <div className="stack">
+        <div className="stack order-line-detail-stack">
           <DetailSection title="顶部摘要">
-            <InfoGrid columns={3}>
-              <InfoField label="货号" value={line.productionTaskNo || line.itemSku || '—'} />
-              <InfoField label="款式名称" value={line.name} />
-              <InfoField label="销售状态" value={<StatusTag value={getStatusLabel(getOrderLineLineStatus(line))} />} />
+            <div className="info-grid order-line-top-summary-grid">
+              <InfoField label="货号" value={<CopyableText value={getOrderLineGoodsNo(line, '')} label="货号" />} />
+              <InfoField label="款式名称" value={getOrderLineDisplayName(line)} />
+              <InfoField label="客服负责人" value={purchase?.ownerName || '待分配'} />
               <InfoField label="当前负责人" value={line.currentOwner || purchase?.ownerName || '待分配'} />
-              <InfoField label="客户姓名" value={customer?.name || '—'} />
-              <InfoField label="客户 ID" value={customer?.id || line.customerId || purchase?.customerId || '—'} />
-              <InfoField label="所属购买记录编号" value={purchase?.purchaseNo || '—'} />
+              <InfoField label="客户姓名" value={<CopyableText value={customer?.name} label="客户姓名" />} />
+              <InfoField label="客户 ID" value={<CopyableText value={customer?.id || line.customerId || purchase?.customerId} label="客户 ID" />} />
+              <InfoField label="客户付款时间" value={purchase?.paymentAt || '—'} />
+              <InfoField label="登记时间" value={getOrderLineRegisteredAt(lineLogs, purchase)} />
               <InfoField label="承诺交期" value={line.promisedDate || purchase?.promisedDate || '—'} />
               <InfoField label="生产状态" value={productionWorkflowStatusLabelMap[getOrderLineProductionStatus(line)]} />
-              <InfoField label="标价" value={formatPrice(listPrice)} />
-              <InfoField label="定金" value={formatPrice(depositAmount)} />
-              <InfoField label="成交价" value={formatPrice(dealPrice)} />
-              <InfoField label="尾款" value={formatPrice(finalPaymentAmount)} />
-              <InfoField label="财务状态" value={financeWorkflowStatusLabelMap[getOrderLineFinanceStatus(line)]} />
               <InfoField
                 label="风险标签"
                 value={
@@ -2501,43 +1834,26 @@ export const OrderLineDetailDrawer = ({
                   )
                 }
               />
-            </InfoGrid>
+            </div>
+          </DetailSection>
+
+          <DetailSection title="价格与财务">
+            <div className="info-grid order-line-drawer-grid">
+              <InfoField label="系统参考报价" value={formatPrice(line.quote?.systemQuote)} />
+              <InfoField label="标价" value={formatPrice(listPrice)} />
+              <InfoField label="成交价" value={formatPrice(dealPrice)} />
+              <InfoField label="定金" value={formatPrice(depositAmount)} />
+              <InfoField label="尾款" value={formatPrice(finalPaymentAmount)} />
+              <InfoField label="财务核算状态" value={orderLineFinanceSummaryLabelMap[getOrderLineFinanceStatus(line)]} />
+              <InfoField label="财务备注" value={line.financeNote || '—'} />
+            </div>
           </DetailSection>
 
           <OrderLineStatusUpdatePanel line={line} onStatusChange={onStatusChange} />
           <OrderLineLogSection line={line} logs={lineLogs} />
-          <OrderLineDetailsSection line={line} onUpdateLineDetails={onUpdateLineDetails} />
+          <OrderLineDetailsSection line={line} onUpdateLineDetails={onUpdateLineDetails} onOpenSourceProduct={sourceProduct ? () => setSourceProductOpen(true) : undefined} />
 
-          <DetailSection title="来源款式">
-            <InfoGrid columns={3}>
-              <InfoField label="是否引用款式" value={line.isReferencedProduct ? '是' : '否'} />
-              <InfoField label="来源款式名称" value={line.sourceProduct?.sourceProductName || '未引用款式'} />
-              <InfoField label="来源款式编号" value={line.sourceProduct?.sourceProductCode || '—'} />
-              <InfoField label="来源款式版本" value={line.sourceProduct?.sourceProductVersion ? <VersionBadge value={line.sourceProduct.sourceProductVersion} /> : '—'} />
-              <InfoField label="所选规格" value={line.selectedSpecValue || line.sourceProduct?.sourceSpecValue || '—'} />
-              <InfoField
-                label="来源款式入口"
-                value={
-                  <button type="button" className="button ghost small" onClick={() => setSourceProductOpen(true)} disabled={!sourceProduct}>
-                    查看来源款式
-                  </button>
-                }
-              />
-            </InfoGrid>
-          </DetailSection>
-
-          <DetailSection title="规格与报价">
-            <InfoGrid columns={3}>
-              <InfoField label="规格" value={line.selectedSpecValue || '—'} />
-              <InfoField label="材质" value={line.selectedMaterial || line.actualRequirements?.material || '—'} />
-              <InfoField label="工艺" value={line.selectedProcess || line.actualRequirements?.process || '—'} />
-              <InfoField label="特殊需求" value={<TextList values={line.selectedSpecialOptions} />} />
-              <InfoField label="系统参考报价" value={formatPrice(line.quote?.systemQuote)} />
-              <InfoField label="成交价" value={formatPrice(line.finalDisplayQuote)} />
-            </InfoGrid>
-          </DetailSection>
-
-          <OrderLineDesignModelingSection line={line} onUpdateLineDetails={onUpdateLineDetails} />
+          <OrderLineDesignModelingSection line={line} onUpdateDesignModeling={onUpdateDesignModeling} />
 
           <OrderLineOutsourceSection line={line} onUpdateOutsourceInfo={onUpdateOutsourceInfo} />
           <OrderLineProductionSection line={line} onUpdateProductionInfo={onUpdateProductionInfo} />
@@ -2590,24 +1906,6 @@ export const OrderLineDetailDrawer = ({
               </div>
             </div>
           </DetailSection>
-
-          <DetailSection title="购买记录入口">
-            <InfoGrid columns={2}>
-              <InfoField label="所属购买记录编号" value={purchase?.purchaseNo || '—'} />
-              <InfoField
-                label="查看购买记录"
-                value={
-                  purchase ? (
-                    <Link to={`/purchases/${purchase.id}`} className="button secondary small">
-                      打开购买记录
-                    </Link>
-                  ) : (
-                    '—'
-                  )
-                }
-              />
-            </InfoGrid>
-          </DetailSection>
           <SourceProductDrawer
             open={sourceProductOpen}
             product={sourceProduct}
@@ -2619,11 +1917,3 @@ export const OrderLineDetailDrawer = ({
     </SideDrawer>
   )
 }
-
-export const useOrderLineCenterRows = (filters: OrderLineCenterFilters) => {
-  const rows = useMemo(buildOrderLineRows, [])
-
-  return useMemo(() => filterOrderLineRows(rows, filters), [filters, rows])
-}
-
-export const useAllOrderLineCenterRows = () => useMemo(buildOrderLineRows, [])

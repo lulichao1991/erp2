@@ -156,7 +156,7 @@ export const ProductionPlanDetailPage = () => {
                 <InfoGrid columns={2}>
                   <InfoField label="当前显示状态" value={<ProductionPlanStatusBadge stage={row.stage} />} />
                   <InfoField label="工厂状态" value={getProductionFeedbackStatusLabel(productionFeedback.factoryStatus)} />
-                  <InfoField label="回传重量" value={productionFeedback.returnedWeight || '—'} />
+                  <InfoField label="回传重量" value={productionFeedback.totalWeight || '—'} />
                   <InfoField label="质检结论" value={productionFeedback.qualityResult || '—'} />
                 </InfoGrid>
                 <ProductionFeedbackBlock orderLineId={detail.orderLineId || orderLine.id} feedback={productionFeedback} onChange={updateProductionFeedback} />

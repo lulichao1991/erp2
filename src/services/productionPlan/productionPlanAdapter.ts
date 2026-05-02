@@ -3,7 +3,9 @@ import type { Product, ProductCategory, ProductAssetFile } from '@/types/product
 import type { ProductionPlanDetail, ProductionPlanFile, ProductionPlanFileGroup, ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
 import type { Purchase, PurchaseTimelineRecord } from '@/types/purchase'
 import type { Task } from '@/types/task'
+import { getOrderLineGoodsNo, isOrderLineInPurchase } from '@/services/orderLine/orderLineIdentity'
 import { getOrderLineFactoryStatus, getOrderLineProductionStatus } from '@/services/orderLine/orderLineWorkflow'
+import { findPurchaseForTask } from '@/services/task/taskIdentity'
 
 const productCategoryLabelMap: Record<ProductCategory, string> = {
   ring: '戒指',
@@ -108,21 +110,14 @@ const buildProductionTimeline = (source: ProductionPlanSource): PurchaseTimeline
 
 const getLineFactoryFeedback = (orderLine: OrderLine) => orderLine.productionInfo
 
-const getLineSku = (orderLine: OrderLine) => orderLine.productionTaskNo || orderLine.skuCode || orderLine.itemSku || orderLine.sourceProduct?.sourceProductCode || orderLine.lineCode
-
-const legacyFactoryStatusMap: Record<string, OrderLineProductionStatus> = {
-  待回传: 'pending_feedback',
-  生产中: 'in_progress',
-  已回传: 'completed',
-  有异常: 'issue'
-}
+const productionInfoFactoryStatuses: OrderLineProductionStatus[] = ['not_started', 'in_progress', 'pending_feedback', 'completed', 'issue']
 
 const normalizeFactoryStatus = (status?: string): OrderLineProductionStatus | undefined => {
   if (!status) {
     return undefined
   }
 
-  return legacyFactoryStatusMap[status] || status as OrderLineProductionStatus
+  return productionInfoFactoryStatuses.includes(status as OrderLineProductionStatus) ? (status as OrderLineProductionStatus) : undefined
 }
 
 const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow => {
@@ -131,18 +126,16 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
   const purchaseId = purchase.id
   const purchaseNo = purchase.purchaseNo
   const orderLineId = orderLine.id
-  const orderLineCode = orderLine.lineCode || getLineSku(orderLine) || task.orderLineCode || orderLine.id
   const orderLineName = orderLine.name || task.orderLineName || sourceProduct.name
+  const goodsNo = getOrderLineGoodsNo(orderLine)
 
   return {
     taskId: task.id,
     purchaseId,
     purchaseNo,
     orderLineId,
-    orderLineCode,
     orderLineName,
-    goodsNo: getLineSku(orderLine) || sourceProduct.code,
-    styleName: orderLine.styleName || orderLineName,
+    goodsNo,
     sourceProductId: sourceProduct.id,
     sourceProductCode: sourceProduct.code,
     sourceProductVersion: orderLine.sourceProduct?.sourceProductVersion || sourceProduct.version,
@@ -199,14 +192,11 @@ export const getProductionPlanStage = (task: Task, orderLine: OrderLine): Produc
   return 'pending_receive'
 }
 
-export const getProductionPlanStageLabel = (stage: ProductionPlanStage) => productionPlanStageLabelMap[stage]
+const getProductionPlanStageLabel = (stage: ProductionPlanStage) => productionPlanStageLabelMap[stage]
 
-export const getProductionPlanCategoryLabel = (category: ProductCategory) => productCategoryLabelMap[category]
+const getProductionPlanCategoryLabel = (category: ProductCategory) => productCategoryLabelMap[category]
 
-export const getProductionPlanTasks = (tasks: Task[]) => tasks.filter((task) => task.type === 'factory_production')
-
-const findPurchase = (task: Task, purchases: Purchase[]) =>
-  purchases.find((item) => item.id === (task.purchaseId || task.transactionId))
+const getProductionPlanTasks = (tasks: Task[]) => tasks.filter((task) => task.type === 'factory_production')
 
 const findOrderLine = (task: Task, purchase: Purchase | undefined, orderLines: OrderLine[]) => {
   const lineId = task.orderLineId
@@ -214,7 +204,7 @@ const findOrderLine = (task: Task, purchase: Purchase | undefined, orderLines: O
     return undefined
   }
 
-  return orderLines.find((item) => item.id === lineId && (!purchase || item.purchaseId === purchase.id)) || purchase?.orderLines.find((item) => item.id === lineId)
+  return orderLines.find((item) => item.id === lineId && (!purchase || isOrderLineInPurchase(item, purchase.id))) || purchase?.orderLines.find((item) => item.id === lineId)
 }
 
 const resolveProductionPlanSource = ({
@@ -228,7 +218,7 @@ const resolveProductionPlanSource = ({
   orderLines?: OrderLine[]
   products: Product[]
 }): ProductionPlanSource | undefined => {
-  const purchase = findPurchase(task, purchases)
+  const purchase = findPurchaseForTask(task, purchases)
   const orderLine = findOrderLine(task, purchase, orderLines)
   const sourceProduct = products.find((item) => item.id === orderLine?.sourceProduct?.sourceProductId)
 
@@ -303,7 +293,6 @@ export const buildProductionPlanDetail = ({
     purchaseId: row.purchaseId,
     purchaseNo: row.purchaseNo,
     orderLineId: row.orderLineId,
-    orderLineCode: row.orderLineCode,
     orderLineName: row.orderLineName,
     row,
     task,

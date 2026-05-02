@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react'
+import { customersMock } from '@/mocks/customers'
 import { orderLinesMock } from '@/mocks/order-lines'
 import { purchasesMock } from '@/mocks/purchases'
 import {
@@ -10,9 +11,11 @@ import {
 } from '@/services/product/productFieldOptions'
 import { normalizeRole } from '@/services/access/roleCapabilities'
 import { createEmptyProduct, getProductList } from '@/services/product/productQueries'
+import { getTaskPurchaseId } from '@/services/task/taskIdentity'
 import { getTaskList } from '@/services/task/taskQueries'
 import { getTaskStatusLabel } from '@/services/workflow/workflowMeta'
 import type { OrderLine, OrderLineProductionInfo } from '@/types/order-line'
+import type { Customer } from '@/types/customer'
 import type { Product } from '@/types/product'
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
 import type { Purchase, PurchaseTimelineRecord } from '@/types/purchase'
@@ -32,6 +35,7 @@ const getInitialCurrentUserRole = (): TaskAssigneeRole => {
 
 type AppDataContextValue = {
   // Current mainline state. New modules should prefer these objects.
+  customers: Customer[]
   products: Product[]
   purchases: Purchase[]
   orderLines: OrderLine[]
@@ -39,6 +43,7 @@ type AppDataContextValue = {
   productFieldOptions: ProductFieldOptions
   currentUserRole: TaskAssigneeRole
   getProduct: (productId?: string) => Product | undefined
+  getCustomer: (customerId?: string) => Customer | undefined
   getPurchase: (purchaseId?: string) => Purchase | undefined
   getOrderLine: (orderLineId?: string) => OrderLine | undefined
   getTask: (taskId?: string) => Task | undefined
@@ -57,8 +62,15 @@ type AppDataContextValue = {
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
 
+export const replaceOrderLineInPurchases = (purchases: Purchase[], orderLineId: string, nextOrderLine: OrderLine): Purchase[] =>
+  purchases.map((purchase) => ({
+    ...purchase,
+    orderLines: purchase.orderLines.map((item) => (item.id === orderLineId ? nextOrderLine : item))
+  }))
+
 export const AppDataProvider = ({ children }: { children: React.ReactNode }) => {
   // Current mainline mock state.
+  const [customers] = useState<Customer[]>(() => structuredClone(customersMock))
   const [products, setProducts] = useState<Product[]>(() => getProductList())
   const [purchases, setPurchases] = useState<Purchase[]>(() => structuredClone(purchasesMock))
   const [orderLines, setOrderLines] = useState<OrderLine[]>(() => structuredClone(orderLinesMock))
@@ -69,11 +81,13 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
   const value = useMemo<AppDataContextValue>(
     () => ({
       products,
+      customers,
       purchases,
       orderLines,
       tasks,
       productFieldOptions,
       currentUserRole,
+      getCustomer: (customerId) => customers.find((item) => item.id === customerId),
       getProduct: (productId) => products.find((item) => item.id === productId),
       getPurchase: (purchaseId) => purchases.find((item) => item.id === purchaseId),
       getOrderLine: (orderLineId) => orderLines.find((item) => item.id === orderLineId),
@@ -130,12 +144,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
 
         const nextOrderLine = updater(found)
         setOrderLines((current) => current.map((item) => (item.id === orderLineId ? nextOrderLine : item)))
-        setPurchases((current) =>
-          current.map((purchase) => ({
-            ...purchase,
-            orderLines: purchase.orderLines.map((item) => (item.id === orderLineId ? nextOrderLine : item))
-          }))
-        )
+        setPurchases((current) => replaceOrderLineInPurchases(current, orderLineId, nextOrderLine))
         return nextOrderLine
       },
       updateOrderLineProductionInfo: (orderLineId, productionInfo) => {
@@ -153,6 +162,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         }
 
         setOrderLines((current) => current.map((item) => (item.id === orderLineId ? nextOrderLine : item)))
+        setPurchases((current) => replaceOrderLineInPurchases(current, orderLineId, nextOrderLine))
         return nextOrderLine
       },
       updateTask: (taskId, updater) => {
@@ -170,12 +180,11 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
           completedAt: updated.status === 'done' ? updated.completedAt || currentTime : undefined
         }
 
-        const purchaseId = nextTask.purchaseId || nextTask.transactionId
+        const purchaseId = getTaskPurchaseId(nextTask)
         const orderLineId = nextTask.orderLineId
         const timelineRecord: PurchaseTimelineRecord = {
           id: `timeline-task-update-${nextTask.id}-${currentTime}`,
           purchaseId,
-          transactionId: nextTask.transactionId,
           type: nextTask.status === 'done' ? 'task_completed' : 'task_updated',
           title: nextTask.status === 'done' ? `完成${nextTask.title}` : `更新${nextTask.title}`,
           description:
@@ -204,7 +213,7 @@ export const AppDataProvider = ({ children }: { children: React.ReactNode }) => 
         return nextTask
       }
     }),
-    [currentUserRole, orderLines, productFieldOptions, products, purchases, tasks]
+    [currentUserRole, customers, orderLines, productFieldOptions, products, purchases, tasks]
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

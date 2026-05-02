@@ -8,14 +8,15 @@ import {
   PurchaseSummarySection
 } from '@/components/business/purchase'
 import { EmptyState, PageContainer, PageHeader } from '@/components/common'
+import { useAppData } from '@/hooks/useAppData'
 import { useOrderLineWorkspaceState } from '@/hooks/useOrderLineWorkspaceState'
-import { customersMock, purchasesMock } from '@/mocks'
 import type { Purchase } from '@/types/purchase'
 
 export const PurchaseDetailPage = () => {
   const { purchaseId } = useParams()
-  const purchase = purchasesMock.find((item) => item.id === purchaseId)
-  const customer = customersMock.find((item) => item.id === purchase?.customerId)
+  const appData = useAppData()
+  const purchase = appData.getPurchase(purchaseId)
+  const customer = appData.getCustomer(purchase?.customerId)
   const workspace = useOrderLineWorkspaceState({ purchaseId })
   const purchaseRows = workspace.rows.filter((row): row is OrderLineRow & { purchase: Purchase } => Boolean(row.purchase))
 
@@ -56,11 +57,14 @@ export const PurchaseDetailPage = () => {
         onClose={workspace.closeOrderLineDetail}
         onStatusChange={workspace.handleStatusChange}
         onUpdateLineDetails={workspace.handleUpdateLineDetails}
+        onUpdateDesignModeling={workspace.handleUpdateDesignModelingInfo}
         onUpdateOutsourceInfo={workspace.handleUpdateOutsourceInfo}
         onUpdateProductionInfo={workspace.handleUpdateProductionInfo}
         logs={workspace.logs}
         logisticsRecords={workspace.logisticsRecords}
         afterSalesCases={workspace.afterSalesCases}
+        customers={appData.customers}
+        products={appData.products}
         onAddLogistics={workspace.handleAddLogistics}
         onAddAfterSales={workspace.handleAddAfterSales}
         onUpdateLogistics={workspace.handleUpdateLogistics}

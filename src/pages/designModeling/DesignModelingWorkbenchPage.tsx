@@ -10,6 +10,7 @@ import {
   type DesignModelingRow,
   type DesignModelingTab
 } from '@/services/orderLine/orderLineDesignModeling'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine, OrderLineUploadedFile } from '@/types/order-line'
 
@@ -30,7 +31,7 @@ const createMockFile = (lineId: string, name: string, kind: 'design' | 'modeling
 })
 
 const getRequirementSummary = (line: OrderLine) =>
-  [line.selectedMaterial || line.actualRequirements?.material, line.selectedSpecValue || line.actualRequirements?.sizeNote, line.selectedProcess || line.actualRequirements?.process]
+  [line.selectedMaterial || line.actualRequirements?.material, line.selectedSpecValue, line.selectedProcess || line.actualRequirements?.process]
     .filter(Boolean)
     .join(' / ') || '待补充'
 
@@ -251,9 +252,9 @@ const DesignModelingTable = ({
         <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
           <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
             <span className="workbench-task-main">
-              <strong>{line.productionTaskNo || line.lineCode}</strong>
+              <strong>{getOrderLineGoodsNo(line)}</strong>
               <span>{line.name}</span>
-              <span className="text-caption">{[line.skuCode, line.styleName, line.versionNo].filter(Boolean).join(' / ') || getRequirementSummary(line)}</span>
+              <span className="text-caption">{[line.sourceProduct?.sourceProductCode, line.versionNo].filter(Boolean).join(' / ') || getRequirementSummary(line)}</span>
             </span>
             <span className="workbench-task-meta">
               <span>设计 {line.assignedDesignerId || '未分配'}</span>

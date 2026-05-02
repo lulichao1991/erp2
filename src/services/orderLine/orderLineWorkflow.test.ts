@@ -11,10 +11,9 @@ import {
 } from '@/services/orderLine/orderLineWorkflow'
 
 describe('orderLineWorkflow', () => {
-  it('uses current lineStatus before legacy status', () => {
+  it('uses current lineStatus as the workflow source', () => {
     const line = {
       ...orderLinesMock[1],
-      status: 'pending_shipment',
       lineStatus: 'pending_finance_confirmation'
     }
 
@@ -48,10 +47,9 @@ describe('orderLineWorkflow', () => {
     )
   })
 
-  it('keeps legacy status synchronized for short-term page compatibility', () => {
+  it('builds status patch with lineStatus only', () => {
     expect(buildOrderLineStatusPatch('ready_to_ship')).toEqual({
-      lineStatus: 'ready_to_ship',
-      status: 'pending_shipment'
+      lineStatus: 'ready_to_ship'
     })
   })
 })

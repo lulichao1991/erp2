@@ -28,7 +28,4 @@ export type Customer = {
   remark?: string
   firstTransactionAt?: string
   lastTransactionAt?: string
-  totalTransactionCount: number
-  totalOrderLineCount: number
-  totalAfterSalesCount: number
 }

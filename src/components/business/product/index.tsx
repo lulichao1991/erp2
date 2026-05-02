@@ -20,6 +20,8 @@ import {
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
 import type { Product, ProductPriceRule, ProductReferenceRecord, ProductSpecRow, ProductVersionRecord } from '@/types/product'
 
+export { ProductAssetsFormSection, ProductDesignVersionFormSection, ProductPlatformListingSection } from './extendedSections'
+
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
 const splitValues = (value: string) =>
@@ -45,7 +47,7 @@ const buildSpecDraft = (product: Product): ProductSpecRow => {
     status: 'enabled',
     basePrice: 0,
     referenceWeight: 0,
-    sizeFields: sizeFieldTemplate.map((field, index) => ({
+    sizeFields: sizeFieldTemplate.map((field) => ({
       key: field.key || field.label || '',
       label: field.label,
       value: '',
@@ -85,10 +87,10 @@ const versionRecordStatusLabel: Record<ProductVersionRecord['status'], string> =
 const renderReferenceStatus = (status: ProductReferenceRecord['status']) =>
   status === 'adjusted' ? <RiskTag value={referenceRecordStatusLabel[status]} /> : <StatusTag value={referenceRecordStatusLabel[status]} />
 
-const getReferencePurchaseLabel = (record: ProductReferenceRecord) => record.purchaseNo || record.transactionNo || '未关联购买记录'
+const getReferencePurchaseLabel = (record: ProductReferenceRecord) => record.purchaseNo || '未关联购买记录'
 
 const getReferenceOrderLineLabel = (record: ProductReferenceRecord) =>
-  [record.orderLineCode, record.orderLineName].filter(Boolean).join(' · ') || '未关联销售'
+  [record.orderLineGoodsNo, record.orderLineName].filter(Boolean).join(' · ') || '未关联销售'
 
 const renderReferencePurchaseLink = (record: ProductReferenceRecord) =>
   record.purchaseId ? <Link to={`/purchases/${record.purchaseId}`}>{getReferencePurchaseLabel(record)}</Link> : getReferencePurchaseLabel(record)
@@ -708,7 +710,6 @@ export const ProductSummaryCard = ({ product }: { product: Product }) => (
           <ReferenceTag active={product.isReferable} />
           <VersionBadge value={product.version} />
         </div>
-        <div className="quote-value">{formatPrice(product.specs[0]?.basePrice)}</div>
       </div>
       <div className="stack">
         <InfoField label="默认材质" value={product.defaultMaterial || '—'} />
@@ -925,7 +926,7 @@ export const ProductVersionHistorySection = ({
   <SectionCard
     id="versions"
     title="版本记录"
-    description="查看款式模板版本演进、更新摘要和相关文件，首轮先做查看态。"
+    description="查看款式设计版本演进。只有设计结构、设计稿或外观方案变化才会新增版本。"
     actions={
       <button type="button" className="button secondary small" onClick={onOpen}>
         查看版本记录
@@ -1123,13 +1124,23 @@ export const ProductEditHeader = ({
   />
 )
 
-export const ProductEditSideNav = ({ activeSection }: { activeSection: string }) => (
+export const ProductEditSideNav = ({
+  activeSection,
+  showVersionSection = false
+}: {
+  activeSection: string
+  showVersionSection?: boolean
+}) => (
   <div className="editor-side-nav">
     {[
       ['basic-form', '基础信息'],
+      ...(showVersionSection ? [['version-form', '设计版本']] : []),
       ['param-form', '参数配置'],
       ['spec-form', '规格明细'],
-      ['rule-form', '固定加价规则']
+      ['rule-form', '固定加价规则'],
+      ['custom-form', '定制规则'],
+      ['production-form', '生产参考'],
+      ['assets-form', '图片与文件']
     ].map(([id, label]) => (
       <a key={id} href={`#${id}`} className={`anchor-button${activeSection === id ? ' active' : ''}`}>
         {label}
@@ -1149,8 +1160,13 @@ export const ProductBasicFormSection = ({
   fieldOptions: ProductFieldOptions
   onAddGlobalOption: (field: ProductFieldOptionKey, value: string) => void
 }) => (
-  <SectionCard id="basic-form" title="基础信息">
-    <div className="field-grid two">
+  <SectionCard
+    id="basic-form"
+    title="基础信息"
+    description="当前版本只在款式设计结构、设计稿或外观方案变更时升级；补齐参数、价格、文件资料不会生成新版本。"
+  >
+    <p className="text-muted product-version-note">当前版本只在款式设计结构、设计稿或外观方案变更时升级；补齐参数、价格、文件资料不会生成新版本。</p>
+    <div className="field-grid three product-edit-field-grid">
       <div className="field-control">
         <label className="field-label">款式名称</label>
         <input className="input" value={product.name} onChange={(event) => setProduct((current) => ({ ...current, name: event.target.value }))} />
@@ -1196,8 +1212,10 @@ export const ProductBasicFormSection = ({
         <input className="input" value={product.coverImage || ''} onChange={(event) => setProduct((current) => ({ ...current, coverImage: event.target.value }))} />
       </div>
       <div className="field-control">
-        <label className="field-label">版本</label>
-        <input className="input" value={product.version} onChange={(event) => setProduct((current) => ({ ...current, version: event.target.value }))} />
+        <label className="field-label">当前版本</label>
+        <div className="input readonly-input" aria-label="当前版本">
+          {product.version}
+        </div>
       </div>
       <ProductOptionSelectorField
         label="风格标签"
@@ -1248,7 +1266,7 @@ export const ProductParamFormSection = ({
 
   return (
     <SectionCard id="param-form" title="参数配置">
-      <div className="field-grid two">
+      <div className="field-grid three product-edit-field-grid">
         <ProductOptionSelectorField
           label="支持材质"
           values={product.supportedMaterials}
@@ -1329,7 +1347,7 @@ export const ProductParamFormSection = ({
         </div>
       </div>
       <div className="spacer-top">
-        <div className="field-grid three">
+        <div className="field-grid three product-edit-field-grid">
         <div className="field-control">
           <label className="field-label">规格名称</label>
           <input className="input" value={product.specName || ''} onChange={(event) => setProduct((current) => ({ ...current, specName: event.target.value }))} />
@@ -1350,98 +1368,133 @@ export const ProductParamFormSection = ({
         </div>
         </div>
       </div>
-      <div className="spacer-top">
-        <div className="field-grid four">
-          {[
-            ['canResize', '支持改圈'],
-            ['canChangeMaterial', '支持换材质'],
-            ['canEngrave', '支持刻字'],
-            ['canChangeProcess', '支持改工艺'],
-            ['canRevise', '允许修订'],
-            ['requiresRemodeling', '需重新建模'],
-            ['requiresMeasureTool', '需测量工具']
-          ].map(([key, label]) => (
-            <label key={key} className="subtle-panel row">
-              <input
-                type="checkbox"
-                checked={Boolean(product.customRules[key as keyof Product['customRules']])}
-                onChange={(event) =>
-                  setProduct((current) => ({
-                    ...current,
-                    customRules: {
-                      ...current.customRules,
-                      [key]: event.target.checked
-                    }
-                  }))
-                }
-              />
-              <span>{label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-      <div className="spacer-top">
-        <div className="field-grid four">
-          <div className="field-control">
-            <label className="field-label">标准材质</label>
-            <input
-              className="input"
-              value={product.productionReference.standardMaterial || ''}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  productionReference: { ...current.productionReference, standardMaterial: event.target.value }
-                }))
-              }
-            />
-          </div>
-          <div className="field-control">
-            <label className="field-label">默认工期（天）</label>
-            <input
-              className="input"
-              type="number"
-              value={product.productionReference.defaultLeadTimeDays ?? 0}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  productionReference: { ...current.productionReference, defaultLeadTimeDays: Number(event.target.value) }
-                }))
-              }
-            />
-          </div>
-          <div className="field-control">
-            <label className="field-label">建议工期（天）</label>
-            <input
-              className="input"
-              type="number"
-              value={product.productionReference.suggestedLeadTimeDays ?? 0}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  productionReference: { ...current.productionReference, suggestedLeadTimeDays: Number(event.target.value) }
-                }))
-              }
-            />
-          </div>
-          <div className="field-control">
-            <label className="field-label">参考人工费</label>
-            <input
-              className="input"
-              type="number"
-              value={product.productionReference.referenceLaborCost ?? 0}
-              onChange={(event) =>
-                setProduct((current) => ({
-                  ...current,
-                  productionReference: { ...current.productionReference, referenceLaborCost: Number(event.target.value) }
-                }))
-              }
-            />
-          </div>
-        </div>
-      </div>
     </SectionCard>
   )
 }
+
+export const ProductCustomRuleFormSection = ({
+  product,
+  setProduct
+}: {
+  product: Product
+  setProduct: Dispatch<SetStateAction<Product>>
+}) => (
+  <SectionCard id="custom-form" title="定制规则">
+    <div className="field-grid three product-edit-field-grid">
+      {[
+        ['canResize', '支持改圈'],
+        ['canChangeMaterial', '支持换材质'],
+        ['canEngrave', '支持刻字'],
+        ['canChangeProcess', '支持改工艺'],
+        ['canRevise', '允许修订'],
+        ['requiresRemodeling', '需重新建模'],
+        ['requiresMeasureTool', '需测量工具']
+      ].map(([key, label]) => (
+        <label key={key} className="subtle-panel row">
+          <input
+            type="checkbox"
+            checked={Boolean(product.customRules[key as keyof Product['customRules']])}
+            onChange={(event) =>
+              setProduct((current) => ({
+                ...current,
+                customRules: {
+                  ...current.customRules,
+                  [key]: event.target.checked
+                }
+              }))
+            }
+          />
+          <span>{label}</span>
+        </label>
+      ))}
+    </div>
+  </SectionCard>
+)
+
+export const ProductProductionRefFormSection = ({
+  product,
+  setProduct
+}: {
+  product: Product
+  setProduct: Dispatch<SetStateAction<Product>>
+}) => (
+  <SectionCard id="production-form" title="生产参考">
+    <div className="field-grid three product-edit-field-grid">
+      <div className="field-control">
+        <label className="field-label">标准材质</label>
+        <input
+          className="input"
+          value={product.productionReference.standardMaterial || ''}
+          onChange={(event) =>
+            setProduct((current) => ({
+              ...current,
+              productionReference: { ...current.productionReference, standardMaterial: event.target.value }
+            }))
+          }
+        />
+      </div>
+      <div className="field-control">
+        <label className="field-label">默认工期（天）</label>
+        <input
+          className="input"
+          type="number"
+          value={product.productionReference.defaultLeadTimeDays ?? 0}
+          onChange={(event) =>
+            setProduct((current) => ({
+              ...current,
+              productionReference: { ...current.productionReference, defaultLeadTimeDays: Number(event.target.value) }
+            }))
+          }
+        />
+      </div>
+      <div className="field-control">
+        <label className="field-label">建议工期（天）</label>
+        <input
+          className="input"
+          type="number"
+          value={product.productionReference.suggestedLeadTimeDays ?? 0}
+          onChange={(event) =>
+            setProduct((current) => ({
+              ...current,
+              productionReference: { ...current.productionReference, suggestedLeadTimeDays: Number(event.target.value) }
+            }))
+          }
+        />
+      </div>
+      <div className="field-control">
+        <label className="field-label">参考人工费</label>
+        <input
+          className="input"
+          type="number"
+          value={product.productionReference.referenceLaborCost ?? 0}
+          onChange={(event) =>
+            setProduct((current) => ({
+              ...current,
+              productionReference: { ...current.productionReference, referenceLaborCost: Number(event.target.value) }
+            }))
+          }
+        />
+      </div>
+      <div className="field-control product-edit-wide-field">
+        <label className="field-label">生产备注</label>
+        <textarea
+          className="textarea"
+          rows={4}
+          value={product.productionReference.productionNotes?.join('\n') || ''}
+          onChange={(event) =>
+            setProduct((current) => ({
+              ...current,
+              productionReference: {
+                ...current.productionReference,
+                productionNotes: splitValues(event.target.value)
+              }
+            }))
+          }
+        />
+      </div>
+    </div>
+  </SectionCard>
+)
 
 export const ProductSpecSection = ({
   product,

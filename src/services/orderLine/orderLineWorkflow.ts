@@ -3,7 +3,6 @@ import type {
   OrderLineFactoryStatus,
   OrderLineFinanceStatus,
   OrderLineLineStatus,
-  OrderLineStatus,
   OrderLineWorkflowDesignStatus,
   OrderLineWorkflowModelingStatus,
   OrderLineWorkflowProductionStatus
@@ -80,38 +79,6 @@ export const financeWorkflowStatusLabelMap: Record<OrderLineFinanceStatus, strin
   abnormal: '财务异常'
 }
 
-const legacyStatusToLineStatus: Partial<Record<OrderLineStatus | string, OrderLineLineStatus>> = {
-  draft: 'draft',
-  pending_confirm: 'pending_customer_confirmation',
-  pending_measurement: 'pending_customer_confirmation',
-  pending_design: 'pending_design',
-  designing: 'pending_design',
-  pending_outsource: 'pending_factory_production',
-  in_production: 'in_production',
-  pending_factory_feedback: 'in_production',
-  pending_shipment: 'ready_to_ship',
-  shipped: 'ready_to_ship',
-  after_sales: 'after_sales',
-  completed: 'completed',
-  cancelled: 'completed',
-  exception: 'pending_merchandiser_review'
-}
-
-const lineStatusToLegacyStatus: Record<OrderLineLineStatus, OrderLineStatus> = {
-  draft: 'draft',
-  pending_customer_confirmation: 'pending_confirm',
-  pending_design: 'pending_design',
-  pending_modeling: 'pending_design',
-  pending_merchandiser_review: 'pending_outsource',
-  pending_factory_production: 'pending_outsource',
-  in_production: 'in_production',
-  factory_returned: 'pending_factory_feedback',
-  pending_finance_confirmation: 'pending_shipment',
-  ready_to_ship: 'pending_shipment',
-  completed: 'completed',
-  after_sales: 'after_sales'
-}
-
 const legacyDesignStatusMap: Record<string, OrderLineWorkflowDesignStatus> = {
   not_required: 'not_required',
   pending: 'pending',
@@ -134,14 +101,11 @@ export const getOrderLineLineStatus = (line: OrderLine): OrderLineLineStatus => 
     return line.lineStatus as OrderLineLineStatus
   }
 
-  return legacyStatusToLineStatus[String(line.status)] || 'draft'
+  return 'draft'
 }
 
 export const getOrderLineLineStatusLabel = (status?: string) =>
   status && status in orderLineLineStatusLabelMap ? orderLineLineStatusLabelMap[status as OrderLineLineStatus] : status || '待确认'
-
-export const getLegacyStatusForLineStatus = (status: OrderLineLineStatus | string): OrderLineStatus | string =>
-  status in lineStatusToLegacyStatus ? lineStatusToLegacyStatus[status as OrderLineLineStatus] : status
 
 export const getOrderLineDesignStatus = (line: OrderLine): OrderLineWorkflowDesignStatus => {
   if (line.designStatus && line.designStatus in designWorkflowStatusLabelMap) {
@@ -224,10 +188,7 @@ export const getOrderLineFinanceStatus = (line: OrderLine): OrderLineFinanceStat
   return 'not_required'
 }
 
-export const buildOrderLineStatusPatch = (status: OrderLineLineStatus | string): Pick<OrderLine, 'lineStatus' | 'status'> => ({
-  lineStatus: status,
-  status: getLegacyStatusForLineStatus(status)
-})
+export const buildOrderLineStatusPatch = (status: OrderLineLineStatus | string): Pick<OrderLine, 'lineStatus'> => ({ lineStatus: status })
 
 export const getOrderLineTaskGroups = (lines: OrderLine[]) => {
   const groups: Array<{ value: OrderLineLineStatus; label: string; count: number }> = [

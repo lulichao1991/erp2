@@ -2,28 +2,29 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   addAfterSalesCase,
   addLogisticsRecord,
+  applyOrderLineDesignModelingDraft,
+  applyOrderLineDetailsDraft,
+  applyOrderLineOutsourceDraft,
+  applyOrderLineProductionDraft,
   buildOrderLineAfterSalesCloseLog,
   buildOrderLineAfterSalesEditLog,
   buildOrderLineAfterSalesLog,
+  buildOrderLineDesignModelingLog,
   buildOrderLineDetailsLog,
   buildOrderLineLogisticsEditLog,
   buildOrderLineLogisticsLog,
   buildOrderLineLogisticsVoidLog,
   buildOrderLineOutsourceLog,
   buildOrderLineProductionLog,
-  buildOrderLineRows,
   buildOrderLineStatusLog,
   closeAfterSalesCaseInList,
   updateAfterSalesCaseInList,
   updateLogisticsRecordInList,
-  updateOrderLineDetailsInRows,
-  updateOrderLineOutsourceInfoInRows,
-  updateOrderLineProductionInfoInRows,
-  updateOrderLineStatusInRows,
   voidLogisticsRecordInList,
   type OrderLineAfterSalesCloseHandler,
   type OrderLineAfterSalesCreateHandler,
   type OrderLineAfterSalesUpdateHandler,
+  type OrderLineDesignModelingUpdateHandler,
   type OrderLineDetailsUpdateHandler,
   type OrderLineLogisticsCreateHandler,
   type OrderLineLogisticsUpdateHandler,
@@ -31,9 +32,12 @@ import {
   type OrderLineOutsourceUpdateHandler,
   type OrderLineProductionUpdateHandler,
   type OrderLineRow,
-  type OrderLineStatusUpdateHandler
-} from '@/components/business/orderLine'
+  type OrderLineStatusUpdateHandler,
+  buildOrderLineRowsFromData
+} from '@/services/orderLine/orderLineWorkspace'
+import { useAppData } from '@/hooks/useAppData'
 import { afterSalesMock, logisticsMock, orderLineLogsMock } from '@/mocks'
+import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
 import { getOrderLineLineStatus } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLineLog } from '@/types/order-line'
 import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
@@ -42,20 +46,12 @@ type UseOrderLineWorkspaceStateOptions = {
   purchaseId?: string
 }
 
-const buildInitialRows = (purchaseId?: string) => {
-  const rows = buildOrderLineRows()
-  if (!purchaseId) {
-    return rows
-  }
-
-  return rows.filter(({ line }) => line.purchaseId === purchaseId || line.transactionId === purchaseId)
-}
-
-// This hook centralizes page-local workspace logic. It does not provide
-// cross-route persistent state sharing yet.
 export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspaceStateOptions = {}) => {
-  const initialRows = useMemo(() => buildInitialRows(purchaseId), [purchaseId])
-  const [rows, setRows] = useState<OrderLineRow[]>(initialRows)
+  const appData = useAppData()
+  const rows = useMemo(
+    () => buildOrderLineRowsFromData(appData.orderLines, appData.purchases, purchaseId),
+    [appData.orderLines, appData.purchases, purchaseId]
+  )
   const [logs, setLogs] = useState<OrderLineLog[]>(orderLineLogsMock)
   const [logisticsRecords, setLogisticsRecords] = useState<LogisticsRecord[]>(logisticsMock)
   const [afterSalesCases, setAfterSalesCases] = useState<AfterSalesCase[]>(afterSalesMock)
@@ -64,12 +60,11 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
   const selectedRow = rows.find(({ line }) => line.id === selectedLineId)
 
   useEffect(() => {
-    setRows(initialRows)
     setLogs(orderLineLogsMock)
     setLogisticsRecords(logisticsMock)
     setAfterSalesCases(afterSalesMock)
     setSelectedLineId(undefined)
-  }, [initialRows])
+  }, [purchaseId])
 
   const openOrderLineDetail = (row: OrderLineRow) => {
     setSelectedLineId(row.line.id)
@@ -89,7 +84,7 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
       return
     }
 
-    setRows((current) => updateOrderLineStatusInRows(current, lineId, nextStatus))
+    appData.updateOrderLine(lineId, (current) => ({ ...current, ...buildOrderLineStatusPatch(nextStatus) }))
     appendLog(buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus }))
   }
 
@@ -161,8 +156,18 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
       return
     }
 
-    setRows((current) => updateOrderLineDetailsInRows(current, lineId, draft))
+    appData.updateOrderLine(lineId, (current) => applyOrderLineDetailsDraft(current, draft))
     appendLog(buildOrderLineDetailsLog({ line: currentRow.line, purchase: currentRow.purchase }))
+  }
+
+  const handleUpdateDesignModelingInfo: OrderLineDesignModelingUpdateHandler = (lineId, draft) => {
+    const currentRow = rows.find(({ line }) => line.id === lineId)
+    if (!currentRow) {
+      return
+    }
+
+    appData.updateOrderLine(lineId, (current) => applyOrderLineDesignModelingDraft(current, draft))
+    appendLog(buildOrderLineDesignModelingLog({ line: currentRow.line, purchase: currentRow.purchase }))
   }
 
   const handleUpdateOutsourceInfo: OrderLineOutsourceUpdateHandler = (lineId, draft) => {
@@ -171,7 +176,7 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
       return
     }
 
-    setRows((current) => updateOrderLineOutsourceInfoInRows(current, lineId, draft))
+    appData.updateOrderLine(lineId, (current) => applyOrderLineOutsourceDraft(current, draft))
     appendLog(buildOrderLineOutsourceLog({ line: currentRow.line, purchase: currentRow.purchase }))
   }
 
@@ -181,7 +186,7 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
       return
     }
 
-    setRows((current) => updateOrderLineProductionInfoInRows(current, lineId, draft))
+    appData.updateOrderLine(lineId, (current) => applyOrderLineProductionDraft(current, draft))
     appendLog(buildOrderLineProductionLog({ line: currentRow.line, purchase: currentRow.purchase }))
   }
 
@@ -203,6 +208,7 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
     handleUpdateAfterSales,
     handleCloseAfterSales,
     handleUpdateLineDetails,
+    handleUpdateDesignModelingInfo,
     handleUpdateOutsourceInfo,
     handleUpdateProductionInfo
   }

@@ -25,7 +25,7 @@ export const designModelingTabs: Array<{ value: DesignModelingTab; label: string
   { value: 'completed', label: '已完成' }
 ]
 
-export const isDesignModelingLine = (line: OrderLine) =>
+const isDesignModelingLine = (line: OrderLine) =>
   Boolean(line.requiresDesign || line.requiresModeling || line.requiresWax || getOrderLineDesignStatus(line) === 'revision_requested' || getOrderLineModelingStatus(line) === 'revision_requested')
 
 export const buildDesignModelingRows = (orderLines: OrderLine[]): DesignModelingRow[] =>

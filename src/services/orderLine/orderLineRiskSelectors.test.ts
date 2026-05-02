@@ -23,8 +23,6 @@ describe('orderLineRiskSelectors', () => {
         process: ''
       },
       productionTaskNo: '',
-      skuCode: '',
-      itemSku: ''
     }
 
     const completeness = getOrderLineCompleteness(incompleteLine)

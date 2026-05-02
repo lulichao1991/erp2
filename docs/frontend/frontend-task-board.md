@@ -111,7 +111,8 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 创建一笔 `Purchase` 草稿
 - 在同一笔购买记录下维护多条销售草稿
 - 每条销售草稿可独立引用款式、选择规格并生成参考报价
-- 每条销售草稿可录入货号、产品货号、款式、版本、尺寸、印记、设计 / 建模 / 出蜡需求
+- 每条销售草稿自动生成货号，可录入款式、版本、规格、印记、特殊需求、设计 / 建模 / 出蜡需求；来源款式编号不作为独立录入项
+- 保存草稿允许资料暂缺，资料完整度只阻断客服确认完成
 - 每条销售草稿展示资料完整度和缺失项
 - 客服确认完成后，按 `requiresDesign / requiresModeling` 分流到 `pending_design / pending_modeling / pending_merchandiser_review`
 - 页面语义已从旧“新建订单”收口为“新建购买记录”
@@ -177,7 +178,7 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - `lineStatus` 已作为多角色工作流主状态字段接入 `/order-lines` 筛选、快捷视图、购买记录详情和任务分组
 - 销售详情抽屉展示客服资料完整度，并可执行客服确认分流
 - 设计 / 建模 / 生产 / 工厂 / 财务状态字段已落在 `OrderLine`，用于后续跟单、设计建模、工厂和财务视图
-- `status` 短期保留为兼容展示字段，后续新增逻辑优先使用 `lineStatus`
+- `OrderLine.status` 兼容字段已删除，后续新增逻辑统一使用 `lineStatus`
 
 验收口径：
 - 同一购买记录下的多件商品可以处于不同状态
@@ -408,46 +409,9 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 
 ---
 
-## 5. 当前暂停项
+## 5. 暂停项与完成收口
 
-### 5.1 财务中心
-
-状态：暂停
-
-暂停说明：
-- 当前只保留购买记录层面的付款汇总和销售报价展示
-- 不做完整财务中心、收退款流水中心、发票中心或复杂对账
-
-恢复条件：
-- Purchase + OrderLine 类型命名收口完成
-- 销售物流 / 售后 / 生产链路稳定
-- 明确财务对象与 `Purchase`、`OrderLine` 的边界
-
-### 5.2 工厂协同中心
-
-状态：暂停
-
-暂停说明：
-- 当前只在销售详情中维护跟单 / 下厂和工厂回传信息
-- 不做工厂角色登录、工厂看板、工厂任务派发或复杂协同流
-
-恢复条件：
-- 销售生产字段稳定
-- 明确哪些字段属于内部跟单，哪些字段属于外部工厂回传
-
-### 5.3 客户中心完整页面
-
-状态：暂停
-
-暂停说明：
-- 当前保留 `Customer` 作为客户主档和关联对象
-- 不做完整客户列表、客户详情、客户生命周期、客户画像或 CRM 功能
-
-恢复条件：
-- `Purchase` 与 `OrderLine` 主线稳定
-- 明确客户中心需要承载的查询、沉淀和售后入口
-
-### 5.4 真实后端
+### 5.1 真实后端
 
 状态：暂停
 
@@ -460,20 +424,20 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 兼容命名和旧模块依赖审计完成
 - 当前页面字段与数据边界稳定
 
-### 5.5 legacy `/orders` 删除
+### 5.2 legacy `/orders` 删除
 
 状态：已完成
 
 完成说明：
 - `/orders`、`/orders/new`、`/orders/:orderId` 已删除
 - 旧 pages / components / services / types / mocks 已删除
-- `useAppData.orders / updateOrderItem / createTaskFromOrder` 已删除
+- 旧 orders runtime API 已删除
 - 当前新建和执行主流程入口是 `/purchases/new` 与 `/order-lines`
 - 如需回看旧实现，使用 git 历史 / 删除前 PR
 
 验收结果：
 - 所有当前主入口不再依赖旧 `/orders` 模块
-- 测试和演示路径已切到 `/order-lines`、`/purchases/*`、`/customers/*`、`/tasks` 和 `/production-plan`
+- 测试和演示路径已切到 `/order-lines`、`/purchases/*`、`/customers/*`、`/tasks`、`/production-follow-up`、`/design-modeling`、`/factory`、`/finance`、`/inventory`、`/management` 和 `/production-plan`
 - current workflow route smoke 保持覆盖
 
 ---
@@ -482,12 +446,12 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 
 ### 6.1 类型命名收口
 
-状态：待清理
+状态：进行中
 
 目标：
 - 将当前主线类型统一到 `Customer / Purchase / OrderLine / Product / ProductSnapshot`
-- 将 `TransactionRecord` 收口为 `Purchase` 的兼容别名
-- 删除 `OrderItem` runtime 类型，并移除 current runtime 中的旧 `order*` 字段 fallback
+- 删除旧交易记录 runtime 兼容别名
+- 删除旧订单单件 runtime 类型，并移除 current runtime 中的旧 `order*` 字段 fallback
 - 将 `SourceProductSnapshot` 收口为 `ProductSnapshot`
 
 检查范围：
@@ -499,9 +463,18 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 文档示例
 
 验收标准：
-- 当前主线代码和文档不再把 `TransactionRecord` 当作当前主模型
+- 当前主线代码和文档不再保留旧交易记录 runtime 兼容别名
 - 新代码不继续扩大旧命名使用范围
 - 兼容别名有清晰注释或集中出口
+
+当前记录：
+- 销售货号展示与购买记录归属兼容读取已集中到 `src/services/orderLine/orderLineIdentity.ts`
+- 新增代码应优先使用 `getOrderLineGoodsNo / getOrderLinePurchaseId / isOrderLineInPurchase / findPurchaseForOrderLine`
+- `transactionId / transactionNo / itemSku` 已从 current runtime 类型、mock、helper 和测试中删除；历史兼容只保留在 archive 文档或 git 历史中
+- 客户聚合、购买记录草稿展示、销售中心 / 详情、生产跟进、财务和生产计划已改为复用上述 helper，不再散落购买归属或货号展示兜底逻辑
+- 任务关联购买记录的兼容读取已集中到 `src/services/task/taskIdentity.ts`
+- 新增任务页面、adapter 或 hooks 应优先使用 `getTaskPurchaseId / getTaskPurchaseNo / findPurchaseForTask`
+- `ProductReferenceRecord` 已只保留 `purchaseId / purchaseNo`，不再保留 `transactionId / transactionNo`
 
 ### 6.2 旧 `/orders` 依赖迁移审计
 
@@ -513,16 +486,15 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 输出删除完成后的回滚口径
 
 当前记录：
-- 迁移准备文档：`docs/frontend/legacy-orders-removal-plan.md`
-- 已梳理 legacy route smoke tests 保留 / 迁移 / 删除门槛
+- 已删除 legacy route smoke，保留 current workflow smoke
 - 已梳理 productionPlan fallback 迁移顺序
 - productionPlan 页面正常路径已 current-only，不再传 `appData.orders`
 - productionPlan legacy write fallback 已迁移，生产反馈只写 `OrderLine.productionInfo`
 - productionPlan adapter legacy read fallback 已移除，生产计划视图只从 `tasks + purchases + orderLines + products` 生成
-- productionPlan 已移除 `OrderItem` 兼容详情形状，详情页直接使用 current `OrderLine`
+- productionPlan 详情页直接使用 current `OrderLine`
 - `useAppData` legacy orders APIs 已移除
 - task timeline 已迁移到 current `Purchase.timeline`
-- current task 更新不再 mirror 到 legacy `orders.timeline`
+- current task 更新只写 current `Purchase.timeline`
 - legacy `/orders` route smoke 已移除，current workflow smoke 保留
 
 检查范围：
@@ -546,10 +518,44 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 删除旧 route smoke
 - 保留 current workflow smoke
 
+当前记录：
+- 已删除未被 current runtime 引用的 `src/app/layout/AppTopbar.tsx`
+- 已删除未被 current runtime 引用的旧弹窗 / 抽屉辅助 hooks：`src/hooks/useModalState.ts`、`src/hooks/useProductPicker.ts`、`src/hooks/useSourceProductDrawer.ts`
+- 已删除未被 current runtime 引用的 `src/services/quote/quoteService.ts`
+- 已删除未被 current runtime 引用的 `src/styles/tokens.ts`
+- 删除项引用搜索仅剩 archive 历史文档或 docs-index 对归档文档的说明；current runtime 无引用
+
 验收标准：
 - 每轮删除前有引用搜索结果
 - 删除后测试通过
-- 不破坏 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products`、`/customers`、`/tasks`、`/production-plan`
+- 不破坏 `/order-lines`、`/purchases/new`、`/purchases/:purchaseId`、`/products`、`/customers`、`/tasks`、`/production-follow-up`、`/design-modeling`、`/factory`、`/finance`、`/inventory`、`/management`、`/production-plan`
+
+### 6.4 静态分析与瘦身门禁
+
+状态：已完成
+
+目标：
+- 将未使用文件、未使用导出、未使用依赖检查变成可重复执行的命令
+- 避免每轮人工解释同一批历史兼容保留项
+
+当前记录：
+- 新增 `npm run analyze:dead`，底层使用 `knip`
+- 新增 `knip.json`
+- `npm test` 已加入 `src/app/router/router.docs.test.ts`，用于校验 runtime route 与 `docs/frontend/routes-and-pages.md` 的路由最小集一致
+- `npm test` 已加入 `src/mocks/mock-data-schema.docs.test.ts`，用于校验 `src/mocks` 数据文件与 `docs/frontend/mock-data-schema.md` 的 mock 文件清单一致
+- `npm test` 已加入 `src/types/mock-data-schema.docs.test.ts`，用于校验当前主领域类型文件与 `docs/frontend/mock-data-schema.md` 的对象章节一致；支撑 / 兼容类型文件必须在测试中显式列为例外
+- 旧交易记录类型和 mock 兼容出口已删除
+- `src/types/**` 中的领域类型导出暂不按当前页面引用情况删除
+- 已删除未使用的 `@playwright/test` 依赖；当前没有 Playwright 配置或 e2e 测试入口
+
+验收标准：
+- `npm run analyze:dead` 通过
+- `npm test` 通过
+- `npm run build` 通过
+- 修改 `src/app/router/index.tsx` 的路由时，必须同步更新 `docs/frontend/routes-and-pages.md`
+- 新增或删除 `src/mocks` 数据文件时，必须同步更新 `docs/frontend/mock-data-schema.md`
+- 新增当前主领域类型文件或对象章节时，必须同步更新 `docs/frontend/mock-data-schema.md`；新增支撑 / 兼容类型文件时，必须在对象级门禁中显式说明例外
+- 新增兼容例外必须写入 `knip.json` 并说明业务原因
 
 ---
 
@@ -562,8 +568,8 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 - 旧 `/orders`
 - 旧 `/orders/new`
 - 旧 `/orders/:orderId`
-- `TransactionRecord` 作为当前主模型
-- `OrderItem` 作为当前主对象
+- 旧交易记录命名作为当前主模型
+- 旧订单单件模型作为当前主对象
 - `order.items` 作为当前主数据结构
 
 当前任务板不得再按旧订单中心继续拆 Sprint，不得把旧 `/orders` 写成当前主入口。
@@ -576,7 +582,7 @@ legacy `/orders` 模块已经删除，不再作为兼容路由或当前任务板
 
 1. 是否仍以 `Purchase + OrderLine` 为主线
 2. 是否避免把旧 `/orders` 写成当前主模块
-3. 是否没有新增财务中心、工厂协同中心、客户中心完整页面或真实后端功能
+3. 是否没有把财务中心、工厂协同、客户中心或库存管理扩展成超出当前 mock v1 边界的复杂系统
 4. 是否没有修改款式管理模块的现有能力
 5. 是否只在必要范围内改文档、类型、mock、路由或兼容层
 6. 是否保留了必要旧模块，避免一次性破坏测试和演示

@@ -20,10 +20,8 @@ describe('productionPlanAdapter', () => {
       purchaseId: 'o-202604-001',
       purchaseNo: 'PUR-202604-001',
       orderLineId: 'oi-ring-001',
-      orderLineCode: 'OL-202604-001-01',
-      orderLineName: '山形戒指',
+      orderLineName: '山形素圈戒指',
       goodsNo: 'RING-SH-016',
-      styleName: '山形素圈戒指',
       sourceProductVersion: 'v3',
       categoryLabel: '戒指',
       quantity: 1
@@ -42,8 +40,7 @@ describe('productionPlanAdapter', () => {
       purchaseId: 'o-202604-001',
       purchaseNo: 'PUR-202604-001',
       orderLineId: 'oi-ring-001',
-      orderLineCode: 'OL-202604-001-01',
-      orderLineName: '山形戒指'
+      orderLineName: '山形素圈戒指'
     })
     expect(detail?.timeline.map((record) => record.id)).toContain('tl-purchase-001-ring-production')
   })
@@ -105,10 +102,8 @@ describe('productionPlanAdapter', () => {
       purchaseId: 'o-202604-001',
       purchaseNo: 'PUR-202604-001',
       orderLineId: 'oi-ring-001',
-      orderLineCode: 'OL-202604-001-01',
-      orderLineName: '山形戒指',
+      orderLineName: '山形素圈戒指',
       goodsNo: 'RING-SH-016',
-      styleName: '山形素圈戒指',
       sourceProductVersion: 'v3',
       categoryLabel: '戒指',
       quantity: 1,
@@ -117,7 +112,7 @@ describe('productionPlanAdapter', () => {
   })
 
   it('does not build rows when current order-line links are absent', () => {
-    const tasksWithoutOrderLineLinks = mockTasks.map(({ orderLineId, orderLineCode, orderLineName, ...task }) => task)
+    const tasksWithoutOrderLineLinks = mockTasks.map(({ orderLineId, orderLineName, ...task }) => task)
     const purchasesWithoutOrderLines = purchasesMock.map((purchase) => ({ ...purchase, orderLines: [] }))
     const rows = buildProductionPlanRows({
       tasks: tasksWithoutOrderLineLinks,
@@ -156,16 +151,6 @@ describe('productionPlanAdapter', () => {
         factoryStatus: 'in_progress'
       }
     }
-    const legacyProducingItem = {
-      ...orderLine!,
-      lineStatus: undefined,
-      productionStatus: undefined,
-      factoryStatus: undefined,
-      productionInfo: {
-        ...orderLine!.productionInfo,
-        factoryStatus: '生产中' as 'in_progress'
-      }
-    }
     const pendingReportTask = { ...receivedTask, status: 'pending_confirm' as const }
     const pendingFeedbackItem = {
       ...orderLine!,
@@ -187,25 +172,12 @@ describe('productionPlanAdapter', () => {
         factoryStatus: 'issue'
       }
     }
-    const legacyIssueItem = {
-      ...orderLine!,
-      lineStatus: undefined,
-      productionStatus: undefined,
-      factoryStatus: undefined,
-      productionInfo: {
-        ...orderLine!.productionInfo,
-        factoryStatus: '有异常' as 'issue'
-      }
-    }
-
     expect(getProductionPlanStage(factoryTask!, orderLine!)).toBe('in_production')
     expect(getProductionPlanStage(receivedTask, readyItem)).toBe('ready_to_produce')
     expect(getProductionPlanStage(receivedTask, producingItem)).toBe('in_production')
-    expect(getProductionPlanStage(receivedTask, legacyProducingItem)).toBe('in_production')
     expect(getProductionPlanStage(pendingReportTask, pendingFeedbackItem)).toBe('pending_report')
     expect(getProductionPlanStage(reportedTask, orderLine!)).toBe('reported')
     expect(getProductionPlanStage(receivedTask, issueItem)).toBe('issue')
-    expect(getProductionPlanStage(receivedTask, legacyIssueItem)).toBe('issue')
   })
 
   it('builds detail data with production files and timeline records', () => {
@@ -222,15 +194,13 @@ describe('productionPlanAdapter', () => {
       purchaseId: 'o-202604-001',
       purchaseNo: 'PUR-202604-001',
       orderLineId: 'oi-ring-001',
-      orderLineCode: 'OL-202604-001-01',
-      orderLineName: '山形戒指'
+      orderLineName: '山形素圈戒指'
     })
     expect(detail?.row).toMatchObject({
       purchaseId: 'o-202604-001',
       purchaseNo: 'PUR-202604-001',
       orderLineId: 'oi-ring-001',
-      orderLineCode: 'OL-202604-001-01',
-      orderLineName: '山形戒指'
+      orderLineName: '山形素圈戒指'
     })
     expect(detail?.fileGroups.map((group) => group.title)).toContain('建模文件')
     expect(detail?.fileGroups.map((group) => group.title)).toContain('工艺图')

@@ -1,6 +1,6 @@
 import type { TaskAssigneeRole } from '@/types/task'
 
-export type RoleField =
+type RoleField =
   | 'customer_profile'
   | 'customer_contact'
   | 'purchase_finance'
@@ -11,7 +11,7 @@ export type RoleField =
   | 'inventory_item'
   | 'management_metrics'
 
-export type RoleAction =
+type RoleAction =
   | 'purchase_edit'
   | 'order_line_customer_confirm'
   | 'production_dispatch'
@@ -21,7 +21,7 @@ export type RoleAction =
   | 'inventory_manage'
   | 'management_view'
 
-export type RoleCapability = {
+type RoleCapability = {
   label: string
   visibleRoutes: string[]
   visibleFields: RoleField[]
@@ -135,7 +135,7 @@ export const roleCapabilities: Record<TaskAssigneeRole, RoleCapability> = {
   }
 }
 
-export const isKnownRole = (role?: string): role is TaskAssigneeRole => Boolean(role && role in roleCapabilities)
+const isKnownRole = (role?: string): role is TaskAssigneeRole => Boolean(role && role in roleCapabilities)
 
 export const normalizeRole = (role?: string): TaskAssigneeRole => {
   if (isKnownRole(role)) {
@@ -159,7 +159,5 @@ export const canViewRoute = (role: TaskAssigneeRole, routePath: string) => {
 }
 
 export const canViewField = (role: TaskAssigneeRole, field: RoleField) => roleCapabilities[role].visibleFields.includes(field)
-
-export const canEditField = (role: TaskAssigneeRole, field: RoleField) => roleCapabilities[role].editableFields.includes(field)
 
 export const canPerformAction = (role: TaskAssigneeRole, action: RoleAction) => roleCapabilities[role].allowedActions.includes(action)

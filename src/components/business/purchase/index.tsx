@@ -1,18 +1,18 @@
 import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag, TimePressureBadge } from '@/components/common'
+import { CopyableText, EmptyState, InfoField, InfoGrid, RecordTimeline, SectionCard, StatusTag, TimePressureBadge } from '@/components/common'
 import { afterSalesMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import {
-  getOrderLineFactoryStatus,
   getOrderLineLineStatus,
-  getOrderLineLineStatusLabel,
-  factoryWorkflowStatusLabelMap
+  getOrderLineLineStatusLabel
 } from '@/services/orderLine/orderLineWorkflow'
 import { getCustomerServiceNextLineStatus, getOrderLineCompleteness, hasEngravingRequirement } from '@/services/orderLine/orderLineCustomerService'
-import { generateGoodsNumber, getGoodsNumberExample } from '@/services/orderLine/goodsNumber'
+import { generateGoodsNumber } from '@/services/orderLine/goodsNumber'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
+import { getReferableProducts } from '@/services/product/productQueries'
 import type { Customer } from '@/types/customer'
 import type { OrderLine, OrderLineLineStatus, OrderLineUploadedFile } from '@/types/order-line'
 import type { Product, ProductCategory, ProductSpecRow } from '@/types/product'
@@ -26,7 +26,8 @@ type PurchaseLineRow = {
   purchase: Purchase
 }
 
-export type PurchaseDraftFormValue = {
+type PurchaseDraftFormValue = {
+  purchaseNo: string
   channel: string
   platformOrderNo: string
   paymentAt: string
@@ -45,11 +46,9 @@ export type PurchaseDraftFormValue = {
   paymentMethod: string
 }
 
-export type OrderLineDraft = {
+type OrderLineDraft = {
   id: string
-  lineCode: string
   productionTaskNo: string
-  skuCode: string
   sourceProductId?: string
   sourceProductCode?: string
   sourceProductName?: string
@@ -58,12 +57,10 @@ export type OrderLineDraft = {
   selectedSpecialOptions: string[]
   productName: string
   category: string
-  styleName: string
   versionNo: string
   spec: string
   material: string
   process: string
-  sizeNote: string
   engraveText: string
   engraveImageFiles: OrderLineUploadedFile[]
   engravePltFiles: OrderLineUploadedFile[]
@@ -78,7 +75,7 @@ export type OrderLineDraft = {
 }
 
 type PurchaseDraftPayload = {
-  commonInfo: Pick<PurchaseDraftFormValue, 'channel' | 'platformOrderNo' | 'paymentAt' | 'ownerName' | 'remark'>
+  commonInfo: Pick<PurchaseDraftFormValue, 'purchaseNo' | 'channel' | 'platformOrderNo' | 'paymentAt' | 'ownerName' | 'remark'>
   customerShippingInfo: Pick<
     PurchaseDraftFormValue,
     'customerId' | 'customerName' | 'customerPhone' | 'customerWechat' | 'recipientName' | 'recipientPhone' | 'recipientAddress' | 'customerRemark'
@@ -94,7 +91,6 @@ type PurchaseDraftPayload = {
 }
 
 type OrderLineDraftPayload = OrderLineDraft & {
-  tempLineNo: string
   specParameterSummary?: string
   quoteResult?: QuoteResult
 }
@@ -109,10 +105,7 @@ type ProductReferencePatch = Pick<
   | 'selectedSpecialOptions'
   | 'productName'
   | 'category'
-  | 'styleName'
   | 'versionNo'
-  | 'skuCode'
-  | 'productionTaskNo'
   | 'spec'
   | 'material'
   | 'process'
@@ -121,7 +114,14 @@ type ProductReferencePatch = Pick<
   | 'needsWax'
 >
 
-const defaultPurchaseDraft: PurchaseDraftFormValue = {
+const generatePurchaseNumber = (date = new Date(), sequence = 2) => {
+  const pad = (value: number, length = 2) => String(value).padStart(length, '0')
+
+  return `PUR-${date.getFullYear()}${pad(date.getMonth() + 1)}-${pad(sequence, 3)}`
+}
+
+const createPurchaseDraft = (): PurchaseDraftFormValue => ({
+  purchaseNo: generatePurchaseNumber(),
   channel: 'taobao',
   platformOrderNo: '',
   paymentAt: '',
@@ -138,7 +138,7 @@ const defaultPurchaseDraft: PurchaseDraftFormValue = {
   receivableAmount: '',
   receivedAmount: '',
   paymentMethod: '淘宝平台'
-}
+})
 
 let draftLineSeed = 1
 
@@ -151,18 +151,14 @@ const createOrderLineDraft = (): OrderLineDraft => {
 
   return {
     id: createOrderLineDraftId(sequence),
-    lineCode: '',
     productionTaskNo: generateGoodsNumber(sequence),
-    skuCode: '',
     selectedSpecialOptions: [],
     productName: '',
     category: '',
-    styleName: '',
     versionNo: '',
     spec: '',
     material: '',
     process: '',
-    sizeNote: '',
     engraveText: '',
     engraveImageFiles: [],
     engravePltFiles: [],
@@ -183,13 +179,10 @@ const duplicateOrderLineDraft = (line: OrderLineDraft): OrderLineDraft => {
   return {
     ...line,
     id: createOrderLineDraftId(sequence),
-    lineCode: '',
     productionTaskNo: generateGoodsNumber(sequence),
     lineStatus: 'draft'
   }
 }
-
-const getTempLineNo = (index: number) => `TEMP-${String(index + 1).padStart(2, '0')}`
 
 const parseMoneyInput = (value: string) => {
   const parsed = Number(value)
@@ -206,8 +199,6 @@ const categoryLabelMap: Record<ProductCategory, string> = {
 }
 
 const getProductCategoryLabel = (category: ProductCategory) => categoryLabelMap[category] || category
-
-const getReferableProducts = () => mockProducts.filter((product) => product.isReferable)
 
 const getDraftProduct = (line: OrderLineDraft) => mockProducts.find((product) => product.id === line.sourceProductId)
 
@@ -229,10 +220,7 @@ const buildProductReferencePatch = (productId: string): ProductReferencePatch =>
       selectedSpecialOptions: [],
       productName: '',
       category: '',
-      styleName: '',
       versionNo: '',
-      skuCode: '',
-      productionTaskNo: '',
       spec: '',
       material: '',
       process: '',
@@ -249,12 +237,9 @@ const buildProductReferencePatch = (productId: string): ProductReferencePatch =>
     sourceProductVersion: product.version,
     selectedSpecId: undefined,
     selectedSpecialOptions: [],
-    productName: product.shortName || product.name,
+    productName: product.name,
     category: getProductCategoryLabel(product.category),
-    styleName: product.shortName || product.name,
     versionNo: product.version,
-    skuCode: product.code,
-    productionTaskNo: product.code,
     spec: '',
     material: product.defaultMaterial || product.supportedMaterials[0] || '',
     process: product.defaultProcess || product.supportedProcesses[0] || '',
@@ -284,7 +269,7 @@ const buildDraftCompletenessInput = (line: OrderLineDraft) => ({
   productName: line.productName,
   category: line.category,
   material: line.material,
-  size: line.spec || line.sizeNote,
+  size: line.spec,
   craftRequirements: line.process,
   productionTaskNo: line.productionTaskNo,
   needsEngraving: hasEngravingRequirement({
@@ -321,8 +306,11 @@ const buildOrderLineDraftQuote = (line: OrderLineDraft) => {
   })
 }
 
-const buildDraftSourceProductCompareValue = (line: OrderLineDraft, tempLineNo: string): SourceProductCompareValue => ({
-  sourceLabel: `${line.lineCode || tempLineNo} ${line.styleName || line.productName || line.sourceProductName || '未命名销售'}`,
+const getOrderLineDraftGoodsNo = (line: Pick<OrderLineDraft, 'productionTaskNo'>, fallback = '待生成货号') =>
+  getOrderLineGoodsNo({ productionTaskNo: line.productionTaskNo.trim() }, fallback)
+
+const buildDraftSourceProductCompareValue = (line: OrderLineDraft): SourceProductCompareValue => ({
+  sourceLabel: `${getOrderLineDraftGoodsNo(line)} ${line.productName || line.sourceProductName || '未命名销售'}`,
   specValue: line.spec,
   material: line.material,
   process: line.process,
@@ -340,6 +328,7 @@ const buildDraftPayload = (
   purchaseDraft: {
     commonInfo: {
       channel: draft.channel,
+      purchaseNo: draft.purchaseNo,
       platformOrderNo: draft.platformOrderNo,
       paymentAt: draft.paymentAt,
       ownerName: draft.ownerName,
@@ -365,45 +354,20 @@ const buildDraftPayload = (
     }
   },
   orderLineDrafts: orderLines.map((line, index) => {
-    const tempLineNo = line.lineCode.trim() || getTempLineNo(index)
-    const skuCode = line.skuCode.trim()
+    const goodsNo = getOrderLineDraftGoodsNo(line, generateGoodsNumber(index + 1))
 
     return {
       ...line,
-      lineCode: tempLineNo,
-      productionTaskNo: line.productionTaskNo.trim() || skuCode || tempLineNo,
-      skuCode: skuCode || line.productionTaskNo.trim() || tempLineNo,
-      tempLineNo,
+      productionTaskNo: goodsNo,
       specParameterSummary: getSpecParameterSummary(getSelectedSpec(line, getDraftProduct(line))),
       quoteResult: buildOrderLineDraftQuote(line)
     }
   })
 })
 
-const validatePurchaseDraft = (
-  draft: PurchaseDraftFormValue,
-  paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary>,
-  orderLines: OrderLineDraft[]
-) => {
-  if (!draft.customerName.trim()) {
-    return '请填写客户姓名。'
-  }
-
+const validatePurchaseDraft = (paymentSummary: ReturnType<typeof getPurchaseDraftPaymentSummary>) => {
   if (paymentSummary.receivedAmount > paymentSummary.receivableAmount) {
     return '已收金额不能大于应收总额。'
-  }
-
-  const missingNameIndex = orderLines.findIndex((line) => !line.productName.trim())
-  if (missingNameIndex >= 0) {
-    return `销售 ${getTempLineNo(missingNameIndex)} 需要填写款式名称。`
-  }
-
-  const missingSpecIndex = orderLines.findIndex((line) => {
-    const product = getDraftProduct(line)
-    return Boolean(line.sourceProductId && product?.isSpecRequired && !line.selectedSpecId)
-  })
-  if (missingSpecIndex >= 0) {
-    return `销售 ${getTempLineNo(missingSpecIndex)} 引用款式时需要选择规格。`
   }
 
   return ''
@@ -417,14 +381,6 @@ const purchaseAggregateStatusLabelMap: Record<string, string> = {
   after_sales: '售后中',
   exception: '异常',
   cancelled: '已取消'
-}
-
-const factoryStatusLabelMap: Record<string, string> = {
-  not_started: '未开始',
-  in_progress: '生产中',
-  pending_feedback: '待回传',
-  completed: '已完成',
-  issue: '异常'
 }
 
 const afterSalesStatusLabelMap: Record<string, string> = {
@@ -442,9 +398,17 @@ const getPurchaseAggregateStatusLabel = (status?: string) => (status ? purchaseA
 
 const getOrderLineStatusLabel = getOrderLineLineStatusLabel
 
-const getFactoryStatusLabel = (status?: string) => (status ? factoryStatusLabelMap[status] || factoryWorkflowStatusLabelMap[status as keyof typeof factoryWorkflowStatusLabelMap] || status : '待确认')
-
 const getAfterSalesStatusLabel = (status?: string) => (status ? afterSalesStatusLabelMap[status] || status : '待处理')
+
+const getOrderLineDealPrice = (line: OrderLine) => line.lineSalesAmount ?? line.quote?.systemQuote
+
+const getOrderLinePaidAmount = (line: OrderLine) => {
+  const depositAmount = line.allocatedDepositAmount ?? 0
+  const finalPaymentAmount = line.financeStatus === 'confirmed' || line.financeLocked ? line.allocatedFinalPaymentAmount ?? 0 : 0
+  const paidAmount = depositAmount + finalPaymentAmount
+
+  return paidAmount > 0 ? paidAmount : undefined
+}
 
 const getTimePressure = (line: OrderLine, promisedDate?: string) => getProductionDelayStatus(line, new Date(), promisedDate, { respectCompleted: false })
 
@@ -461,10 +425,10 @@ const findCurrentAfterSalesCase = (records: AfterSalesCase[], orderLineId: strin
 
 const getParameterSummary = (line: OrderLine) =>
   [
-    line.selectedSpecValue ? `规格 ${line.selectedSpecValue}` : null,
-    line.selectedMaterial ? `材质 ${line.selectedMaterial}` : line.actualRequirements?.material ? `材质 ${line.actualRequirements.material}` : null,
-    line.selectedProcess ? `工艺 ${line.selectedProcess}` : line.actualRequirements?.process ? `工艺 ${line.actualRequirements.process}` : null,
-    line.actualRequirements?.sizeNote ? `尺寸 ${line.actualRequirements.sizeNote}` : null
+    line.selectedSpecValue || null,
+    line.selectedMaterial || line.actualRequirements?.material || null,
+    line.selectedProcess || line.actualRequirements?.process || null,
+    line.actualRequirements?.remark || null
   ]
     .filter(Boolean)
     .join(' / ') || '待补充参数'
@@ -489,7 +453,7 @@ const getPaymentSummary = (purchase: Purchase) => {
   const receivedAmount = transactions
     .filter((item) => item.type === 'deposit_received' || item.type === 'balance_received' || item.type === 'after_sales_payment')
     .reduce((sum, item) => sum + item.amount, 0)
-  const receivableAmount = purchase.finance?.dealPrice ?? purchase.orderLines.reduce((sum, line) => sum + (line.finalDisplayQuote || line.quote?.systemQuote || 0), 0)
+  const receivableAmount = purchase.finance?.dealPrice ?? purchase.orderLines.reduce((sum, line) => sum + (line.lineSalesAmount ?? line.quote?.systemQuote ?? 0), 0)
   const pendingAmount = Math.max(receivableAmount - receivedAmount, 0)
 
   return {
@@ -502,16 +466,18 @@ const getPaymentSummary = (purchase: Purchase) => {
   }
 }
 
+const renderCopyable = (value: string | number | undefined, label: string) => <CopyableText value={value} label={label} />
+
 export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => {
   const paymentSummary = getPaymentSummary(purchase)
 
   return (
-    <SectionCard title="购买记录摘要" description="Purchase 是一次购买的归组对象；OrderLine 才是设计、生产、物流和售后的执行对象。">
+    <SectionCard title="购买记录摘要">
       <InfoGrid columns={3}>
-        <InfoField label="购买记录编号" value={purchase.purchaseNo} />
-        <InfoField label="客户" value={customer?.name || '—'} />
+        <InfoField label="购买记录编号" value={renderCopyable(purchase.purchaseNo, '购买记录编号')} />
+        <InfoField label="客户" value={renderCopyable(customer?.name, '客户')} />
         <InfoField label="渠道" value={purchase.sourceChannel} />
-        <InfoField label="平台订单号" value={purchase.platformOrderNo || '—'} />
+        <InfoField label="平台订单号" value={renderCopyable(purchase.platformOrderNo, '平台订单号')} />
         <InfoField label="销售数量" value={`${purchase.orderLines.length} 条`} />
         <InfoField label="聚合状态" value={<StatusTag value={getPurchaseAggregateStatusLabel(purchase.aggregateStatus)} />} />
         <InfoField label="付款摘要" value={`${formatPrice(paymentSummary.receivedAmount)} / ${formatPrice(paymentSummary.receivableAmount)}`} />
@@ -526,13 +492,13 @@ export const PurchaseSummarySection = ({ purchase, customer }: { purchase: Purch
 export const PurchaseCustomerSection = ({ purchase, customer }: { purchase: Purchase; customer?: Customer }) => (
   <SectionCard title="客户与收货信息">
     <InfoGrid columns={3}>
-      <InfoField label="客户姓名" value={customer?.name || '—'} />
-      <InfoField label="手机" value={customer?.phone || '—'} />
-      <InfoField label="微信" value={customer?.wechat || '—'} />
-      <InfoField label="收件人" value={purchase.recipientName || customer?.defaultRecipientName || '—'} />
-      <InfoField label="收件手机号" value={purchase.recipientPhone || customer?.defaultRecipientPhone || '—'} />
-      <InfoField label="收件地址" value={purchase.recipientAddress || customer?.defaultRecipientAddress || '—'} />
-      <InfoField label="客户备注" value={customer?.remark || '—'} />
+      <InfoField label="客户姓名" value={renderCopyable(customer?.name, '客户姓名')} />
+      <InfoField label="手机" value={renderCopyable(customer?.phone, '手机')} />
+      <InfoField label="微信" value={renderCopyable(customer?.wechat, '微信')} />
+      <InfoField label="收件人" value={renderCopyable(purchase.recipientName || customer?.defaultRecipientName, '收件人')} />
+      <InfoField label="收件手机号" value={renderCopyable(purchase.recipientPhone || customer?.defaultRecipientPhone, '收件手机号')} />
+      <InfoField label="收件地址" value={renderCopyable(purchase.recipientAddress || customer?.defaultRecipientAddress, '收件地址')} />
+      <InfoField label="客户备注" value={renderCopyable(customer?.remark, '客户备注')} />
     </InfoGrid>
   </SectionCard>
 )
@@ -541,7 +507,7 @@ export const PurchasePaymentSection = ({ purchase }: { purchase: Purchase }) => 
   const summary = getPaymentSummary(purchase)
 
   return (
-    <SectionCard title="付款总览" description="第一版只展示购买记录层面的付款汇总，不展开复杂财务中心。">
+    <SectionCard title="付款总览">
       <InfoGrid columns={3}>
         <InfoField label="应收总额" value={formatPrice(summary.receivableAmount)} />
         <InfoField label="已收金额" value={formatPrice(summary.receivedAmount)} />
@@ -568,7 +534,6 @@ export const PurchaseOrderLineTable = ({
 }) => (
   <SectionCard
     title="本次销售列表"
-    description="直接展示本次购买下的所有销售，避免把多件商品折叠成一条摘要。"
     actions={
       <Link to="/order-lines" className="button secondary small">
         返回销售中心
@@ -580,13 +545,12 @@ export const PurchaseOrderLineTable = ({
         <table className="table">
           <thead>
             <tr>
-              <th>销售编号</th>
-              <th>款式名称</th>
+              <th>货号 / 款式</th>
               <th>状态</th>
               <th>当前负责人</th>
               <th>承诺交期</th>
               <th>参数摘要</th>
-              <th>报价摘要</th>
+              <th>实付款 / 成交价</th>
               <th>物流状态</th>
               <th>售后状态</th>
               <th>操作</th>
@@ -597,6 +561,10 @@ export const PurchaseOrderLineTable = ({
               const logisticsRecord = logisticsRecords.find((item) => item.orderLineId === line.id && isActiveLogisticsRecord(item))
               const afterSalesCase = findCurrentAfterSalesCase(afterSalesCases, line.id)
               const pressure = getTimePressure(line, line.promisedDate || purchase.promisedDate)
+              const goodsNo = getOrderLineGoodsNo(line)
+              const versionLabel = line.versionNo || line.sourceProduct?.sourceProductVersion
+              const paidAmount = getOrderLinePaidAmount(line)
+              const dealPrice = getOrderLineDealPrice(line)
               const row = { line, purchase }
               const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
                 if (isInteractiveTarget(event.target)) {
@@ -617,16 +585,14 @@ export const PurchaseOrderLineTable = ({
               return (
                 <tr key={line.id} role="button" tabIndex={0} onClick={handleRowClick} onKeyDown={handleRowKeyDown}>
                   <td>
-                    <div>{line.lineCode || line.id}</div>
-                    <div className="text-caption">货号 {line.productionTaskNo || line.skuCode || line.itemSku || '待生成'}</div>
-                  </td>
-                  <td>
-                    <div>{line.name}</div>
-                    <div className="text-caption">{line.styleName || line.sourceProduct?.sourceProductName || '非模板定制'} · {line.versionNo || line.sourceProduct?.sourceProductVersion || '无版本'}</div>
+                    <div className="stack order-line-goods-no-cell">
+                      <strong>{goodsNo}</strong>
+                      <span>{line.name}</span>
+                      {versionLabel ? <span className="text-caption">{versionLabel}</span> : null}
+                    </div>
                   </td>
                   <td>
                     <StatusTag value={getOrderLineStatusLabel(getOrderLineLineStatus(line))} />
-                    <div className="text-caption">工厂 {getFactoryStatusLabel(getOrderLineFactoryStatus(line))}</div>
                   </td>
                   <td>{line.currentOwner || purchase.ownerName || '待分配'}</td>
                   <td>
@@ -637,11 +603,18 @@ export const PurchaseOrderLineTable = ({
                   </td>
                   <td>
                     <div>{getParameterSummary(line)}</div>
-                    <div className="text-caption">{line.sourceProduct?.sourceProductName || '手动填写'}</div>
                   </td>
                   <td>
-                    <div>{formatPrice(line.finalDisplayQuote || line.quote?.systemQuote)}</div>
-                    <div className="text-caption">系统参考 {formatPrice(line.quote?.systemQuote)}</div>
+                    <div className="order-line-price-stack">
+                      <div className="order-line-price-paid">
+                        <span className="text-caption">实付</span>
+                        <strong>{formatPrice(paidAmount)}</strong>
+                      </div>
+                      <div className="order-line-price-deal">
+                        <span className="text-caption">成交价</span>
+                        <span>{formatPrice(dealPrice)}</span>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <StatusTag value={logisticsRecord ? `物流 ${logisticsRecord.trackingNo || '已创建'}` : '无物流'} />
@@ -686,7 +659,7 @@ export const PurchaseNotesTimelineSection = ({ purchase }: { purchase: Purchase 
 )
 
 export const usePurchaseDraftForm = () => {
-  const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraftFormValue>(defaultPurchaseDraft)
+  const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraftFormValue>(() => createPurchaseDraft())
   const [orderLineDrafts, setOrderLineDrafts] = useState<OrderLineDraft[]>(() => [createOrderLineDraft()])
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -756,7 +729,7 @@ export const usePurchaseDraftForm = () => {
       return
     }
 
-    const validationError = validatePurchaseDraft(purchaseDraft, paymentSummary, orderLineDrafts)
+    const validationError = validatePurchaseDraft(paymentSummary)
     if (validationError) {
       setErrorMessage(validationError)
       setSuccessMessage('')
@@ -797,6 +770,10 @@ export const PurchaseDraftCommonSection = ({ draft, onChange }: PurchaseDraftSec
   <SectionCard title="购买公共信息">
     <div className="field-grid three">
       <label className="field-control">
+        <span className="field-label">购买记录编号（系统生成）</span>
+        <input aria-label="购买记录编号" className="input" value={draft.purchaseNo} readOnly />
+      </label>
+      <label className="field-control">
         <span className="field-label">渠道</span>
         <select className="select" value={draft.channel} onChange={(event) => onChange('channel', event.target.value)}>
           <option value="taobao">淘宝</option>
@@ -833,7 +810,7 @@ export const PurchaseDraftCustomerSection = ({ draft, onChange }: PurchaseDraftS
         <input aria-label="客户ID" className="input" value={draft.customerId} onChange={(event) => onChange('customerId', event.target.value)} placeholder="例如：customer-zhang-001" />
       </label>
       <label className="field-control">
-        <span className="field-label">客户姓名（必填）</span>
+        <span className="field-label">客户姓名</span>
         <input aria-label="客户姓名" className="input" value={draft.customerName} onChange={(event) => onChange('customerName', event.target.value)} />
       </label>
       <label className="field-control">
@@ -929,9 +906,9 @@ const OrderLineDraftQuotePanel = ({ product, selectedSpec, quote }: { product?: 
   )
 }
 
-export const OrderLineDraftCard = ({
+const OrderLineDraftCard = ({
   line,
-  tempLineNo,
+  draftIndex,
   canRemove,
   onChange,
   onRemove,
@@ -942,7 +919,7 @@ export const OrderLineDraftCard = ({
   onOpenSourceProduct
 }: {
   line: OrderLineDraft
-  tempLineNo: string
+  draftIndex: number
   canRemove: boolean
   onChange: (patch: Partial<OrderLineDraft>) => void
   onRemove: () => void
@@ -984,7 +961,7 @@ export const OrderLineDraftCard = ({
     <div className="subtle-panel">
       <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <div className="row wrap">
-          <strong>销售 {line.lineCode || tempLineNo}</strong>
+          <strong>销售草稿 {draftIndex + 1}</strong>
           <StatusTag value={getOrderLineLineStatusLabel(line.lineStatus)} />
           <StatusTag value={completeness.complete ? '资料完整' : '资料缺失'} />
         </div>
@@ -1017,32 +994,20 @@ export const OrderLineDraftCard = ({
           </select>
         </label>
         <label className="field-control">
-          <span className="field-label">内部销售编号</span>
-          <input className="input" value={line.lineCode} onChange={(event) => onChange({ lineCode: event.target.value })} placeholder={tempLineNo} />
-        </label>
-        <label className="field-control">
           <span className="field-label">货号</span>
-          <input className="input" value={line.productionTaskNo} onChange={(event) => onChange({ productionTaskNo: event.target.value })} placeholder={getGoodsNumberExample()} />
+          <input aria-label="货号" className="input" value={line.productionTaskNo} readOnly />
         </label>
         <label className="field-control">
-          <span className="field-label">款式名称（必填）</span>
-          <input aria-label="款式名称" className="input" value={line.productName} onChange={(event) => onChange({ productName: event.target.value })} />
+          <span className="field-label">款式名称</span>
+          <input aria-label="款式名称" className="input" value={line.productName} readOnly={Boolean(line.sourceProductId)} onChange={(event) => onChange({ productName: event.target.value })} />
         </label>
         <label className="field-control">
           <span className="field-label">品类</span>
           <input className="input" value={line.category} onChange={(event) => onChange({ category: event.target.value })} />
         </label>
         <label className="field-control">
-          <span className="field-label">款式别名</span>
-          <input className="input" value={line.styleName} onChange={(event) => onChange({ styleName: event.target.value })} />
-        </label>
-        <label className="field-control">
           <span className="field-label">版本号</span>
           <input className="input" value={line.versionNo} onChange={(event) => onChange({ versionNo: event.target.value })} />
-        </label>
-        <label className="field-control">
-          <span className="field-label">产品货号</span>
-          <input className="input" value={line.skuCode} onChange={(event) => onChange({ skuCode: event.target.value })} />
         </label>
       </div>
 
@@ -1059,7 +1024,7 @@ export const OrderLineDraftCard = ({
 
       <div className="field-grid three spacer-top">
         <label className="field-control">
-          <span className="field-label">规格{product?.isSpecRequired ? '（必选）' : ''}</span>
+          <span className="field-label">规格</span>
           {product?.specMode === 'single_axis' ? (
             <select aria-label="规格" className="select" value={line.selectedSpecId || ''} onChange={(event) => onSelectSpec(event.target.value)}>
               <option value="">请选择{product.specName || '规格'}</option>
@@ -1106,10 +1071,6 @@ export const OrderLineDraftCard = ({
         <label className="field-control">
           <span className="field-label">特殊需求备注</span>
           <input className="input" value={line.specialRequirement} onChange={(event) => onChange({ specialRequirement: event.target.value })} />
-        </label>
-        <label className="field-control">
-          <span className="field-label">尺寸备注</span>
-          <input className="input" value={line.sizeNote} onChange={(event) => onChange({ sizeNote: event.target.value })} />
         </label>
         <label className="field-control">
           <span className="field-label">印记内容</span>
@@ -1204,7 +1165,7 @@ export const PurchaseDraftOrderLinesSection = ({
   const sourceProductLineIndex = sourceProductLine ? orderLines.findIndex((line) => line.id === sourceProductLine.id) : -1
   const sourceProduct = sourceProductLine ? getDraftProduct(sourceProductLine) : undefined
   const sourceProductCompareValue =
-    sourceProductLine && sourceProductLineIndex >= 0 ? buildDraftSourceProductCompareValue(sourceProductLine, getTempLineNo(sourceProductLineIndex)) : undefined
+    sourceProductLine && sourceProductLineIndex >= 0 ? buildDraftSourceProductCompareValue(sourceProductLine) : undefined
 
   return (
     <>
@@ -1225,7 +1186,7 @@ export const PurchaseDraftOrderLinesSection = ({
             <OrderLineDraftCard
               key={line.id}
               line={line}
-              tempLineNo={getTempLineNo(index)}
+              draftIndex={index}
               canRemove={orderLines.length > 1}
               onChange={(patch) => onChange(line.id, patch)}
               onRemove={() => onRemove(line.id)}

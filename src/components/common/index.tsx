@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type MouseEvent, type ReactNode } from 'react'
 
 const cx = (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(' ')
 
@@ -56,6 +56,7 @@ export const SectionCard = ({ title, description, actions, children, id, classNa
       </div>
       {actions}
     </div>
+    {description ? <p className="section-card-description text-muted">{description}</p> : null}
     {children}
   </section>
 )
@@ -98,6 +99,65 @@ export const InfoField = ({
     <div className={cx('info-field-value', muted && 'muted')}>{value ?? '—'}</div>
   </div>
 )
+
+export const CopyableText = ({
+  value,
+  children,
+  label,
+  className
+}: {
+  value?: string | number | null
+  children?: ReactNode
+  label?: string
+  className?: string
+}) => {
+  const [copied, setCopied] = useState(false)
+  const copyValue = value === null || value === undefined ? '' : String(value)
+  const displayValue = children ?? (copyValue || '—')
+
+  if (!copyValue || copyValue === '—') {
+    return <span className={className}>{displayValue}</span>
+  }
+
+  const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    try {
+      await navigator.clipboard.writeText(copyValue)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = copyValue
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1200)
+  }
+
+  return (
+    <button
+      type="button"
+      className={cx('copyable-text', copied && 'copied', className)}
+      title={copied ? '已复制' : `点击复制${label ? ` ${label}` : ''}`}
+      aria-label={`复制${label || '内容'}：${copyValue}`}
+      onClick={handleCopy}
+    >
+      {displayValue}
+      {copied ? (
+        <span className="copyable-text-success" role="status" aria-live="polite">
+          复制成功
+        </span>
+      ) : null}
+    </button>
+  )
+}
 
 const tagClassMap: Record<string, string> = {
   enabled: 'status-enabled',
@@ -291,37 +351,3 @@ export const SideDrawer = ({ open, title, onClose, children, footer }: OverlayPr
     </>
   )
 }
-
-export const ConfirmDialog = ({
-  open,
-  title,
-  description,
-  confirmLabel = '确认',
-  onConfirm,
-  onClose
-}: {
-  open: boolean
-  title: string
-  description: string
-  confirmLabel?: string
-  onConfirm: () => void
-  onClose: () => void
-}) => (
-  <LargeModal
-    open={open}
-    title={title}
-    onClose={onClose}
-    footer={
-      <>
-        <button className="button secondary" onClick={onClose}>
-          取消
-        </button>
-        <button className="button primary" onClick={onConfirm}>
-          {confirmLabel}
-        </button>
-      </>
-    }
-  >
-    <p className="text-muted">该操作仅影响当前前端 mock 数据状态，不会触发真实后端写入。</p>
-  </LargeModal>
-)

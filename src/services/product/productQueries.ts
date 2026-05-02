@@ -5,9 +5,6 @@ const clone = <T,>(value: T): T => structuredClone(value)
 
 export const getProductList = (): Product[] => clone(mockProducts)
 
-export const getProductById = (productId: string): Product | undefined =>
-  clone(mockProducts.find((item) => item.id === productId))
-
 export const getReferableProducts = (): Product[] => clone(mockProducts.filter((item) => item.isReferable))
 
 export const createEmptyProduct = (): Product => ({

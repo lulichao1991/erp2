@@ -18,9 +18,9 @@ describe('inventorySelectors', () => {
 
     expect(returnRow?.sourceLabel).toBe('客户退货入库')
     expect(returnRow?.purchaseNo).toBe('PUR-202604-001')
-    expect(returnRow?.orderLineCode).toBe('OL-202604-001-01')
+    expect(returnRow?.orderLineGoodsNo).toBe('RING-SH-016')
     expect(returnRow?.customerName).toBe('张三')
-    expect(returnRow?.linkedSummary).toContain('销售：OL-202604-001-01')
+    expect(returnRow?.linkedSummary).toContain('销售：RING-SH-016')
   })
 
   it('summarizes design samples, returns and review-needed inventory', () => {
@@ -169,7 +169,7 @@ describe('inventorySelectors', () => {
 
     const [summary] = buildInventoryOrderLineMovementSummary(movements, orderLinesMock)
 
-    expect(summary.orderLineDisplay).toBe('OL-202604-001-01 / 山形戒指')
+    expect(summary.orderLineDisplay).toBe('RING-SH-016 / 山形素圈戒指')
     expect(summary.reserveQuantity).toBe(2)
     expect(summary.releaseQuantity).toBe(0)
     expect(summary.outboundQuantity).toBe(1)

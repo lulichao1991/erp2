@@ -10,6 +10,7 @@ import {
   type ProductionFollowUpRow,
   type ProductionFollowUpTab
 } from '@/services/orderLine/orderLineProductionFollowUp'
+import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine } from '@/types/order-line'
 
@@ -21,7 +22,7 @@ type RowDraft = {
 const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
 
 const getLineSpecSummary = (line: OrderLine) =>
-  [line.selectedMaterial || line.actualRequirements?.material, line.selectedSpecValue || line.actualRequirements?.sizeNote, line.selectedProcess || line.actualRequirements?.process]
+  [line.selectedMaterial || line.actualRequirements?.material, line.selectedSpecValue, line.selectedProcess || line.actualRequirements?.process]
     .filter(Boolean)
     .join(' / ') || '待补充'
 
@@ -234,9 +235,9 @@ const ProductionFollowUpTable = ({
         <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
           <button type="button" className="workbench-task-summary" aria-expanded={isExpanded} onClick={() => onToggleLine(line.id)}>
             <span className="workbench-task-main">
-              <strong>{line.productionTaskNo || line.lineCode || line.id}</strong>
+              <strong>{getOrderLineGoodsNo(line)}</strong>
               <span>{line.name}</span>
-              <span className="text-caption">{[row.purchaseNo, line.skuCode, getLineSpecSummary(line)].filter(Boolean).join(' / ')}</span>
+              <span className="text-caption">{[row.purchaseNo, line.sourceProduct?.sourceProductCode, getLineSpecSummary(line)].filter(Boolean).join(' / ')}</span>
             </span>
             <span className="workbench-task-meta">
               <span>跟单 {line.merchandiserId || '未分配'}</span>
@@ -261,7 +262,7 @@ const ProductionFollowUpTable = ({
                   <Link to={row.purchase ? `/purchases/${row.purchase.id}` : '/purchases'} className="production-plan-table-link">
                     {row.purchaseNo}
                   </Link>
-                  <span className="text-caption">销售：{line.lineCode}</span>
+                  <span className="text-caption">货号：{getOrderLineGoodsNo(line)}</span>
                 </section>
                 <section className="workbench-detail-block">
                   <h3>生产需求</h3>

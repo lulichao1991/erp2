@@ -6,8 +6,9 @@ import {
   productionWorkflowStatusLabelMap,
   factoryWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
+import { findPurchaseForOrderLine, getOrderLinePurchaseId } from '@/services/orderLine/orderLineIdentity'
 import { getProductionDelayStatus } from '@/services/orderLine/orderLineRiskSelectors'
-import type { OrderLine, OrderLineWorkflowProductionStatus } from '@/types/order-line'
+import type { OrderLine } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 
 export type ProductionFollowUpTab = 'review' | 'dispatch' | 'producing' | 'factory_return' | 'risk'
@@ -31,11 +32,11 @@ export const productionFollowUpTabs: Array<{ value: ProductionFollowUpTab; label
   { value: 'risk', label: '异常 / 逾期' }
 ]
 
-export const isProductionFollowUpOverdue = (line: OrderLine) => {
+const isProductionFollowUpOverdue = (line: OrderLine) => {
   return getProductionDelayStatus(line, new Date(), line.factoryPlannedDueDate).overdue
 }
 
-export const isProductionFollowUpRisk = (line: OrderLine) => {
+const isProductionFollowUpRisk = (line: OrderLine) => {
   const productionStatus = getOrderLineProductionStatus(line)
   return productionStatus === 'blocked' || productionStatus === 'delayed' || isProductionFollowUpOverdue(line)
 }
@@ -60,7 +61,7 @@ export const buildProductionFollowUpRows = (orderLines: OrderLine[], purchases: 
       )
     })
     .map((line) => {
-      const purchase = purchases.find((item) => item.id === line.purchaseId)
+      const purchase = findPurchaseForOrderLine(line, purchases)
       const lineStatus = getOrderLineLineStatus(line)
       const productionStatus = getOrderLineProductionStatus(line)
       const factoryStatus = getOrderLineFactoryStatus(line)
@@ -69,7 +70,7 @@ export const buildProductionFollowUpRows = (orderLines: OrderLine[], purchases: 
       return {
         line,
         purchase,
-        purchaseNo: purchase?.purchaseNo || line.purchaseId || '未关联购买记录',
+        purchaseNo: purchase?.purchaseNo || getOrderLinePurchaseId(line) || '未关联购买记录',
         lineStatusLabel: orderLineLineStatusLabelMap[lineStatus],
         productionStatusLabel: productionWorkflowStatusLabelMap[productionStatus],
         factoryStatusLabel: factoryWorkflowStatusLabelMap[factoryStatus],
@@ -99,6 +100,3 @@ export const filterProductionFollowUpRowsByTab = (rows: ProductionFollowUpRow[],
         return false
     }
   })
-
-export const getNextProductionStatusLabel = (status: OrderLineWorkflowProductionStatus | string) =>
-  status in productionWorkflowStatusLabelMap ? productionWorkflowStatusLabelMap[status as OrderLineWorkflowProductionStatus] : status

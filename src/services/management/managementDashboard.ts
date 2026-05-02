@@ -12,7 +12,7 @@ import {
 import type { OrderLine, OrderLineLineStatus } from '@/types/order-line'
 import type { Purchase } from '@/types/purchase'
 
-export type ManagementDashboardMetrics = {
+type ManagementDashboardMetrics = {
   businessOverview: {
     todayPurchaseCount: number
     monthPurchaseCount: number

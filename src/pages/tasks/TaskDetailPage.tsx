@@ -4,6 +4,7 @@ import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import { TaskInfoCardGroup, TaskSummaryCard } from '@/components/business/task'
 import { EmptyState, PageContainer, PageHeader, SectionCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { getTaskPurchaseId } from '@/services/task/taskIdentity'
 import type { TaskStatus } from '@/types/task'
 
 const toDateTimeInputValue = (value?: string) => (value ? value.replace(' ', 'T').slice(0, 16) : '')
@@ -16,9 +17,10 @@ export const TaskDetailPage = () => {
   const currentRole = appData.currentUserRole
   const hideCommercialInfo = currentRole === 'factory'
   const task = appData.getTask(taskId)
-  const purchase = appData.getPurchase(task?.purchaseId || task?.transactionId)
+  const taskPurchaseId = getTaskPurchaseId(task)
+  const purchase = appData.getPurchase(taskPurchaseId)
   const orderLine = appData.getOrderLine(task?.orderLineId)
-  const purchaseId = purchase?.id || task?.purchaseId || task?.transactionId
+  const purchaseId = purchase?.id || taskPurchaseId
   const [form, setForm] = useState(() =>
     task
       ? {
@@ -172,7 +174,7 @@ export const TaskDetailPage = () => {
           <SectionCard title="销售推进建议" description="任务完成不等于购买记录或销售自动完成；当前只展示主线入口，不再写入旧订单阶段。">
             <div className="stack">
               <div className="text-muted">
-                阶段推进已迁移到销售主线，后续接入基于 OrderLine.status 的推进能力。当前可以查看销售或购买记录详情，由业务人员在主线页面继续跟进。
+                阶段推进已迁移到销售主线，后续接入基于 OrderLine.lineStatus 的推进能力。当前可以查看销售或购买记录详情，由业务人员在主线页面继续跟进。
               </div>
               <div className="row wrap">
                 <button type="button" className="button secondary" onClick={() => navigate('/order-lines')}>

@@ -164,18 +164,18 @@ export const SourceProductDrawer = ({
         <div className="text-caption">这里展示款式模板原始信息；查看或调整销售不会修改款式模板。</div>
 
         <SectionCard title="顶部摘要">
-          <InfoGrid columns={3}>
+          <div className="info-grid source-product-detail-grid">
             <InfoField label="款式名称" value={product.name} />
             <InfoField label="款式编号" value={product.code} />
             <InfoField label="当前版本" value={<VersionBadge value={product.version} />} />
             <InfoField label="品类" value={categoryLabelMap[product.category] || product.category} />
             <InfoField label="状态" value={<StatusTag value={product.status === 'enabled' ? '启用' : product.status === 'disabled' ? '停用' : '草稿'} />} />
             <InfoField label="是否可引用" value={product.isReferable ? '是' : '否'} />
-          </InfoGrid>
+          </div>
         </SectionCard>
 
         <SectionCard title="参数配置">
-          <InfoGrid columns={3}>
+          <div className="info-grid source-product-detail-grid">
             <InfoField label="支持材质" value={formatList(product.supportedMaterials)} />
             <InfoField label="默认材质" value={product.defaultMaterial || '—'} />
             <InfoField label="支持工艺" value={formatList(product.supportedProcesses)} />
@@ -183,7 +183,7 @@ export const SourceProductDrawer = ({
             <InfoField label="支持特殊需求" value={formatList(product.supportedSpecialOptions, '暂无特殊需求')} />
             <InfoField label="规格模式" value={specModeLabelMap[product.specMode]} />
             <InfoField label="规格名称" value={product.specName || '—'} />
-          </InfoGrid>
+          </div>
         </SectionCard>
 
         <SectionCard title="规格明细">

@@ -2,7 +2,6 @@ import { Link, useParams } from 'react-router-dom'
 import {
   CustomerAfterSalesSection,
   CustomerBasicSection,
-  CustomerLegacyTotalsSection,
   CustomerOrderLinesSection,
   CustomerPurchasesSection,
   buildCustomerOverview
@@ -44,7 +43,6 @@ export const CustomerDetailPage = () => {
       />
       <div className="stack">
         <CustomerBasicSection overview={overview} />
-        <CustomerLegacyTotalsSection customer={customer} />
         <CustomerPurchasesSection purchases={overview.purchases} />
         <CustomerOrderLinesSection orderLines={overview.orderLines} />
         <CustomerAfterSalesSection cases={overview.afterSalesCases} />
