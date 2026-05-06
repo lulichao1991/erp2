@@ -4,6 +4,19 @@
 
 本文只记录当前 runtime 仍在使用的 mock 类型和字段主线。
 
+## 当前 PRD 命名映射
+
+新 PRD 中的业务名词按当前前端主线理解：
+
+| 新 PRD 名词 | 当前前端模型 | 说明 |
+|---|---|---|
+| `order` | `Purchase` | 一次购买公共信息和归组对象，不驱动单件执行状态 |
+| `item` / `work_order` | `OrderLine.productionTaskNo` + `OrderLine` | 货号是主要识别码，`OrderLine` 是一件商品的执行对象 |
+| `style_template` | `Product` | 款式模板，只提供规格、规则、生产参考和文件资料 |
+| `payment` | `FinancePaymentRecord` | 货号维度收款、补款、退款和旧金抵扣流水 |
+| `inventory_batch` | `InventoryBatch` | 库存 FIFO 批次，只服务库存台账和财务成本卡 |
+| `logistics` / `after_sales` | `LogisticsRecord` / `AfterSalesCase` | `orderLineId` 优先关联的单件物流 / 售后记录 |
+
 已删除的旧兼容字段不再写入类型示例：
 
 - `TransactionRecord`
@@ -70,7 +83,29 @@ type Purchase = {
 
 `Purchase` 是归组对象，不是单件商品执行对象。
 
-## 4. ProductSnapshot
+## 4. FinancePaymentRecord
+
+```ts
+type FinancePaymentRecord = {
+  id: string
+  orderLineId: string
+  purchaseId?: string
+  amount: number
+  method: 'cash' | 'transfer' | 'platform' | 'old_gold' | 'refund'
+  recordType?: 'deposit' | 'final_payment' | 'supplement' | 'refund' | 'old_gold'
+  reviewStatus?: 'pending' | 'reviewed'
+  reviewedAt?: string
+  inventoryItemId?: string
+  inventoryCode?: string
+  occurredAt: string
+  reason?: string
+  note?: string
+}
+```
+
+财务收款流水默认关联 `orderLineId`。`method` 表示现金、转账、平台、旧金或退款等收款方式，`recordType` 表示定金、尾款、补款、退款或旧金等业务用途。补款 / 退款流水使用 `reviewStatus` 做前端复核状态；退款流水必须优先填写 `reason`，退款缺原因会被财务台账标记为风险，财务异常视图可一次性补齐原因并复核解除。`method = old_gold` 时可以通过 `inventoryItemId / inventoryCode` 关联旧金抵扣入库资产。`Purchase.finance` 只做整笔购买的聚合摘要，不作为单件商品收款主流程。
+
+## 5. ProductSnapshot
 
 ```ts
 type ProductSnapshot = {
@@ -88,7 +123,7 @@ type ProductSnapshot = {
 
 销售引用款式时保存快照，用于核对模板值和本次销售参数。
 
-## 5. OrderLine
+## 6. OrderLine
 
 ```ts
 type OrderLineLineStatus =
@@ -163,10 +198,12 @@ type OrderLine = {
 - `OrderLine.status` 已删除。
 - 设计/建模/生产/工厂/财务角色分流状态使用顶层 `designStatus / modelingStatus / productionStatus / factoryStatus / financeStatus`。
 - 工厂回传子状态使用 `productionInfo.feedbackStatus`，不得写回 `productionInfo.factoryStatus`。
+- `factory_returned` 表示工厂已回传但仍待跟单完工审核；审核通过后才进入 `pending_finance_confirmation`。
+- `financeStatus = confirmed` 或 `financeLocked = true` 表示该销售财务已锁定；财务页只读展示收退款、成本卡、工厂结算、备注和异常状态。
 - 销售成交金额使用 `lineSalesAmount`。
 - 系统参考报价使用 `quote.systemQuote`。
 
-## 6. Product
+## 7. Product
 
 ```ts
 type Product = {
@@ -203,9 +240,9 @@ type Product = {
 }
 ```
 
-`Product` 是款式模板，不是销售实例。
+`Product` 是款式模板，不是销售实例。平台店铺商品当前只在产品扩展区用 mock 展示，不进入正式 `Product` 类型；它不参与报价、销售执行、库存成本或财务核算。
 
-## 7. ProductSpecRow
+## 8. ProductSpecRow
 
 ```ts
 type ProductSpecRow = {
@@ -223,7 +260,7 @@ type ProductSpecRow = {
 
 规格行用于自动带出参数和基础价格。
 
-## 8. ProductPriceRule
+## 9. ProductPriceRule
 
 ```ts
 type ProductPriceRule = {
@@ -239,7 +276,7 @@ type ProductPriceRule = {
 
 固定加价规则用于计算 `QuoteResult.systemQuote`。
 
-## 9. QuoteResult
+## 10. QuoteResult
 
 ```ts
 type QuoteResult = {
@@ -253,7 +290,7 @@ type QuoteResult = {
 
 当前不做报价审批流和多版本报价历史。
 
-## 10. InventoryItem
+## 11. InventoryItem
 
 ```ts
 type InventoryItem = {
@@ -263,6 +300,7 @@ type InventoryItem = {
   category?: ProductCategory
   sourceType: InventoryItemSourceType
   sourceLabel?: string
+  sourcePaymentRecordId?: string
   productId?: string
   productName?: string
   orderLineId?: string
@@ -272,6 +310,7 @@ type InventoryItem = {
   size?: string
   craftRequirements?: string
   weight?: number
+  valuationAmount?: number
   quantity: number
   availableQuantity: number
   warehouseLocation: string
@@ -284,9 +323,46 @@ type InventoryItem = {
 }
 ```
 
-库存资产可以关联销售用于追溯，但不驱动销售状态。
+库存资产可以关联销售用于追溯，但不驱动销售状态。旧金抵扣入库使用 `sourceType = old_gold`，可通过 `sourcePaymentRecordId` 追溯到商品行收款流水，并用 `valuationAmount` 保存财务抵扣估值。当前前端使用 FIFO 批次核算库存领用成本：只有关联销售的 `outbound` 出库会进入对应 `OrderLine` 成本卡；`reserve / release / adjust` 不确认成本，`scrap` 只扣库存批次，不进入销售成本。
 
-## 11. LogisticsRecord
+## 12. InventoryBatch
+
+```ts
+type InventoryBatch = {
+  id: string
+  inventoryItemId: string
+  inventoryCode: string
+  receivedAt: string
+  quantity: number
+  remainingQuantity: number
+  unitCostAmount: number
+  totalCostAmount: number
+  sourceMovementId: string
+}
+
+type InventoryMovement = {
+  id: string
+  inventoryItemId: string
+  inventoryCode: string
+  type: 'inbound' | 'reserve' | 'release' | 'outbound' | 'scrap' | 'adjust'
+  quantity: number
+  operatorName: string
+  occurredAt: string
+  relatedOrderLineId?: string
+  fifoCostAmount?: number
+  fifoLayers?: Array<{
+    batchId: string
+    quantity: number
+    unitCostAmount: number
+    costAmount: number
+    receivedAt: string
+  }>
+}
+```
+
+每次入库形成一个 FIFO 批次。`outbound / scrap` 按 `receivedAt` 升序扣减 `remainingQuantity`；只有 `outbound` 且有关联 `relatedOrderLineId` 时，`fifoCostAmount` 进入该销售的商品行成本。
+
+## 13. LogisticsRecord
 
 ```ts
 type LogisticsRecord = {
@@ -308,7 +384,7 @@ type LogisticsRecord = {
 
 物流记录必须优先关联 `orderLineId`。
 
-## 12. AfterSalesCase
+## 14. AfterSalesCase
 
 ```ts
 type AfterSalesCase = {
@@ -328,7 +404,7 @@ type AfterSalesCase = {
 
 售后记录必须优先关联 `orderLineId`。
 
-## 13. Task
+## 15. Task
 
 ```ts
 type Task = {
@@ -356,21 +432,41 @@ type Task = {
 
 任务是协作提醒，不替代 `OrderLine.lineStatus` 主流程。
 
-## 14. 当前 mock 关系
+## 16. 当前 mock 关系
 
 ```text
 customers -> purchases -> order-lines
+finance-payment-records -> orderLineId + optional inventoryItemId
+inventory batches -> inventoryItemId + sourceMovementId
 products -> order-lines.sourceProduct
 supporting-records -> orderLineId
 tasks -> purchaseId + orderLineId
-inventory -> optional productId / purchaseId / orderLineId / customerId
+inventory -> optional productId / purchaseId / orderLineId / customerId / sourcePaymentRecordId
 ```
 
-## 15. 当前 mock 文件建议
+## 前端字段契约
+
+| 对象 | 主键 | 主要关联键 | 页面归属 |
+|---|---|---|---|
+| `Purchase` | `id` / `purchaseNo` | `customerId`，内含 `orderLines` 归组展示 | `/purchases/new`、`/purchases/:purchaseId`、工作台 |
+| `OrderLine` | `id` / `productionTaskNo` | `purchaseId`、`customerId`、`productId`、`sourceProduct` | `/order-lines`、生产、设计建模、工厂、财务 |
+| `Product` | `id` / `code` | `referenceRecords.orderLineId` | `/products/*` |
+| `FinancePaymentRecord` | `id` | `orderLineId`、`purchaseId`、可选 `inventoryItemId` | `/finance` |
+| `InventoryItem` | `id` / `inventoryCode` | 可选 `productId / purchaseId / orderLineId / customerId / sourcePaymentRecordId` | `/inventory` |
+| `InventoryBatch` | `id` | `inventoryItemId`、`sourceMovementId` | `/inventory`、`/finance` 成本卡 |
+| `LogisticsRecord` | `id` | `orderLineId`，可选 `purchaseId` | 销售详情和购买记录详情 |
+| `AfterSalesCase` | `id` | `orderLineId`，可选 `purchaseId / customerId` | 销售详情、客户详情和售后摘要 |
+
+当前字段契约只服务前端 mock 联调，不定义真实 API、数据库迁移或后端鉴权。
+
+真实接口可以承接 V2 workflow 动作结果字段，但不得恢复 `OrderLine.status`、`productionInfo.factoryStatus`、legacy `/orders`、旧 `OrderItem` 或 `TransactionRecord`。`buildOrderLineStatusPatch` 只允许手动状态面板、兼容测试或明确标注的 demo/debug 入口使用，新业务动作必须调用 `orderLineWorkflow` 动作函数。
+
+## 17. 当前 mock 文件建议
 
 ```text
 src/mocks/
   customers.ts
+  finance-payment-records.ts
   inventory.ts
   order-line-logs.ts
   order-lines.ts
@@ -380,7 +476,7 @@ src/mocks/
   tasks.ts
 ```
 
-## 16. 文档同步规则
+## 18. 文档同步规则
 
 修改以下内容时必须同步更新本文档：
 

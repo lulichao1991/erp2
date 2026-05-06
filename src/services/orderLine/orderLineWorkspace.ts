@@ -131,6 +131,13 @@ export type OrderLineLogisticsVoidHandler = (recordId: string, voidReason: strin
 export type OrderLineAfterSalesCreateHandler = (record: AfterSalesCase) => void
 export type OrderLineAfterSalesUpdateHandler = (recordId: string, draft: OrderLineAfterSalesDraft) => void
 export type OrderLineAfterSalesCloseHandler = (recordId: string) => void
+export type OrderLineCompleteHandler = (lineId: string) => void
+
+type OrderLineActiveAfterSalesSummary = {
+  activeCount: number
+  hasActiveAfterSales: boolean
+  latestReason: string
+}
 
 const activeAfterSalesStatuses = new Set(['open', 'processing', 'in_progress', 'waiting_return'])
 
@@ -179,6 +186,27 @@ const getProductionTotalWeight = (line: OrderLine) => line.productionInfo?.total
 
 const getLineHasActiveAfterSales = (line: OrderLine, afterSalesCases: AfterSalesCase[] = afterSalesMock) =>
   getOrderLineLineStatus(line) === 'after_sales' || afterSalesCases.some((item) => item.orderLineId === line.id && isActiveAfterSalesCase(item))
+
+export const getOrderLineLogisticsRecords = (records: LogisticsRecord[], orderLineId?: string) =>
+  orderLineId ? records.filter((record) => record.orderLineId === orderLineId) : []
+
+export const getOrderLineAfterSalesCases = (records: AfterSalesCase[], orderLineId?: string) =>
+  orderLineId ? records.filter((record) => record.orderLineId === orderLineId) : []
+
+export const getOrderLineActiveAfterSalesCases = (records: AfterSalesCase[], orderLineId?: string) =>
+  getOrderLineAfterSalesCases(records, orderLineId)
+    .filter(isActiveAfterSalesCase)
+    .sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''))
+
+export const getOrderLineActiveAfterSalesSummary = (records: AfterSalesCase[], orderLineId?: string): OrderLineActiveAfterSalesSummary => {
+  const activeCases = getOrderLineActiveAfterSalesCases(records, orderLineId)
+
+  return {
+    activeCount: activeCases.length,
+    hasActiveAfterSales: activeCases.length > 0,
+    latestReason: activeCases[0] ? getAfterSalesReason(activeCases[0]) : ''
+  }
+}
 
 export const buildOrderLineRowsFromData = (orderLines: OrderLine[], purchases: Purchase[], purchaseId?: string): OrderLineRow[] =>
   orderLines
@@ -504,7 +532,7 @@ export const applyOrderLineProductionDraft = (line: OrderLine, draft: OrderLineP
         : draft.feedbackStatus === 'in_progress' || draft.feedbackStatus === 'pending_feedback'
           ? 'in_production'
           : line.factoryStatus
-  const nextLineStatus = draft.feedbackStatus === 'completed' ? 'pending_finance_confirmation' : draft.feedbackStatus === 'issue' ? getOrderLineLineStatus(line) : getOrderLineLineStatus(line)
+  const nextLineStatus = draft.feedbackStatus === 'completed' ? 'factory_returned' : draft.feedbackStatus === 'issue' ? getOrderLineLineStatus(line) : getOrderLineLineStatus(line)
   const nextProductionStatus =
     draft.feedbackStatus === 'completed'
       ? 'completed'
@@ -519,7 +547,7 @@ export const applyOrderLineProductionDraft = (line: OrderLine, draft: OrderLineP
     lineStatus: nextLineStatus,
     factoryStatus: nextFactoryStatus,
     productionStatus: nextProductionStatus,
-    financeStatus: draft.feedbackStatus === 'completed' ? 'pending' : line.financeStatus,
+    financeStatus: draft.feedbackStatus === 'completed' ? 'not_required' : line.financeStatus,
     productionCompletedAt: draft.feedbackStatus === 'completed' ? draft.factoryShippedAt || line.productionCompletedAt : line.productionCompletedAt,
     productionInfo: {
       ...line.productionInfo,

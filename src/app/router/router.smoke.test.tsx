@@ -791,6 +791,33 @@ describe('router smoke', () => {
     expect(within(pendantRow as HTMLElement).getByText('待财务确认')).toBeInTheDocument()
   })
 
+  it('completes a ready-to-ship order line from purchase detail without changing siblings', async () => {
+    const user = userEvent.setup()
+    renderRoute('/purchases/o-202604-001')
+
+    const ringRow = screen.getByText('RING-SH-016').closest('tr')
+    const pendantRow = screen.getByText('PDT-SH-S').closest('tr')
+    const necklaceRow = screen.getByText('NECK-CUSTOM-042').closest('tr')
+    expect(ringRow).not.toBeNull()
+    expect(pendantRow).not.toBeNull()
+    expect(necklaceRow).not.toBeNull()
+
+    await user.click(within(ringRow as HTMLElement).getByRole('button', { name: '查看销售' }))
+    expect(screen.queryByRole('button', { name: '完成销售' })).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('目标状态'), 'ready_to_ship')
+    await user.click(screen.getByRole('button', { name: '更新状态' }))
+    expect(screen.getByRole('button', { name: '完成销售' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: '完成销售' }))
+
+    expect(screen.getByText('销售完成')).toBeInTheDocument()
+    expect(screen.getByText('将销售 RING-SH-016 从「待发货」改为「已完成」')).toBeInTheDocument()
+    expect(within(ringRow as HTMLElement).getByText('已完成')).toBeInTheDocument()
+    expect(within(pendantRow as HTMLElement).getByText('待财务确认')).toBeInTheDocument()
+    expect(within(necklaceRow as HTMLElement).getByText('待设计')).toBeInTheDocument()
+  })
+
   it('edits order-line requirements from purchase detail and keeps siblings unchanged', async () => {
     const user = userEvent.setup()
     renderRoute('/purchases/o-202604-001')
@@ -1278,6 +1305,9 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '切换到生产中' }))
     expect(screen.getByText('山形素圈戒指')).toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: '切换到完工待审核' }))
+    expect(screen.getByText('山形开口手镯')).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: '切换到异常 / 逾期' }))
     expect(screen.getByText('山形胸针')).toBeInTheDocument()
     expect(screen.getAllByText('已逾期').length).toBeGreaterThan(0)
@@ -1306,10 +1336,54 @@ describe('router smoke', () => {
     await expandWorkbenchCard(user, earringRow as HTMLElement)
 
     await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '下发生产' }))
-    expect(screen.getAllByText('待工厂接收').length).toBeGreaterThan(0)
-
-    await user.click(within(earringRow as HTMLElement).getByRole('button', { name: '标记生产中' }))
     expect(screen.getAllByText('生产中').length).toBeGreaterThan(0)
+    expect(container.querySelector('a[href^="/orders"]')).toBeNull()
+  })
+
+  it('blocks and resumes production follow-up through action availability', async () => {
+    const user = userEvent.setup()
+    renderRoute('/production-follow-up')
+
+    await user.click(screen.getByRole('button', { name: '切换到生产中' }))
+    const producingCard = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(producingCard).not.toBeNull()
+    await user.click(within(producingCard as HTMLElement).getByRole('button', { name: /展开/ }))
+    expect(within(producingCard as HTMLElement).getByRole('button', { name: '标记阻塞' })).toBeEnabled()
+    expect(within(producingCard as HTMLElement).getByRole('button', { name: '恢复生产' })).toBeDisabled()
+
+    await user.click(within(producingCard as HTMLElement).getByRole('button', { name: '标记阻塞' }))
+
+    expect(screen.getByRole('button', { name: '切换到异常 / 逾期' })).toHaveClass('selected')
+    const blockedCard = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(blockedCard).not.toBeNull()
+    await expandWorkbenchCard(user, blockedCard as HTMLElement)
+    expect(within(blockedCard as HTMLElement).getByRole('button', { name: '标记阻塞' })).toBeDisabled()
+    expect(within(blockedCard as HTMLElement).getByRole('button', { name: '恢复生产' })).toBeEnabled()
+
+    await user.click(within(blockedCard as HTMLElement).getByRole('button', { name: '恢复生产' }))
+
+    expect(screen.getByRole('button', { name: '切换到生产中' })).toHaveClass('selected')
+    expect(screen.getByText('山形素圈戒指')).toBeInTheDocument()
+    expect(screen.getAllByText('生产中').length).toBeGreaterThan(0)
+  })
+
+  it('approves factory returned order lines only after merchandiser review', async () => {
+    const user = userEvent.setup()
+    const { container } = renderRoute('/production-follow-up')
+
+    await user.click(screen.getByRole('button', { name: '切换到完工待审核' }))
+    const reviewCard = screen.getByText('山形开口手镯').closest('.workbench-task-card')
+    expect(reviewCard).not.toBeNull()
+
+    await user.click(within(reviewCard as HTMLElement).getByRole('button', { name: /展开/ }))
+
+    expect(screen.getByRole('heading', { name: '完工审核' })).toBeInTheDocument()
+    expect(screen.getByText('标准：5.6g')).toBeInTheDocument()
+    expect(screen.getByText('回传：5.6g')).toBeInTheDocument()
+
+    await user.click(within(reviewCard as HTMLElement).getByRole('button', { name: '审核通过' }))
+
+    expect(screen.getByText('暂无销售')).toBeInTheDocument()
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
@@ -1381,6 +1455,55 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
+  it('keeps factory action buttons gated by workflow action state', async () => {
+    const user = userEvent.setup()
+    renderRoute('/factory')
+
+    const pendingRow = screen.getByText('山形胸针试产版').closest('.workbench-task-card')
+    expect(pendingRow).not.toBeNull()
+    await user.click(within(pendingRow as HTMLElement).getByRole('button', { name: /展开/ }))
+
+    expect(within(pendingRow as HTMLElement).getByRole('button', { name: '接收任务' })).toBeEnabled()
+    expect(within(pendingRow as HTMLElement).getByRole('button', { name: '标记开始生产' })).toBeDisabled()
+    expect(within(pendingRow as HTMLElement).getByRole('button', { name: '标记生产完成' })).toBeDisabled()
+    expect(within(pendingRow as HTMLElement).getByRole('button', { name: '提交回传' })).toBeDisabled()
+
+    await user.click(within(pendingRow as HTMLElement).getByRole('button', { name: '接收任务' }))
+
+    const acceptedRow = screen.getByText('山形胸针试产版').closest('.workbench-task-card')
+    expect(acceptedRow).not.toBeNull()
+    await expandWorkbenchCard(user, acceptedRow as HTMLElement)
+    expect(within(acceptedRow as HTMLElement).getByRole('button', { name: '接收任务' })).toBeDisabled()
+    expect(within(acceptedRow as HTMLElement).getByRole('button', { name: '标记开始生产' })).toBeEnabled()
+    expect(within(acceptedRow as HTMLElement).getByRole('button', { name: '提交回传' })).toBeDisabled()
+  })
+
+  it('marks factory abnormal and resumes production through action availability', async () => {
+    const user = userEvent.setup()
+    renderRoute('/factory')
+
+    await user.click(screen.getByRole('button', { name: '切换到生产中' }))
+    const producingRow = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(producingRow).not.toBeNull()
+    await user.click(within(producingRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    expect(within(producingRow as HTMLElement).getByRole('button', { name: '标记异常' })).toBeEnabled()
+    expect(within(producingRow as HTMLElement).getByRole('button', { name: '恢复生产' })).toBeDisabled()
+
+    await user.click(within(producingRow as HTMLElement).getByRole('button', { name: '标记异常' }))
+
+    expect(screen.getByRole('button', { name: '切换到异常' })).toHaveClass('selected')
+    const abnormalRow = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(abnormalRow).not.toBeNull()
+    await expandWorkbenchCard(user, abnormalRow as HTMLElement)
+    expect(within(abnormalRow as HTMLElement).getByRole('button', { name: '标记异常' })).toBeDisabled()
+    expect(within(abnormalRow as HTMLElement).getByRole('button', { name: '恢复生产' })).toBeEnabled()
+
+    await user.click(within(abnormalRow as HTMLElement).getByRole('button', { name: '恢复生产' }))
+
+    expect(screen.getByRole('button', { name: '切换到生产中' })).toHaveClass('selected')
+    expect(screen.getByText('山形素圈戒指')).toBeInTheDocument()
+  })
+
   it('updates factory production return through current order-line state', async () => {
     const user = userEvent.setup()
     const { container } = renderRoute('/factory')
@@ -1435,7 +1558,41 @@ describe('router smoke', () => {
     expect(screen.getByRole('heading', { name: '财务中心' })).toBeInTheDocument()
     expect(screen.getByText('如意吊坠')).toBeInTheDocument()
     expect(screen.getByText('PUR-202604-001')).toBeInTheDocument()
-    expect(screen.getByText('待确认尾款')).toBeInTheDocument()
+    expect(screen.getByText('货号财务总览')).toBeInTheDocument()
+    expect(screen.getByText('退款总额')).toBeInTheDocument()
+    expect(screen.getByText('待收总额')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '切换到补款 / 退款' })).toBeInTheDocument()
+    const pendantSettlementRow = screen.getByText('如意吊坠').closest('.workbench-task-card')
+    expect(pendantSettlementRow).not.toBeNull()
+    await user.click(within(pendantSettlementRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    expect(screen.getByText('FIFO库存领用成本：¥120')).toBeInTheDocument()
+    expect(screen.getByText('成本合计：¥980')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到补款 / 退款' }))
+    const refundRow = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(refundRow).not.toBeNull()
+    await user.click(within(refundRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    expect(screen.getByText(/退款 · 退款 -¥120/)).toBeInTheDocument()
+    expect(screen.getByText(/原因待补/)).toBeInTheDocument()
+    expect(screen.getAllByText('退款原因未填写').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: '复核补 / 退款' })).toBeDisabled()
+    await user.type(screen.getByLabelText('收退款原因-oi-ring-001'), '戒围复核差额退款')
+    await user.click(screen.getByRole('button', { name: '补齐退款原因' }))
+    expect(screen.getByText(/原因：戒围复核差额退款/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '复核补 / 退款' })).not.toBeDisabled()
+    await user.click(screen.getByRole('button', { name: '复核补 / 退款' }))
+    expect(screen.queryByText('山形素圈戒指')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到待收款' }))
+    const necklaceRow = screen.getByText('山形定制吊牌项链').closest('.workbench-task-card')
+    expect(necklaceRow).not.toBeNull()
+    await user.click(within(necklaceRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    expect(screen.getByRole('heading', { name: '商品行成本卡' })).toBeInTheDocument()
+    expect(screen.getByText(/旧金抵扣：¥1,000/)).toBeInTheDocument()
+    expect(screen.getByText('旧金计入成本：¥0')).toBeInTheDocument()
+    expect(screen.getByText(/库存估值：¥1,000/)).toBeInTheDocument()
+    expect(screen.getByText(/抵扣流水不自动计入商品行成本/)).toBeInTheDocument()
+    expect(screen.getByText(/INV-OG-202604-005/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '切换到财务异常' }))
     expect(screen.getByText('山形胸针')).toBeInTheDocument()
@@ -1444,12 +1601,31 @@ describe('router smoke', () => {
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
-  it('confirms finance settlement and final payment without changing production ownership', async () => {
+  it('resolves refund reason exception from the finance abnormal view in one action', async () => {
+    const user = userEvent.setup()
+    renderRoute('/finance')
+
+    await user.click(screen.getByRole('button', { name: '切换到财务异常' }))
+    const exceptionRow = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(exceptionRow).not.toBeNull()
+    await user.click(within(exceptionRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    expect(within(exceptionRow as HTMLElement).getAllByText('退款原因未填写').length).toBeGreaterThan(0)
+    expect(within(exceptionRow as HTMLElement).getByRole('button', { name: '解除退款异常' })).toBeDisabled()
+
+    await user.type(within(exceptionRow as HTMLElement).getByLabelText('收退款原因-oi-ring-001'), '异常视图补齐退款原因')
+    await user.click(within(exceptionRow as HTMLElement).getByRole('button', { name: '解除退款异常' }))
+    expect(screen.queryByText('山形素圈戒指')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '切换到待收款' }))
+    const balanceRow = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(balanceRow).not.toBeNull()
+    expect(screen.getByText(/原因：异常视图补齐退款原因/)).toBeInTheDocument()
+    expect(screen.getByText(/已复核/)).toBeInTheDocument()
+  })
+
+  it('confirms finance settlement without changing production ownership', async () => {
     const user = userEvent.setup()
     const { container } = renderRoute('/finance')
-
-    await user.click(screen.getByRole('button', { name: '确认尾款' }))
-    expect(screen.getByText('尾款：已确认')).toBeInTheDocument()
 
     const pendantRow = screen.getByText('如意吊坠').closest('.workbench-task-card')
     expect(pendantRow).not.toBeNull()
@@ -1461,6 +1637,13 @@ describe('router smoke', () => {
 
     expect(screen.getAllByText('财务已确认').length).toBeGreaterThan(0)
     expect(screen.getByText('如意吊坠')).toBeInTheDocument()
+    expect(screen.getAllByText('财务已锁定').length).toBeGreaterThan(0)
+    expect(screen.getByText('财务已锁定，收退款、结算金额、备注和异常处理当前只读。')).toBeInTheDocument()
+    expect(screen.getByLabelText('本次收款金额-oi-pendant-001')).toBeDisabled()
+    expect(screen.getByLabelText('工厂结算金额-oi-pendant-001')).toBeDisabled()
+    expect(screen.getByRole('button', { name: '记录收 / 退款' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '确认工厂结算' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '标记财务异常' })).toBeDisabled()
     expect(screen.queryByText('标记生产中')).not.toBeInTheDocument()
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
@@ -1532,6 +1715,7 @@ describe('router smoke', () => {
     expect(screen.getAllByText('B-退货待检-03').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: '可领用库存' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '客户退货' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '旧金入库' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待检 / 瑕疵' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待出库' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '待盘点' })).toBeInTheDocument()
@@ -1539,9 +1723,10 @@ describe('router smoke', () => {
     expect(screen.getAllByText('山形素圈戒指设计留样').length).toBeGreaterThan(0)
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
     expect(screen.getByText('通用 18K 项链链身')).toBeInTheDocument()
+    expect(screen.getByText('张三旧金抵扣料')).toBeInTheDocument()
     expect(screen.getByText('已占用件数')).toBeInTheDocument()
     expect(screen.getAllByText('已占用 1 件').length).toBeGreaterThan(0)
-    expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: '查看购买记录' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.getAllByRole('link', { name: '查看款式模板' }).length).toBeGreaterThan(0)
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
 
@@ -1581,6 +1766,12 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '客户退货' }))
     expect(screen.getByText('客户退回山形戒指')).toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: '旧金入库' }))
+    expect(screen.getByText('张三旧金抵扣料')).toBeInTheDocument()
+    expect(screen.getAllByText('INV-OG-202604-005').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('估值 ¥1,000').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: '客户退货' }))
     const returnRow = screen
       .getAllByText('INV-RT-202604-002')
       .map((element) => element.closest('tr'))
@@ -1589,6 +1780,7 @@ describe('router smoke', () => {
     await user.click(within(returnRow as HTMLElement).getByRole('button', { name: '查看详情' }))
     expect(screen.getByText('来源追溯')).toBeInTheDocument()
     expect(screen.getByText('销售占用 / 出库追溯')).toBeInTheDocument()
+    expect(screen.getByText('FIFO 批次')).toBeInTheDocument()
     expect(screen.getAllByText('库存追溯，不推进状态').length).toBeGreaterThan(0)
     expect(screen.getByText('1 条关联流水')).toBeInTheDocument()
     expect(screen.getAllByText('产品：山形素圈戒指 / 销售：RING-SH-016 / 购买记录：PUR-202604-001 / 客户：张三').length).toBeGreaterThan(0)
@@ -1640,6 +1832,7 @@ describe('router smoke', () => {
     const quantityInputs = screen.getAllByLabelText('数量')
     await user.clear(quantityInputs[0] as HTMLElement)
     await user.type(quantityInputs[0] as HTMLElement, '2')
+    await user.type(screen.getByLabelText('批次总成本 / 估值'), '300')
     await user.click(screen.getByRole('button', { name: '登记入库' }))
 
     expect(screen.getByText(/已新增入库/)).toBeInTheDocument()
@@ -1657,6 +1850,16 @@ describe('router smoke', () => {
     expect(screen.getByText(/已登记占用/)).toBeInTheDocument()
     expect(screen.getAllByText('为后续拍摄预占').length).toBeGreaterThan(0)
     expect(screen.getAllByText('RING-SH-016 / 山形素圈戒指').length).toBeGreaterThan(0)
+
+    await user.selectOptions(screen.getByLabelText('操作类型'), 'outbound')
+    await user.clear(screen.getAllByLabelText('数量')[1] as HTMLElement)
+    await user.type(screen.getAllByLabelText('数量')[1] as HTMLElement, '1')
+    await user.type(screen.getAllByLabelText('备注')[1] as HTMLElement, '拍摄样戒领用出库')
+    await user.click(screen.getByRole('button', { name: '登记流转' }))
+
+    expect(screen.getByText(/已登记出库/)).toBeInTheDocument()
+    expect(screen.getAllByText('¥150').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/拍摄样戒领用出库/).length).toBeGreaterThan(0)
 
     await user.selectOptions(screen.getByLabelText('关联销售筛选'), 'oi-ring-001')
     await user.type(screen.getByLabelText('流转记录搜索'), '拍摄')

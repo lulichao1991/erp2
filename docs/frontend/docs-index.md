@@ -17,8 +17,10 @@ Customer -> Purchase -> OrderLine -> Product
 3. `docs/frontend/mock-data-schema.md`
 4. `docs/frontend/routes-and-pages.md`
 5. `docs/frontend/ui-structure.md`
-6. `docs/frontend/frontend-task-board.md`
-7. `README.md`
+6. `docs/frontend/interface-readiness.md`
+7. `docs/frontend/v2-plan.md`
+8. `docs/frontend/frontend-task-board.md`
+9. `README.md`
 
 若文档冲突，按上面顺序理解。
 
@@ -30,6 +32,8 @@ Customer -> Purchase -> OrderLine -> Product
 | `mock-data-schema.md` | 当前类型、mock 文件和字段规则 |
 | `routes-and-pages.md` | 当前路由和页面职责 |
 | `ui-structure.md` | 当前页面信息层级 |
+| `interface-readiness.md` | 接真实接口前的字段契约和验收边界 |
+| `v2-plan.md` | v2 阶段建设包、执行顺序和当前第一轮计划 |
 | `frontend-task-board.md` | 剩余计划和改动检查清单 |
 
 ## 已删除内容
@@ -49,5 +53,7 @@ Customer -> Purchase -> OrderLine -> Product
 - 路由变更：同步 `routes-and-pages.md`。
 - 类型或 mock 文件变更：同步 `mock-data-schema.md`。
 - 页面信息层级变更：同步 `ui-structure.md`。
+- 接口前字段契约变更：同步 `interface-readiness.md`。
+- v2 阶段建设目标变更：同步 `v2-plan.md`。
 - 阶段目标或剩余计划变更：同步 `handoff.md` 和 `frontend-task-board.md`。
 - 每次文档瘦身后跑 `npm test`。

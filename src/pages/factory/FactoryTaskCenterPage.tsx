@@ -12,7 +12,7 @@ import {
   type FactoryTaskTab
 } from '@/services/orderLine/orderLineFactory'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
-import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
+import { acceptFactoryTask, completeFactoryProduction, getOrderLineWorkflowActionState, markProductionBlocked, resumeProduction, startFactoryProduction, submitFactoryReturn } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine, OrderLineProductionData } from '@/types/order-line'
 
 type FactoryReturnDraft = {
@@ -91,11 +91,9 @@ export const FactoryTaskCenterPage = () => {
 
   const acceptTask = (line: OrderLine) => {
     patchLine(line.id, {
-      factoryStatus: 'accepted',
-      productionStatus: line.productionStatus === 'not_started' ? 'dispatched' : line.productionStatus,
+      ...acceptFactoryTask(line),
       productionInfo: {
-        ...line.productionInfo,
-        feedbackStatus: 'in_progress',
+        ...acceptFactoryTask(line).productionInfo,
         factoryNote: '工厂已接收任务。'
       }
     })
@@ -104,12 +102,9 @@ export const FactoryTaskCenterPage = () => {
 
   const startProduction = (line: OrderLine) => {
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('in_production'),
-      factoryStatus: 'in_production',
-      productionStatus: 'in_production',
+      ...startFactoryProduction(line),
       productionInfo: {
-        ...line.productionInfo,
-        feedbackStatus: 'in_progress',
+        ...startFactoryProduction(line).productionInfo,
         factoryNote: '工厂已开始生产。'
       }
     })
@@ -119,7 +114,7 @@ export const FactoryTaskCenterPage = () => {
   const completeProduction = (line: OrderLine) => {
     const completedAt = formatCurrentTime()
     patchLine(line.id, {
-      productionStatus: 'completed',
+      ...completeFactoryProduction(line),
       productionCompletedAt: line.productionCompletedAt || completedAt,
       productionData: {
         ...line.productionData,
@@ -127,8 +122,7 @@ export const FactoryTaskCenterPage = () => {
         actualMaterial: line.productionData?.actualMaterial || line.selectedMaterial || line.actualRequirements?.material
       },
       productionInfo: {
-        ...line.productionInfo,
-        feedbackStatus: 'pending_feedback',
+        ...completeFactoryProduction(line).productionInfo,
         factoryNote: '生产完成，等待回传重量与结算资料。'
       }
     })
@@ -139,20 +133,23 @@ export const FactoryTaskCenterPage = () => {
 
   const markAbnormal = (line: OrderLine) => {
     const draft = getDraft(line)
+    const abnormalReason = draft.factoryNote || '工厂标记异常，等待跟单处理。'
+    const nextLine = markProductionBlocked(line, abnormalReason)
     patchLine(line.id, {
-      factoryStatus: 'abnormal',
-      productionStatus: 'blocked',
+      ...nextLine,
       productionData: {
         ...line.productionData,
-        factoryNote: draft.factoryNote || '工厂标记异常，等待跟单处理。'
-      },
-      productionInfo: {
-        ...line.productionInfo,
-        feedbackStatus: 'issue',
-        factoryNote: draft.factoryNote || '工厂标记异常，等待跟单处理。'
+        factoryNote: abnormalReason
       }
     })
     setActiveTab('abnormal')
+  }
+
+  const resumeAbnormal = (line: OrderLine) => {
+    patchLine(line.id, {
+      ...resumeProduction(line)
+    })
+    setActiveTab('in_production')
   }
 
   const submitReturn = (line: OrderLine) => {
@@ -183,21 +180,18 @@ export const FactoryTaskCenterPage = () => {
     }
 
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('factory_returned'),
-      factoryStatus: 'returned',
-      productionStatus: 'completed',
-      financeStatus: 'pending',
+      ...submitFactoryReturn(line),
+      financeStatus: 'not_required',
       productionCompletedAt: line.productionCompletedAt || returnedAt,
       productionData,
       productionInfo: {
-        ...line.productionInfo,
-        feedbackStatus: 'completed',
+        ...submitFactoryReturn(line).productionInfo,
         actualMaterial: productionData.actualMaterial,
         totalWeight: productionData.totalWeight ? `${productionData.totalWeight}g` : line.productionInfo?.totalWeight,
         netWeight: productionData.netMetalWeight ? `${productionData.netMetalWeight}g` : line.productionInfo?.netWeight,
         laborCostDetail: productionData.totalLaborCost ? `${productionData.totalLaborCost}` : line.productionInfo?.laborCostDetail,
         factoryShippedAt: returnedAt,
-        qualityResult: '待跟单 / 财务确认',
+        qualityResult: '待跟单二次审核',
         factoryNote: draft.factoryNote || '工厂已回传生产数据。'
       }
     })
@@ -243,6 +237,7 @@ export const FactoryTaskCenterPage = () => {
               onStart={startProduction}
               onComplete={completeProduction}
               onAbnormal={markAbnormal}
+              onResume={resumeAbnormal}
               onSubmitReturn={submitReturn}
               expandedReturnLineId={expandedReturnLineId}
               expandedLineId={expandedLineId}
@@ -267,6 +262,7 @@ const FactoryTaskTable = ({
   onStart,
   onComplete,
   onAbnormal,
+  onResume,
   onSubmitReturn,
   expandedReturnLineId,
   expandedLineId,
@@ -281,6 +277,7 @@ const FactoryTaskTable = ({
   onStart: (line: OrderLine) => void
   onComplete: (line: OrderLine) => void
   onAbnormal: (line: OrderLine) => void
+  onResume: (line: OrderLine) => void
   onSubmitReturn: (line: OrderLine) => void
   expandedReturnLineId: string
   expandedLineId: string
@@ -292,7 +289,8 @@ const FactoryTaskTable = ({
     {rows.map((row) => {
       const line = row.line
       const draft = getDraft(line)
-      const canShowReturnForm = line.productionStatus === 'completed' || line.factoryStatus === 'returned'
+      const actionState = getOrderLineWorkflowActionState(line)
+      const canShowReturnForm = actionState.canSubmitFactoryReturn || line.factoryStatus === 'returned'
       const isReturnExpanded = expandedReturnLineId === line.id
       const isExpanded = expandedLineId === line.id
 
@@ -375,20 +373,23 @@ const FactoryTaskTable = ({
                 </section>
               </div>
               <div className="workbench-actions inline">
-                <button type="button" className="button secondary small" onClick={() => onAccept(line)} disabled={!canEdit}>
+                <button type="button" className="button secondary small" onClick={() => onAccept(line)} disabled={!canEdit || !actionState.canAcceptFactoryTask}>
                   接收任务
                 </button>
-                <button type="button" className="button secondary small" onClick={() => onStart(line)} disabled={!canEdit}>
+                <button type="button" className="button secondary small" onClick={() => onStart(line)} disabled={!canEdit || !actionState.canStartFactoryProduction}>
                   标记开始生产
                 </button>
-                <button type="button" className="button secondary small" onClick={() => onComplete(line)} disabled={!canEdit}>
+                <button type="button" className="button secondary small" onClick={() => onComplete(line)} disabled={!canEdit || !actionState.canCompleteFactoryProduction}>
                   标记生产完成
                 </button>
-                <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit || !canShowReturnForm}>
+                <button type="button" className="button secondary small" onClick={() => onSubmitReturn(line)} disabled={!canEdit || !actionState.canSubmitFactoryReturn}>
                   提交回传
                 </button>
-                <button type="button" className="button ghost small" onClick={() => onAbnormal(line)} disabled={!canEdit}>
+                <button type="button" className="button ghost small" onClick={() => onAbnormal(line)} disabled={!canEdit || !actionState.canMarkProductionBlocked}>
                   标记异常
+                </button>
+                <button type="button" className="button ghost small" onClick={() => onResume(line)} disabled={!canEdit || !actionState.canResumeProduction}>
+                  恢复生产
                 </button>
               </div>
             </div>

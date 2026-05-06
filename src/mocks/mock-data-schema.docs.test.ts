@@ -14,7 +14,7 @@ const extractRuntimeMockFiles = () =>
     .sort()
 
 const extractDocumentedMockFiles = () => {
-  const mockFilesBlock = mockDataSchemaDocs.match(/## 15\. 当前 mock 文件建议[\s\S]*?```text\nsrc\/mocks\/\n([\s\S]*?)\n```/)
+  const mockFilesBlock = mockDataSchemaDocs.match(/## \d+\. 当前 mock 文件建议[\s\S]*?```text\nsrc\/mocks\/\n([\s\S]*?)\n```/)
 
   expect(mockFilesBlock?.[1]).toBeTruthy()
 

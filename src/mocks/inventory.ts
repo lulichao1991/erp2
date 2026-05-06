@@ -1,4 +1,4 @@
-import type { InventoryItem, InventoryMovement } from '@/types/inventory'
+import type { InventoryBatch, InventoryItem, InventoryMovement } from '@/types/inventory'
 
 export const inventoryItemsMock: InventoryItem[] = [
   {
@@ -61,8 +61,8 @@ export const inventoryItemsMock: InventoryItem[] = [
     size: '42cm',
     craftRequirements: '通用链身，可用于多款吊坠搭配',
     weight: 2.6,
-    quantity: 5,
-    availableQuantity: 5,
+    quantity: 4,
+    availableQuantity: 4,
     warehouseLocation: 'C-常备链身-02',
     ownerDepartment: 'warehouse',
     condition: 'new',
@@ -70,6 +70,32 @@ export const inventoryItemsMock: InventoryItem[] = [
     receivedAt: '2026-04-20 09:30',
     keeperName: '周库管',
     remark: '库管常备货，后续可按销售领用。'
+  },
+  {
+    id: 'inventory-old-gold-necklace-001',
+    inventoryCode: 'INV-OG-202604-005',
+    name: '张三旧金抵扣料',
+    category: 'other',
+    sourceType: 'old_gold',
+    sourceLabel: '旧金抵扣入库',
+    sourcePaymentRecordId: 'finance-payment-necklace-old-gold-001',
+    orderLineId: 'ol-zhang-necklace-001',
+    purchaseId: 'o-202604-001',
+    customerId: 'customer-zhang-001',
+    material: '18K金',
+    size: '碎料',
+    craftRequirements: '客户旧金抵扣回收入库，待复核成色和熔料处置',
+    weight: 3.2,
+    valuationAmount: 1000,
+    quantity: 1,
+    availableQuantity: 1,
+    warehouseLocation: 'E-旧金待熔-01',
+    ownerDepartment: 'warehouse',
+    condition: 'returned',
+    status: 'in_stock',
+    receivedAt: '2026-04-22 15:35',
+    keeperName: '周库管',
+    remark: '财务按 ¥1000 抵扣，库存只做旧金资产追溯，不推进销售状态。'
   },
   {
     id: 'inventory-other-stone-001',
@@ -131,5 +157,113 @@ export const inventoryMovementsMock: InventoryMovement[] = [
     toStatus: 'in_stock',
     toLocation: 'C-常备链身-02',
     note: '常备链身采购入库。'
+  },
+  {
+    id: 'inventory-movement-stock-chain-outbound-001',
+    inventoryItemId: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    type: 'outbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-25 17:20',
+    fromStatus: 'in_stock',
+    toStatus: 'in_stock',
+    fromLocation: 'C-常备链身-02',
+    toLocation: 'C-常备链身-02',
+    relatedOrderLineId: 'oi-pendant-001',
+    fifoCostAmount: 120,
+    fifoLayers: [
+      {
+        batchId: 'inventory-batch-stock-chain-001',
+        quantity: 1,
+        unitCostAmount: 120,
+        costAmount: 120,
+        receivedAt: '2026-04-20 09:30'
+      }
+    ],
+    note: '如意吊坠领用常备链身，按 FIFO 计入商品行成本。'
+  },
+  {
+    id: 'inventory-movement-old-gold-necklace-001',
+    inventoryItemId: 'inventory-old-gold-necklace-001',
+    inventoryCode: 'INV-OG-202604-005',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-22 15:35',
+    toStatus: 'in_stock',
+    toLocation: 'E-旧金待熔-01',
+    relatedOrderLineId: 'ol-zhang-necklace-001',
+    note: '客户旧金抵扣入库，关联财务收款流水 finance-payment-necklace-old-gold-001。'
+  },
+  {
+    id: 'inventory-movement-other-stone-001',
+    inventoryItemId: 'inventory-other-stone-001',
+    inventoryCode: 'INV-OT-202604-004',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-18 15:00',
+    toStatus: 'in_stock',
+    toLocation: 'D-辅石-08',
+    note: '其他渠道辅石入库。'
+  }
+]
+
+export const inventoryBatchesMock: InventoryBatch[] = [
+  {
+    id: 'inventory-batch-design-sample-ring-001',
+    inventoryItemId: 'inventory-design-sample-ring-001',
+    inventoryCode: 'INV-DS-202604-001',
+    receivedAt: '2026-04-23 18:20',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 0,
+    totalCostAmount: 0,
+    sourceMovementId: 'inventory-movement-design-sample-ring-001'
+  },
+  {
+    id: 'inventory-batch-return-ring-001',
+    inventoryItemId: 'inventory-return-ring-001',
+    inventoryCode: 'INV-RT-202604-002',
+    receivedAt: '2026-04-25 11:10',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 0,
+    totalCostAmount: 0,
+    sourceMovementId: 'inventory-movement-return-ring-001'
+  },
+  {
+    id: 'inventory-batch-stock-chain-001',
+    inventoryItemId: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    receivedAt: '2026-04-20 09:30',
+    quantity: 5,
+    remainingQuantity: 4,
+    unitCostAmount: 120,
+    totalCostAmount: 600,
+    sourceMovementId: 'inventory-movement-stock-chain-001'
+  },
+  {
+    id: 'inventory-batch-old-gold-necklace-001',
+    inventoryItemId: 'inventory-old-gold-necklace-001',
+    inventoryCode: 'INV-OG-202604-005',
+    receivedAt: '2026-04-22 15:35',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 1000,
+    totalCostAmount: 1000,
+    sourceMovementId: 'inventory-movement-old-gold-necklace-001'
+  },
+  {
+    id: 'inventory-batch-other-stone-001',
+    inventoryItemId: 'inventory-other-stone-001',
+    inventoryCode: 'INV-OT-202604-004',
+    receivedAt: '2026-04-18 15:00',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 80,
+    totalCostAmount: 80,
+    sourceMovementId: 'inventory-movement-other-stone-001'
   }
 ]

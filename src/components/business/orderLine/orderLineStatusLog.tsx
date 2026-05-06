@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { EmptyState, InfoField, RecordTimeline, StatusTag } from '@/components/common'
 import { DetailSection } from '@/components/business/orderLine/orderLineDetailSection'
 import { orderLineStatusOptions } from '@/components/business/orderLine/orderLineOptions'
-import { getCustomerServiceNextLineStatus } from '@/services/orderLine/orderLineCustomerService'
 import { getOrderLineCompleteness } from '@/services/orderLine/orderLineRiskSelectors'
-import { getOrderLineLineStatus, getOrderLineLineStatusLabel } from '@/services/orderLine/orderLineWorkflow'
+import { confirmCustomerServiceInfo, getOrderLineLineStatus, getOrderLineLineStatusLabel } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine, OrderLineLineStatus, OrderLineLog } from '@/types/order-line'
 
 export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
@@ -22,10 +21,7 @@ export const OrderLineStatusUpdatePanel = ({
   const [nextStatus, setNextStatus] = useState(String(currentLineStatus))
   const [statusMessage, setStatusMessage] = useState('')
   const completeness = getOrderLineCompleteness(line)
-  const customerConfirmStatus = getCustomerServiceNextLineStatus({
-    requiresDesign: Boolean(line.requiresDesign),
-    requiresModeling: Boolean(line.requiresModeling)
-  })
+  const customerConfirmStatus = getOrderLineLineStatus(confirmCustomerServiceInfo(line))
 
   useEffect(() => {
     setNextStatus(String(getOrderLineLineStatus(line)))

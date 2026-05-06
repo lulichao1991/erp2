@@ -1,15 +1,16 @@
 import type { Customer } from '@/types/customer'
-import type { InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
+import type { InventoryBatch, InventoryFifoLayer, InventoryItem, InventoryItemCondition, InventoryItemSourceType, InventoryItemStatus, InventoryMovement, InventoryMovementType } from '@/types/inventory'
 import type { OrderLine } from '@/types/order-line'
 import type { Product } from '@/types/product'
 import type { Purchase } from '@/types/purchase'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 
-export type InventoryQuickView = 'all' | 'available' | 'design_samples' | 'customer_returns' | 'needs_review' | 'reserved' | 'pending_outbound' | 'pending_stocktake' | 'low_stock' | 'unavailable'
+export type InventoryQuickView = 'all' | 'available' | 'design_samples' | 'customer_returns' | 'old_gold' | 'needs_review' | 'reserved' | 'pending_outbound' | 'pending_stocktake' | 'low_stock' | 'unavailable'
 
 export const inventorySourceTypeLabelMap: Record<InventoryItemSourceType, string> = {
   design_sample: '设计留样',
   customer_return: '客户退货',
+  old_gold: '旧金抵扣',
   stock_purchase: '常备采购',
   consignment: '寄售库存',
   other: '其他库存'
@@ -68,6 +69,7 @@ type InventorySummary = {
   reservedQuantity: number
   designSampleCount: number
   customerReturnCount: number
+  oldGoldCount: number
   needsReviewCount: number
   reservedCount: number
   lowStockCount: number
@@ -88,6 +90,7 @@ type InventoryMovementInput = {
   quantity: number
   operatorName: string
   occurredAt: string
+  totalCostAmount?: number
   toLocation?: string
   relatedOrderLineId?: string
   note?: string
@@ -96,6 +99,7 @@ type InventoryMovementInput = {
 type InventoryMovementResult = {
   item: InventoryItem
   movement: InventoryMovement
+  batches: InventoryBatch[]
 }
 
 type InventoryOrderLineMovementSummary = {
@@ -104,6 +108,7 @@ type InventoryOrderLineMovementSummary = {
   reserveQuantity: number
   releaseQuantity: number
   outboundQuantity: number
+  fifoCostAmount: number
   movementCount: number
   latestOccurredAt: string
 }
@@ -271,6 +276,10 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
       return false
     }
 
+    if (filters.quickView === 'old_gold' && row.item.sourceType !== 'old_gold') {
+      return false
+    }
+
     if (filters.quickView === 'needs_review' && !['repair_needed', 'defective'].includes(row.item.condition)) {
       return false
     }
@@ -320,6 +329,7 @@ export const filterInventoryRows = (rows: InventoryRow[], filters: InventoryFilt
       row.item.name,
       row.item.material,
       row.item.size,
+      row.item.sourcePaymentRecordId,
       row.sourceLabel,
       row.productName,
       row.orderLineGoodsNo,
@@ -339,6 +349,7 @@ export const buildInventorySummary = (rows: InventoryRow[]): InventorySummary =>
   reservedQuantity: rows.reduce((sum, row) => sum + getInventoryReservedQuantity(row.item), 0),
   designSampleCount: rows.filter((row) => row.item.sourceType === 'design_sample').length,
   customerReturnCount: rows.filter((row) => row.item.sourceType === 'customer_return').length,
+  oldGoldCount: rows.filter((row) => row.item.sourceType === 'old_gold').length,
   needsReviewCount: rows.filter((row) => getInventoryReviewStatus(row.item) === 'needs_review').length,
   reservedCount: rows.filter((row) => row.item.status === 'reserved').length,
   lowStockCount: rows.filter(isLowStockInventoryRow).length,
@@ -387,6 +398,7 @@ export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovem
       reserveQuantity: 0,
       releaseQuantity: 0,
       outboundQuantity: 0,
+      fifoCostAmount: 0,
       movementCount: 0,
       latestOccurredAt: movement.occurredAt
     }
@@ -396,6 +408,7 @@ export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovem
       reserveQuantity: summary.reserveQuantity + (movement.type === 'reserve' ? movement.quantity : 0),
       releaseQuantity: summary.releaseQuantity + (movement.type === 'release' ? movement.quantity : 0),
       outboundQuantity: summary.outboundQuantity + (movement.type === 'outbound' ? movement.quantity : 0),
+      fifoCostAmount: summary.fifoCostAmount + (movement.type === 'outbound' ? movement.fifoCostAmount ?? 0 : 0),
       movementCount: summary.movementCount + 1,
       latestOccurredAt: movement.occurredAt > summary.latestOccurredAt ? movement.occurredAt : summary.latestOccurredAt
     })
@@ -404,11 +417,72 @@ export const buildInventoryOrderLineMovementSummary = (movements: InventoryMovem
   return Array.from(summaries.values())
 }
 
-export const applyInventoryMovement = (item: InventoryItem, input: InventoryMovementInput): InventoryMovementResult => {
+const getSortedFifoBatches = (batches: InventoryBatch[], inventoryItemId: string) =>
+  batches
+    .filter((batch) => batch.inventoryItemId === inventoryItemId && batch.remainingQuantity > 0)
+    .sort((left, right) => left.receivedAt.localeCompare(right.receivedAt) || left.id.localeCompare(right.id))
+
+const consumeFifoBatches = (batches: InventoryBatch[], item: InventoryItem, quantity: number) => {
+  let remainingQuantity = quantity
+  const fifoLayers: InventoryFifoLayer[] = []
+  const consumedByBatch = new Map<string, number>()
+
+  getSortedFifoBatches(batches, item.id).forEach((batch) => {
+    if (remainingQuantity <= 0) {
+      return
+    }
+    const consumedQuantity = Math.min(batch.remainingQuantity, remainingQuantity)
+    const costAmount = Number((consumedQuantity * batch.unitCostAmount).toFixed(2))
+    fifoLayers.push({
+      batchId: batch.id,
+      quantity: consumedQuantity,
+      unitCostAmount: batch.unitCostAmount,
+      costAmount,
+      receivedAt: batch.receivedAt
+    })
+    consumedByBatch.set(batch.id, consumedQuantity)
+    remainingQuantity -= consumedQuantity
+  })
+
+  if (remainingQuantity > 0) {
+    throw new Error('FIFO 批次数量不足，不能出库')
+  }
+
+  const nextBatches = batches.map((batch) => {
+    const consumedQuantity = consumedByBatch.get(batch.id) ?? 0
+    return consumedQuantity > 0 ? { ...batch, remainingQuantity: batch.remainingQuantity - consumedQuantity } : batch
+  })
+
+  return {
+    fifoLayers,
+    fifoCostAmount: Number(fifoLayers.reduce((sum, layer) => sum + layer.costAmount, 0).toFixed(2)),
+    batches: nextBatches
+  }
+}
+
+const buildInboundBatch = (item: InventoryItem, movementId: string, quantity: number, totalCostAmount: number | undefined, receivedAt: string): InventoryBatch => {
+  const totalCost = Math.max(0, totalCostAmount ?? item.valuationAmount ?? 0)
+  return {
+    id: `inventory-batch-${item.id}-${receivedAt.replace(/[^0-9]/g, '')}`,
+    inventoryItemId: item.id,
+    inventoryCode: item.inventoryCode,
+    receivedAt,
+    quantity,
+    remainingQuantity: quantity,
+    unitCostAmount: quantity > 0 ? Number((totalCost / quantity).toFixed(2)) : 0,
+    totalCostAmount: totalCost,
+    sourceMovementId: movementId
+  }
+}
+
+export const applyInventoryMovement = (item: InventoryItem, input: InventoryMovementInput, batches: InventoryBatch[] = []): InventoryMovementResult => {
   const quantity = Math.max(0, Math.floor(input.quantity))
   const fromStatus = item.status
   const fromLocation = item.warehouseLocation
   let nextItem: InventoryItem = { ...item }
+  let nextBatches = batches
+  let fifoLayers: InventoryFifoLayer[] | undefined
+  let fifoCostAmount: number | undefined
 
   if (quantity <= 0) {
     throw new Error('库存流转数量必须大于 0')
@@ -439,6 +513,10 @@ export const applyInventoryMovement = (item: InventoryItem, input: InventoryMove
     if (quantity > item.quantity) {
       throw new Error('出库数量不能大于库存数量')
     }
+    const fifoResult = consumeFifoBatches(nextBatches, item, quantity)
+    nextBatches = fifoResult.batches
+    fifoLayers = fifoResult.fifoLayers
+    fifoCostAmount = fifoResult.fifoCostAmount
     const nextQuantity = item.quantity - quantity
     const availableQuantity = Math.min(item.availableQuantity, nextQuantity)
     nextItem = {
@@ -453,6 +531,10 @@ export const applyInventoryMovement = (item: InventoryItem, input: InventoryMove
     if (quantity > item.quantity) {
       throw new Error('报废数量不能大于库存数量')
     }
+    const fifoResult = consumeFifoBatches(nextBatches, item, quantity)
+    nextBatches = fifoResult.batches
+    fifoLayers = fifoResult.fifoLayers
+    fifoCostAmount = fifoResult.fifoCostAmount
     const nextQuantity = item.quantity - quantity
     const availableQuantity = Math.min(item.availableQuantity, nextQuantity)
     nextItem = {
@@ -481,8 +563,9 @@ export const applyInventoryMovement = (item: InventoryItem, input: InventoryMove
     }
   }
 
+  const movementId = `movement-${item.id}-${input.type}-${input.occurredAt.replace(/[^0-9]/g, '')}`
   const movement: InventoryMovement = {
-    id: `movement-${item.id}-${input.type}-${input.occurredAt.replace(/[^0-9]/g, '')}`,
+    id: movementId,
     inventoryItemId: item.id,
     inventoryCode: item.inventoryCode,
     type: input.type,
@@ -494,12 +577,19 @@ export const applyInventoryMovement = (item: InventoryItem, input: InventoryMove
     fromLocation,
     toLocation: nextItem.warehouseLocation,
     relatedOrderLineId: input.relatedOrderLineId,
+    fifoCostAmount,
+    fifoLayers,
     note: input.note
+  }
+
+  if (input.type === 'inbound') {
+    nextBatches = [...nextBatches, buildInboundBatch(nextItem, movementId, quantity, input.totalCostAmount, input.occurredAt)]
   }
 
   return {
     item: nextItem,
-    movement
+    movement,
+    batches: nextBatches
   }
 }
 
@@ -538,7 +628,8 @@ export const applyInventoryReview = (item: InventoryItem, input: InventoryReview
 
   return {
     item: nextItem,
-    movement
+    movement,
+    batches: []
   }
 }
 
@@ -585,6 +676,7 @@ export const applyInventoryStocktake = (item: InventoryItem, input: InventorySto
 
   return {
     item: nextItem,
-    movement
+    movement,
+    batches: []
   }
 }

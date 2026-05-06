@@ -56,6 +56,7 @@ export const PurchaseDetailPage = () => {
         row={workspace.selectedRow}
         onClose={workspace.closeOrderLineDetail}
         onStatusChange={workspace.handleStatusChange}
+        onCompleteOrderLine={workspace.handleCompleteOrderLine}
         onUpdateLineDetails={workspace.handleUpdateLineDetails}
         onUpdateDesignModeling={workspace.handleUpdateDesignModelingInfo}
         onUpdateOutsourceInfo={workspace.handleUpdateOutsourceInfo}

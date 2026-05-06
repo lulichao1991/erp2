@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SourceProductDrawer, type SourceProductCompareValue } from '@/components/business/sourceProduct'
-import { CopyableText, EmptyState, InfoField, RiskTag, SideDrawer } from '@/components/common'
+import { CopyableText, EmptyState, InfoField, RiskTag, SideDrawer, StatusTag } from '@/components/common'
 import { afterSalesMock, customersMock, logisticsMock } from '@/mocks'
 import { mockProducts } from '@/mocks/products'
 import {
   getOrderLineFinanceStatus,
   getOrderLineProductionStatus,
+  getOrderLineV2WorkflowStep,
+  getOrderLineWorkflowActionState,
   productionWorkflowStatusLabelMap
 } from '@/services/orderLine/orderLineWorkflow'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
@@ -40,7 +42,7 @@ import type { Product } from '@/types/product'
 import type { Customer } from '@/types/customer'
 import type { Purchase } from '@/types/purchase'
 import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
-import type { OrderLineRow } from '@/services/orderLine/orderLineWorkspace'
+import { getOrderLineAfterSalesCases, getOrderLineLogisticsRecords, type OrderLineCompleteHandler, type OrderLineRow } from '@/services/orderLine/orderLineWorkspace'
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
 
@@ -76,6 +78,7 @@ export const OrderLineDetailDrawer = ({
   row,
   onClose,
   onStatusChange,
+  onCompleteOrderLine,
   logs = [],
   logisticsRecords = logisticsMock,
   afterSalesCases = afterSalesMock,
@@ -96,6 +99,7 @@ export const OrderLineDetailDrawer = ({
   row?: OrderLineRow
   onClose: () => void
   onStatusChange?: OrderLineStatusUpdateHandler
+  onCompleteOrderLine?: OrderLineCompleteHandler
   onUpdateLineDetails?: OrderLineDetailsUpdateHandler
   onUpdateOutsourceInfo?: OrderLineOutsourceUpdateHandler
   onUpdateProductionInfo?: OrderLineProductionUpdateHandler
@@ -118,8 +122,8 @@ export const OrderLineDetailDrawer = ({
   const line = row?.line
   const purchase = row?.purchase
   const customer = customers.find((item) => item.id === line?.customerId || item.id === purchase?.customerId)
-  const lineLogisticsRecords = line ? logisticsRecords.filter((item) => item.orderLineId === line.id) : []
-  const lineAfterSalesCases = line ? afterSalesCases.filter((item) => item.orderLineId === line.id) : []
+  const lineLogisticsRecords = getOrderLineLogisticsRecords(logisticsRecords, line?.id)
+  const lineAfterSalesCases = getOrderLineAfterSalesCases(afterSalesCases, line?.id)
   const riskLabels = line ? getLineRiskLabels(line, afterSalesCases) : []
   const lineLogs = line ? logs.filter((log) => log.orderLineId === line.id) : []
   const sourceProduct = line ? products.find((product) => product.id === line.sourceProduct?.sourceProductId || product.id === line.productId) : undefined
@@ -130,6 +134,8 @@ export const OrderLineDetailDrawer = ({
   const finalPaymentAmount =
     line?.allocatedFinalPaymentAmount ??
     (typeof dealPrice === 'number' && typeof depositAmount === 'number' ? Math.max(dealPrice - depositAmount, 0) : undefined)
+  const workflowStep = line ? getOrderLineV2WorkflowStep(line) : undefined
+  const actionState = line ? getOrderLineWorkflowActionState(line) : undefined
   useEffect(() => {
     setLogisticsFormOpen(false)
     setAfterSalesFormOpen(false)
@@ -163,6 +169,24 @@ export const OrderLineDetailDrawer = ({
         <EmptyState title="未选择销售" description="请选择一条销售查看详情。" />
       ) : (
         <div className="stack order-line-detail-stack">
+          {workflowStep ? (
+            <DetailSection title="当前步骤">
+              <div className="info-grid order-line-drawer-grid">
+                <InfoField label="当前阶段" value={<StatusTag value={workflowStep.stageLabel} />} />
+                <InfoField label="负责角色" value={workflowStep.ownerRoleLabel} />
+                <InfoField label="下一步动作" value={workflowStep.nextActionLabel} />
+              </div>
+              <div className="text-caption spacer-top">{workflowStep.description}</div>
+              {actionState?.canCompleteOrderLine ? (
+                <div className="workbench-actions inline spacer-top">
+                  <button type="button" className="button primary small" onClick={() => onCompleteOrderLine?.(line.id)} disabled={!onCompleteOrderLine}>
+                    完成销售
+                  </button>
+                </div>
+              ) : null}
+            </DetailSection>
+          ) : null}
+
           <DetailSection title="顶部摘要">
             <div className="info-grid order-line-top-summary-grid">
               <InfoField label="货号" value={<CopyableText value={getOrderLineGoodsNo(line, '')} label="货号" />} />
@@ -215,6 +239,7 @@ export const OrderLineDetailDrawer = ({
 
           <DetailSection title="物流 / 售后摘要">
             <div className="stack">
+              <div className="text-caption">按销售关联，仅记录单件物流/售后，不推进主流程状态。</div>
               <div className="subtle-panel">
                 <div className="row wrap" style={{ justifyContent: 'space-between' }}>
                   <strong>物流记录</strong>

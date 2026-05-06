@@ -18,7 +18,7 @@ export const purchaseMock: Purchase = {
   expectedDate: '2026-04-30',
   promisedDate: '2026-05-02',
   riskTags: ['同次购买多件商品', '单件售后独立跟进'],
-  remark: '张三一次购买多件商品：戒指生产中、吊坠待财务确认、项链待设计、手链待建模，另有耳钉待跟单审核、胸针生产阻塞。',
+  remark: '张三一次购买多件商品：戒指生产中、吊坠待财务确认、项链待设计、手链待建模，另有耳钉待跟单审核、胸针生产阻塞、手镯完工待审核。',
   aggregateStatus: 'in_progress',
   orderLineCount: orderLinesMock.length,
   orderLines: orderLinesMock,

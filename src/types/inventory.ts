@@ -1,6 +1,6 @@
 import type { ProductCategory } from '@/types/product'
 
-export type InventoryItemSourceType = 'design_sample' | 'customer_return' | 'stock_purchase' | 'consignment' | 'other'
+export type InventoryItemSourceType = 'design_sample' | 'customer_return' | 'old_gold' | 'stock_purchase' | 'consignment' | 'other'
 
 export type InventoryItemStatus = 'in_stock' | 'reserved' | 'outbound' | 'scrapped'
 
@@ -10,6 +10,26 @@ export type InventoryOwnerDepartment = 'design' | 'customer_service' | 'warehous
 
 export type InventoryMovementType = 'inbound' | 'reserve' | 'release' | 'outbound' | 'scrap' | 'adjust'
 
+export type InventoryFifoLayer = {
+  batchId: string
+  quantity: number
+  unitCostAmount: number
+  costAmount: number
+  receivedAt: string
+}
+
+export type InventoryBatch = {
+  id: string
+  inventoryItemId: string
+  inventoryCode: string
+  receivedAt: string
+  quantity: number
+  remainingQuantity: number
+  unitCostAmount: number
+  totalCostAmount: number
+  sourceMovementId: string
+}
+
 export type InventoryItem = {
   id: string
   inventoryCode: string
@@ -17,6 +37,7 @@ export type InventoryItem = {
   category?: ProductCategory
   sourceType: InventoryItemSourceType
   sourceLabel?: string
+  sourcePaymentRecordId?: string
   productId?: string
   productName?: string
   orderLineId?: string
@@ -26,6 +47,7 @@ export type InventoryItem = {
   size?: string
   craftRequirements?: string
   weight?: number
+  valuationAmount?: number
   quantity: number
   availableQuantity: number
   warehouseLocation: string
@@ -50,5 +72,7 @@ export type InventoryMovement = {
   fromLocation?: string
   toLocation?: string
   relatedOrderLineId?: string
+  fifoCostAmount?: number
+  fifoLayers?: InventoryFifoLayer[]
   note?: string
 }

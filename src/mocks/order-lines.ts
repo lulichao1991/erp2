@@ -542,4 +542,96 @@ const factoryPendingOrderLine: OrderLine = {
   promisedDate: '2026-05-04'
 }
 
-export const orderLinesMock: OrderLine[] = [ringOrderLine, pendantOrderLine, necklaceOrderLine, waxOrderLine, earringReviewOrderLine, broochBlockedOrderLine, factoryPendingOrderLine]
+const completionReviewOrderLine: OrderLine = {
+  id: 'ol-zhang-completion-review-001',
+  lineNo: 8,
+  productionTaskNo: 'BRACELET-RETURN-008',
+  purchaseId,
+  customerId: 'customer-zhang-001',
+  name: '山形开口手镯',
+  category: 'bracelet',
+  versionNo: 'v1',
+  quantity: 1,
+  lineStatus: 'factory_returned',
+  designStatus: 'completed',
+  modelingStatus: 'not_required',
+  productionStatus: 'completed',
+  factoryStatus: 'returned',
+  financeStatus: 'not_required',
+  merchandiserId: 'merchandiser-li',
+  factoryId: 'factory-suzhou-gold-001',
+  productionSentAt: '2026-04-24 10:00',
+  factoryPlannedDueDate: '2026-04-28',
+  productionCompletedAt: '2026-04-27 16:00',
+  currentOwner: '李生产',
+  priority: 'normal',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: false,
+  requiresWax: false,
+  isReferencedProduct: false,
+  selectedSpecValue: '开口手镯 58mm',
+  selectedSpecSnapshot: {
+    id: 'spec-custom-bracelet-58',
+    productId: 'custom-bracelet',
+    specValue: '开口手镯 58mm',
+    sortOrder: 1,
+    status: 'enabled',
+    basePrice: 1600,
+    referenceWeight: 5.6,
+    sizeFields: [
+      { key: 'inner_diameter', label: '内径', value: '58', unit: 'mm' },
+      { key: 'opening', label: '开口', value: '18', unit: 'mm' }
+    ]
+  },
+  selectedMaterial: '18K金',
+  selectedProcess: '手工抛光',
+  actualRequirements: {
+    material: '18K金',
+    process: '手工抛光',
+    specialNotes: ['回传后需跟单复核成品照片和结算附件'],
+    remark: '开口手镯 58mm / 工厂已回传，等待跟单完工审核。'
+  },
+  productionInfo: {
+    feedbackStatus: 'completed',
+    actualMaterial: '18K金',
+    totalWeight: '5.8g',
+    netWeight: '5.6g',
+    laborCostDetail: '260',
+    factoryShippedAt: '2026-04-27 16:00',
+    qualityResult: '待跟单二次审核',
+    factoryNote: '工厂已回传手镯完工资料。'
+  },
+  productionData: {
+    shippedAt: '2026-04-27 16:00',
+    completedAt: '2026-04-27 15:40',
+    totalWeight: 5.8,
+    netMetalWeight: 5.6,
+    actualMaterial: '18K金',
+    baseLaborCost: 260,
+    totalLaborCost: 260,
+    factoryNote: '完工回传，等待跟单审核。',
+    finishedImageUrls: ['bracelet-front.jpg', 'bracelet-mark.jpg'],
+    settlementFileUrls: ['bracelet-settlement.pdf']
+  },
+  lineSalesAmount: 1980,
+  allocatedDepositAmount: 1000,
+  allocatedFinalPaymentAmount: 980,
+  materialCost: 720,
+  laborCost: 260,
+  factorySettlementAmount: 260,
+  financeNote: '待跟单完工审核通过后进入财务确认。',
+  expectedDate: '2026-04-28',
+  promisedDate: '2026-05-01'
+}
+
+export const orderLinesMock: OrderLine[] = [
+  ringOrderLine,
+  pendantOrderLine,
+  necklaceOrderLine,
+  waxOrderLine,
+  earringReviewOrderLine,
+  broochBlockedOrderLine,
+  factoryPendingOrderLine,
+  completionReviewOrderLine
+]

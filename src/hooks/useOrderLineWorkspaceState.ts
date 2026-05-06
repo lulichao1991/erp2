@@ -24,6 +24,7 @@ import {
   type OrderLineAfterSalesCloseHandler,
   type OrderLineAfterSalesCreateHandler,
   type OrderLineAfterSalesUpdateHandler,
+  type OrderLineCompleteHandler,
   type OrderLineDesignModelingUpdateHandler,
   type OrderLineDetailsUpdateHandler,
   type OrderLineLogisticsCreateHandler,
@@ -37,7 +38,7 @@ import {
 } from '@/services/orderLine/orderLineWorkspace'
 import { useAppData } from '@/hooks/useAppData'
 import { afterSalesMock, logisticsMock, orderLineLogsMock } from '@/mocks'
-import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
+import { buildOrderLineStatusPatch, completeOrderLine } from '@/services/orderLine/orderLineWorkflow'
 import { getOrderLineLineStatus } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLineLog } from '@/types/order-line'
 import type { AfterSalesCase, LogisticsRecord } from '@/types/supporting-records'
@@ -84,8 +85,24 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
       return
     }
 
+    // manual-status-demo-only: this dropdown is kept for demo/debug; business buttons must call orderLineWorkflow actions.
     appData.updateOrderLine(lineId, (current) => ({ ...current, ...buildOrderLineStatusPatch(nextStatus) }))
     appendLog(buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus }))
+  }
+
+  const handleCompleteOrderLine: OrderLineCompleteHandler = (lineId) => {
+    const currentRow = rows.find(({ line }) => line.id === lineId)
+    if (!currentRow) {
+      return
+    }
+
+    const nextLine = completeOrderLine(currentRow.line)
+    if (nextLine === currentRow.line) {
+      return
+    }
+
+    appData.updateOrderLine(lineId, () => nextLine)
+    appendLog(buildOrderLineStatusLog({ line: currentRow.line, purchase: currentRow.purchase, nextStatus: 'completed' }))
   }
 
   const handleAddLogistics: OrderLineLogisticsCreateHandler = (record) => {
@@ -201,6 +218,7 @@ export const useOrderLineWorkspaceState = ({ purchaseId }: UseOrderLineWorkspace
     closeOrderLineDetail,
     appendLog,
     handleStatusChange,
+    handleCompleteOrderLine,
     handleAddLogistics,
     handleUpdateLogistics,
     handleVoidLogistics,

@@ -11,7 +11,19 @@ import {
   type ProductionFollowUpTab
 } from '@/services/orderLine/orderLineProductionFollowUp'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
-import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
+import {
+  approveFactoryReturn as approveFactoryReturnWorkflow,
+  approveProductionReview,
+  dispatchToFactory,
+  getOrderLineLineStatus,
+  getOrderLineWorkflowActionState,
+  markProductionBlocked,
+  requestDesignRevision,
+  requestModelingRevision,
+  resumeProduction,
+  returnFactoryFeedback,
+  startFactoryProduction
+} from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine } from '@/types/order-line'
 
 type RowDraft = {
@@ -35,6 +47,15 @@ const getProductionNeedSummary = (line: OrderLine) =>
   ]
     .filter(Boolean)
     .join(' / ') || '常规生产'
+
+const reviewSeverityLabelMap = {
+  pass: '通过',
+  warning: '需复核',
+  critical: '异常'
+}
+
+const renderReviewSeverityTag = (severity: ProductionFollowUpRow['completionReviewSeverity']) =>
+  severity === 'critical' ? <RiskTag value={reviewSeverityLabelMap[severity]} /> : <StatusTag value={reviewSeverityLabelMap[severity]} />
 
 export const ProductionFollowUpPage = () => {
   const appData = useAppData()
@@ -79,8 +100,7 @@ export const ProductionFollowUpPage = () => {
 
   const markMaterialsReady = (line: OrderLine) => {
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_factory_production'),
-      productionStatus: 'pending_dispatch'
+      ...approveProductionReview(line)
     })
     setActiveTab('dispatch')
   }
@@ -88,36 +108,64 @@ export const ProductionFollowUpPage = () => {
   const dispatchProduction = (line: OrderLine) => {
     const draft = getDraft(line)
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_factory_production'),
+      ...dispatchToFactory(line),
       factoryId: draft.factoryId.trim() || line.factoryId,
       factoryPlannedDueDate: draft.factoryPlannedDueDate || line.factoryPlannedDueDate,
-      productionSentAt: line.productionSentAt || formatCurrentTime(),
-      productionStatus: 'dispatched',
-      factoryStatus: 'pending_acceptance'
+      productionSentAt: line.productionSentAt || formatCurrentTime()
     })
     setActiveTab('dispatch')
   }
 
   const markInProduction = (line: OrderLine) => {
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('in_production'),
-      productionStatus: 'in_production',
-      factoryStatus: 'in_production'
+      ...startFactoryProduction(line)
     })
     setActiveTab('producing')
   }
 
   const markBlocked = (line: OrderLine) => {
     patchLine(line.id, {
-      productionStatus: 'blocked',
-      factoryStatus: 'abnormal'
+      ...markProductionBlocked(line)
+    })
+    setActiveTab('risk')
+  }
+
+  const resumeBlockedProduction = (line: OrderLine) => {
+    patchLine(line.id, {
+      ...resumeProduction(line)
+    })
+    setActiveTab('producing')
+  }
+
+  const approveFactoryReturn = (line: OrderLine) => {
+    const nextLine = approveFactoryReturnWorkflow(line)
+    patchLine(line.id, {
+      ...nextLine,
+      productionInfo: {
+        ...nextLine.productionInfo,
+        qualityResult: '跟单二次审核通过',
+        factoryNote: line.productionInfo?.factoryNote || '跟单已审核工厂回传资料。'
+      },
+      financeNote: line.financeNote || '跟单审核通过，待财务确认。'
+    })
+  }
+
+  const rejectFactoryReturn = (line: OrderLine) => {
+    const nextLine = returnFactoryFeedback(line)
+    patchLine(line.id, {
+      ...nextLine,
+      productionInfo: {
+        ...nextLine.productionInfo,
+        qualityResult: '跟单二次审核驳回',
+        factoryNote: line.productionInfo?.factoryNote ? `${line.productionInfo.factoryNote} / 跟单驳回，等待工厂修正。` : '跟单驳回，等待工厂修正。'
+      }
     })
     setActiveTab('risk')
   }
 
   const returnToCustomerService = (line: OrderLine) => {
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_customer_confirmation'),
+      lineStatus: 'pending_customer_confirmation',
       productionStatus: 'not_started',
       factoryStatus: 'not_assigned'
     })
@@ -126,19 +174,13 @@ export const ProductionFollowUpPage = () => {
   const returnToDesignOrModeling = (line: OrderLine) => {
     if (line.requiresDesign) {
       patchLine(line.id, {
-        ...buildOrderLineStatusPatch('pending_design'),
-        designStatus: 'revision_requested',
-        productionStatus: 'not_started',
-        factoryStatus: 'not_assigned'
+        ...requestDesignRevision(line, line.revisionReason || '跟单退回设计修改。')
       })
       return
     }
 
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_modeling'),
-      modelingStatus: 'revision_requested',
-      productionStatus: 'not_started',
-      factoryStatus: 'not_assigned'
+      ...requestModelingRevision(line, line.revisionReason || '跟单退回建模修改。')
     })
   }
 
@@ -181,6 +223,9 @@ export const ProductionFollowUpPage = () => {
               onDispatchProduction={dispatchProduction}
               onMarkInProduction={markInProduction}
               onMarkBlocked={markBlocked}
+              onResumeProduction={resumeBlockedProduction}
+              onApproveFactoryReturn={approveFactoryReturn}
+              onRejectFactoryReturn={rejectFactoryReturn}
               onReturnToCustomerService={returnToCustomerService}
               onReturnToDesignOrModeling={returnToDesignOrModeling}
               expandedLineId={expandedLineId}
@@ -205,6 +250,9 @@ const ProductionFollowUpTable = ({
   onDispatchProduction,
   onMarkInProduction,
   onMarkBlocked,
+  onResumeProduction,
+  onApproveFactoryReturn,
+  onRejectFactoryReturn,
   onReturnToCustomerService,
   onReturnToDesignOrModeling,
   expandedLineId,
@@ -219,6 +267,9 @@ const ProductionFollowUpTable = ({
   onDispatchProduction: (line: OrderLine) => void
   onMarkInProduction: (line: OrderLine) => void
   onMarkBlocked: (line: OrderLine) => void
+  onResumeProduction: (line: OrderLine) => void
+  onApproveFactoryReturn: (line: OrderLine) => void
+  onRejectFactoryReturn: (line: OrderLine) => void
   onReturnToCustomerService: (line: OrderLine) => void
   onReturnToDesignOrModeling: (line: OrderLine) => void
   expandedLineId: string
@@ -230,6 +281,8 @@ const ProductionFollowUpTable = ({
       const line = row.line
       const draft = getDraft(line)
       const isExpanded = expandedLineId === line.id
+      const isCompletionReview = getOrderLineLineStatus(line) === 'factory_returned'
+      const actionState = getOrderLineWorkflowActionState(line)
 
       return (
         <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
@@ -250,6 +303,7 @@ const ProductionFollowUpTable = ({
               <StatusTag value={row.factoryStatusLabel} />
               {row.isOverdue ? <RiskTag value="已逾期" /> : null}
               {row.isRisk && !row.isOverdue ? <RiskTag value="异常/阻塞" /> : null}
+              {isCompletionReview ? renderReviewSeverityTag(row.completionReviewSeverity) : null}
             </span>
             <span className="workbench-task-toggle">{isExpanded ? '收起' : '展开'}</span>
           </button>
@@ -291,26 +345,58 @@ const ProductionFollowUpTable = ({
                     保存工厂计划
                   </button>
                 </section>
+                {isCompletionReview ? (
+                  <section className="workbench-detail-block wide">
+                    <h3>完工审核</h3>
+                    <div className="field-grid two">
+                      {row.completionReviewChecks.map((check) => (
+                        <p key={check.key}>
+                          <strong>{check.label}</strong> {check.severity === 'critical' ? <RiskTag value={reviewSeverityLabelMap[check.severity]} /> : <StatusTag value={reviewSeverityLabelMap[check.severity]} />}
+                          <br />
+                          <span className="text-caption">标准：{check.expected}</span>
+                          <br />
+                          <span className="text-caption">回传：{check.actual}</span>
+                        </p>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
               </div>
               <div className="workbench-actions inline">
-                <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit}>
-                  标记资料已齐
-                </button>
-                <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit}>
-                  下发生产
-                </button>
-                <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit}>
-                  标记生产中
-                </button>
-                <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit}>
-                  标记阻塞
-                </button>
-                <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
-                  退回客服补资料
-                </button>
-                <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
-                  退回设计/建模修改
-                </button>
+                {isCompletionReview ? (
+                  <>
+                    <button type="button" className="button secondary small" onClick={() => onApproveFactoryReturn(line)} disabled={!canEdit || !actionState.canApproveFactoryReturn}>
+                      审核通过
+                    </button>
+                    <button type="button" className="button ghost small" onClick={() => onRejectFactoryReturn(line)} disabled={!canEdit || !actionState.canReturnFactoryFeedback}>
+                      驳回工厂
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit || !actionState.canApproveProductionReview}>
+                      标记资料已齐
+                    </button>
+                    <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit || !actionState.canDispatchToFactory}>
+                      下发生产
+                    </button>
+                    <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit || !actionState.canStartFactoryProduction}>
+                      标记生产中
+                    </button>
+                    <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit || !actionState.canMarkProductionBlocked}>
+                      标记阻塞
+                    </button>
+                    <button type="button" className="button ghost small" onClick={() => onResumeProduction(line)} disabled={!canEdit || !actionState.canResumeProduction}>
+                      恢复生产
+                    </button>
+                    <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
+                      退回客服补资料
+                    </button>
+                    <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
+                      退回设计/建模修改
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ) : null}
