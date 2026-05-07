@@ -6,7 +6,7 @@ import { getOrderLineCompleteness } from '@/services/orderLine/orderLineRiskSele
 import { confirmCustomerServiceInfo, getOrderLineLineStatus, getOrderLineLineStatusLabel } from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine, OrderLineLineStatus, OrderLineLog } from '@/types/order-line'
 
-export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
+export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus) => void
 
 const getStatusLabel = getOrderLineLineStatusLabel
 
@@ -18,13 +18,13 @@ export const OrderLineStatusUpdatePanel = ({
   onStatusChange?: OrderLineStatusUpdateHandler
 }) => {
   const currentLineStatus = getOrderLineLineStatus(line)
-  const [nextStatus, setNextStatus] = useState(String(currentLineStatus))
+  const [nextStatus, setNextStatus] = useState<OrderLineLineStatus>(currentLineStatus)
   const [statusMessage, setStatusMessage] = useState('')
   const completeness = getOrderLineCompleteness(line)
   const customerConfirmStatus = getOrderLineLineStatus(confirmCustomerServiceInfo(line))
 
   useEffect(() => {
-    setNextStatus(String(getOrderLineLineStatus(line)))
+    setNextStatus(getOrderLineLineStatus(line))
   }, [line])
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export const OrderLineStatusUpdatePanel = ({
         <InfoField label="资料检查" value={<StatusTag value={completeness.complete ? '资料完整' : '资料缺失'} />} />
         <label className="field-control">
           <span className="field-label">目标状态</span>
-          <select className="select" aria-label="目标状态" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}>
+          <select className="select" aria-label="目标状态" value={nextStatus} onChange={(event) => setNextStatus(event.target.value as OrderLineLineStatus)}>
             {orderLineStatusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

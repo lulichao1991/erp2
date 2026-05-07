@@ -98,7 +98,7 @@ export const buildProductionCompletionReviewChecks = (line: OrderLine): Producti
       '净金重',
       formatWeight(expectedWeight),
       formatWeight(actualWeight),
-      typeof actualWeight !== 'number' || typeof expectedWeight !== 'number' ? 'warning' : weightDifference! <= 0.3 ? 'pass' : weightDifference! <= 0.8 ? 'warning' : 'critical'
+      typeof actualWeight !== 'number' || typeof expectedWeight !== 'number' ? 'warning' : (weightDifference ?? 0) <= 0.3 ? 'pass' : (weightDifference ?? 0) <= 0.8 ? 'warning' : 'critical'
     ),
     buildReviewCheck('finished_images', '成品照片', '至少 1 张', `${finishedImageCount} 张`, finishedImageCount > 0 ? 'pass' : 'warning'),
     buildReviewCheck('settlement_files', '结算附件', '至少 1 份', `${settlementFileCount} 份`, settlementFileCount > 0 ? 'pass' : 'warning')
@@ -163,16 +163,17 @@ export const filterProductionFollowUpRowsByTab = (rows: ProductionFollowUpRow[],
     const lineStatus = getOrderLineLineStatus(row.line)
     const productionStatus = getOrderLineProductionStatus(row.line)
     const factoryStatus = getOrderLineFactoryStatus(row.line)
+    const isBlockedOrAbnormal = productionStatus === 'blocked' || productionStatus === 'delayed' || factoryStatus === 'abnormal'
 
     switch (tab) {
       case 'review':
         return lineStatus === 'pending_merchandiser_review'
       case 'dispatch':
-        return lineStatus === 'pending_factory_production' || productionStatus === 'pending_dispatch'
+        return !isBlockedOrAbnormal && (lineStatus === 'pending_factory_production' || productionStatus === 'pending_dispatch')
       case 'producing':
-        return lineStatus === 'in_production' || productionStatus === 'in_production'
+        return !isBlockedOrAbnormal && (lineStatus === 'in_production' || productionStatus === 'in_production')
       case 'factory_return':
-        return productionStatus === 'in_production' && factoryStatus !== 'returned' && factoryStatus !== 'abnormal'
+        return !isBlockedOrAbnormal && productionStatus === 'in_production' && factoryStatus !== 'returned'
       case 'completion_review':
         return lineStatus === 'factory_returned'
       case 'risk':
@@ -181,3 +182,18 @@ export const filterProductionFollowUpRowsByTab = (rows: ProductionFollowUpRow[],
         return false
     }
   })
+
+export const canReturnProductionToCustomerService = (line: OrderLine) => {
+  const lineStatus = getOrderLineLineStatus(line)
+  const productionStatus = getOrderLineProductionStatus(line)
+
+  return (
+    (lineStatus === 'pending_merchandiser_review' || lineStatus === 'pending_factory_production') &&
+    productionStatus !== 'in_production' &&
+    productionStatus !== 'completed' &&
+    productionStatus !== 'blocked'
+  )
+}
+
+export const canReturnProductionToDesignOrModeling = (line: OrderLine) =>
+  canReturnProductionToCustomerService(line) && Boolean(line.requiresDesign || line.requiresModeling)

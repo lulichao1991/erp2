@@ -56,6 +56,31 @@ describe('current workflow guards', () => {
     expect(orderLineBlock).toMatch(/^\s+lineStatus\?:/m)
   })
 
+  it('keeps core OrderLine workflow status fields as frozen unions', () => {
+    const orderLineBlock = orderLineTypesSource.match(/export type OrderLine = \{[\s\S]*?\n\}/)?.[0]
+    const productionInfoBlock = orderLineTypesSource.match(/export type OrderLineProductionInfo = \{[\s\S]*?\n\}/)?.[0]
+    const outsourceInfoBlock = orderLineTypesSource.match(/export type OrderLineOutsourceInfo = \{[\s\S]*?\n\}/)?.[0]
+    const frozenStatusFields = [
+      ['lineStatus', 'OrderLineLineStatus'],
+      ['designStatus', 'OrderLineWorkflowDesignStatus'],
+      ['modelingStatus', 'OrderLineWorkflowModelingStatus'],
+      ['productionStatus', 'OrderLineWorkflowProductionStatus'],
+      ['factoryStatus', 'OrderLineFactoryStatus'],
+      ['financeStatus', 'OrderLineFinanceStatus']
+    ]
+
+    expect(orderLineBlock).toBeTruthy()
+    frozenStatusFields.forEach(([field, typeName]) => {
+      expect(orderLineBlock).toMatch(new RegExp(`^\\s+${field}\\?: ${typeName}$`, 'm'))
+      expect(orderLineBlock).not.toMatch(new RegExp(`^\\s+${field}\\?: .*\\|\\s*string`, 'm'))
+    })
+
+    expect(productionInfoBlock).toMatch(/^\s+feedbackStatus\?: OrderLineProductionFeedbackStatus$/m)
+    expect(productionInfoBlock).not.toMatch(/^\s+feedbackStatus\?: .*\|\s*string/m)
+    expect(outsourceInfoBlock).toMatch(/^\s+outsourceStatus\?: OrderLineOutsourceStatus$/m)
+    expect(outsourceInfoBlock).not.toMatch(/^\s+outsourceStatus\?: .*\|\s*string/m)
+  })
+
   it('keeps buildOrderLineStatusPatch out of business action surfaces', () => {
     const allowedManualDebugEntrypoints = new Set(['src/hooks/useOrderLineWorkspaceState.ts'])
     const checkedRuntimePrefixes = ['src/pages/', 'src/components/', 'src/hooks/', 'src/services/orderLine/']

@@ -33,9 +33,9 @@ describe('inventorySelectors', () => {
     const summary = buildInventorySummary(buildRows())
 
     expect(summary.skuCount).toBe(inventoryItemsMock.length)
-    expect(summary.totalQuantity).toBe(8)
+    expect(summary.totalQuantity).toBe(9)
     expect(summary.availableQuantity).toBe(7)
-    expect(summary.reservedQuantity).toBe(1)
+    expect(summary.reservedQuantity).toBe(2)
     expect(summary.designSampleCount).toBe(1)
     expect(summary.customerReturnCount).toBe(1)
     expect(summary.oldGoldCount).toBe(1)
@@ -84,10 +84,10 @@ describe('inventorySelectors', () => {
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'old_gold', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-OG-202604-005'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'needs_review', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'reserved', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
-    expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_outbound', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002'])
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_outbound', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002', 'INV-SP-202603-118'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'pending_stocktake', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-RT-202604-002'])
     expect(filterInventoryRows(rows, { keyword: '', quickView: 'low_stock', sourceType: 'all', status: 'all', condition: 'all', location: '' }).map((row) => row.item.inventoryCode)).toEqual(['INV-OT-202604-004'])
-    expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(1)
+    expect(filterInventoryRows(rows, { keyword: '', quickView: 'unavailable', sourceType: 'all', status: 'all', condition: 'all', location: '' })).toHaveLength(3)
   })
 
   it('calculates reserved quantity from total and available quantity', () => {

@@ -3,7 +3,7 @@ import { InfoField } from '@/components/common'
 import { DetailSection } from '@/components/business/orderLine/orderLineDetailSection'
 import { getFeedbackStatusLabel, productionStatusOptions } from '@/components/business/orderLine/orderLineOptions'
 import { buildOrderLineProductionDraft, type OrderLineProductionDraft } from '@/services/orderLine/orderLineWorkspace'
-import type { OrderLine } from '@/types/order-line'
+import type { OrderLine, OrderLineProductionFeedbackStatus } from '@/types/order-line'
 
 export type OrderLineProductionUpdateHandler = (lineId: string, draft: OrderLineProductionDraft) => void
 
@@ -78,7 +78,7 @@ export const OrderLineProductionSection = ({
           <div className="field-grid three">
             <label className="field-control">
               <span className="field-label">工厂状态</span>
-              <select className="select" value={draft.feedbackStatus} onChange={(event) => updateDraft('feedbackStatus', event.target.value)}>
+              <select className="select" value={draft.feedbackStatus} onChange={(event) => updateDraft('feedbackStatus', event.target.value as OrderLineProductionFeedbackStatus)}>
                 {productionStatusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}

@@ -150,12 +150,12 @@ type OrderLine = {
   category?: ProductCategory
   versionNo?: string
   quantity: number
-  lineStatus?: OrderLineLineStatus | string
-  designStatus?: OrderLineWorkflowDesignStatus | string
-  modelingStatus?: OrderLineWorkflowModelingStatus | string
-  productionStatus?: OrderLineWorkflowProductionStatus | string
-  factoryStatus?: OrderLineFactoryStatus | string
-  financeStatus?: OrderLineFinanceStatus | string
+  lineStatus?: OrderLineLineStatus
+  designStatus?: OrderLineWorkflowDesignStatus
+  modelingStatus?: OrderLineWorkflowModelingStatus
+  productionStatus?: OrderLineWorkflowProductionStatus
+  factoryStatus?: OrderLineFactoryStatus
+  financeStatus?: OrderLineFinanceStatus
   currentOwner?: string
   priority?: OrderLinePriority
   isUrgent?: boolean
@@ -197,9 +197,12 @@ type OrderLine = {
 - 主工作流状态使用 `lineStatus`。
 - `OrderLine.status` 已删除。
 - 设计/建模/生产/工厂/财务角色分流状态使用顶层 `designStatus / modelingStatus / productionStatus / factoryStatus / financeStatus`。
+- 这些核心 workflow 状态字段不接受任意 `string`；真实接口返回未知状态时必须先在接口边界映射、拒绝或显式扩展 union，不能流入 `OrderLine` current model。
 - 工厂回传子状态使用 `productionInfo.feedbackStatus`，不得写回 `productionInfo.factoryStatus`。
+- `productionInfo` 只放展示型回传文本与回传子状态；结构化重量、成本、附件和结算数据放入 `productionData`。
 - `factory_returned` 表示工厂已回传但仍待跟单完工审核；审核通过后才进入 `pending_finance_confirmation`。
 - `financeStatus = confirmed` 或 `financeLocked = true` 表示该销售财务已锁定；财务页只读展示收退款、成本卡、工厂结算、备注和异常状态。
+- `FinancePaymentRecord` 是商品行收付款流水权威来源；`Purchase.finance` 只保留整笔购买聚合展示，不驱动商品行财务计算。
 - 销售成交金额使用 `lineSalesAmount`。
 - 系统参考报价使用 `quote.systemQuote`。
 
@@ -241,6 +244,8 @@ type Product = {
 ```
 
 `Product` 是款式模板，不是销售实例。平台店铺商品当前只在产品扩展区用 mock 展示，不进入正式 `Product` 类型；它不参与报价、销售执行、库存成本或财务核算。
+
+当前不单独新增复杂 `ProductVariant` 类型；`ProductSpecRow` 承载当前 variant 能力，包括规格值、基础价格、参考重量和尺寸参数。产品管理增强应优先扩展 `ProductSpecRow` 的展示和编辑一致性，而不是先拆一个并行 variant 模型。
 
 ## 8. ProductSpecRow
 
@@ -443,6 +448,29 @@ supporting-records -> orderLineId
 tasks -> purchaseId + orderLineId
 inventory -> optional productId / purchaseId / orderLineId / customerId / sourcePaymentRecordId
 ```
+
+当前 mock 至少覆盖 4 个客户、5 笔购买记录和多条销售：
+
+- 张三 `PUR-202604-001`：同一次购买下多条销售分别处于生产中、待财务确认、待设计、待建模、待跟单审核、工厂异常、待工厂接收和完工待审核。
+- 林小姐 `PUR-202604-002`：全定制购买记录，销售不引用 `Product`，分别覆盖待设计和待建模。
+- 赵女士 `PUR-202603-118`：现货 / 库存相关购买记录，覆盖 `Product.referenceRecords`、库存占用、库存出库、财务确认和物流发货。
+- 内部研发 `PUR-INTERNAL-202605-001`：内部购买记录，覆盖 `purchaseType = internal`、无客户收款和 `lineStatus = completed`。
+- 取消购买记录 `PUR-CANCELLED-202604-001`：覆盖 `aggregateStatus = cancelled` 且未生成销售的边界场景。
+
+PR2 seed 还覆盖：
+
+- `financeStatus = abnormal` 的销售和待复核补款流水。
+- `InventoryItem.status = scrapped` 和 `InventoryMovement.type = scrap` 的库存报废。
+- `LogisticsRecord.logisticsType = measurement_tool / goods / after_sales / other` 四类物流。
+- `AfterSalesCase` 继续按 `orderLineId` 优先关联单件销售。
+
+隐式模型映射：
+
+- `ProductVariant` 当前由 `ProductSpecRow` 承载。
+- `FactoryFeedback` 当前由 `OrderLine.productionInfo / productionData` 承载。
+- `FinanceRecord` 当前由 `FinancePaymentRecord + OrderLine.financeStatus / financeNote / financeLocked / financeAbnormalReason` 承载。
+
+所有 mock 跨文件引用必须能追到 current model 对象；`purchaseId / purchaseNo / customerId / orderLineId / productionTaskNo / productId / inventoryItemId` 不允许只为页面展示伪造。
 
 ## 前端字段契约
 

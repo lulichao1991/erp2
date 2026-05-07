@@ -43,7 +43,7 @@ export const OrderLineFilterBar = ({
         </div>
         <div className="field-control">
           <label className="field-label">状态筛选</label>
-          <select className="select" aria-label="状态筛选" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value })}>
+          <select className="select" aria-label="状态筛选" value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value as OrderLineCenterFilters['status'] })}>
             {statusFilterOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

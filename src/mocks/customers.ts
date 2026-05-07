@@ -15,4 +15,47 @@ export const customerMock: Customer = {
   lastTransactionAt: '2026-04-21 10:46'
 }
 
-export const customersMock: Customer[] = [customerMock]
+export const linCustomerMock: Customer = {
+  id: 'customer-lin-001',
+  name: '林小姐',
+  phone: '13900005678',
+  wechat: 'lin_custom_jewelry',
+  defaultRecipientName: '林小姐',
+  defaultRecipientPhone: '13900005678',
+  defaultRecipientAddress: '杭州市西湖区文三路 99 号',
+  sourceChannels: ['xiaohongshu', 'wechat'],
+  tags: ['new', 'other'],
+  remark: '全定制客户，本次购买不引用现有款式模板，设计和建模分开推进。',
+  firstTransactionAt: '2026-04-26 09:10',
+  lastTransactionAt: '2026-04-26 09:10'
+}
+
+export const zhaoCustomerMock: Customer = {
+  id: 'customer-zhao-001',
+  name: '赵女士',
+  phone: '13700004321',
+  wechat: 'zhao_stock_ring',
+  defaultRecipientName: '赵女士',
+  defaultRecipientPhone: '13700004321',
+  defaultRecipientAddress: '北京市朝阳区建国路 88 号',
+  sourceChannels: ['offline'],
+  tags: ['returning', 'other'],
+  remark: '现货客户，购买记录需要能追溯库存占用、出库、财务确认和发货。',
+  firstTransactionAt: '2026-03-28 14:20',
+  lastTransactionAt: '2026-03-28 14:20'
+}
+
+export const internalCustomerMock: Customer = {
+  id: 'customer-internal-rd-001',
+  name: '内部研发',
+  defaultRecipientName: '研发样品库',
+  defaultRecipientPhone: '00000000000',
+  defaultRecipientAddress: '上海市内部研发样品库',
+  sourceChannels: ['other'],
+  tags: ['other'],
+  remark: '内部研发和新品打样使用的前端 mock 客户档，只用于归组内部购买记录，不代表真实外部客户。',
+  firstTransactionAt: '2026-05-01 09:00',
+  lastTransactionAt: '2026-05-01 09:00'
+}
+
+export const customersMock: Customer[] = [customerMock, linCustomerMock, zhaoCustomerMock, internalCustomerMock]

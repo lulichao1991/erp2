@@ -39,7 +39,7 @@ export const modelingStatusOptions = Object.entries(modelingWorkflowStatusLabelM
   label
 }))
 
-export const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus | string; label: string }> = [
+export const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus; label: string }> = [
   { value: 'not_required', label: '不需要下厂' },
   { value: 'pending', label: '待下厂' },
   { value: 'in_progress', label: '生产中' },
@@ -47,7 +47,7 @@ export const outsourceStatusOptions: Array<{ value: OrderLineOutsourceStatus | s
   { value: 'rework', label: '返工中' }
 ]
 
-export const productionStatusOptions: Array<{ value: OrderLineProductionFeedbackStatus | string; label: string }> = [
+export const productionStatusOptions: Array<{ value: OrderLineProductionFeedbackStatus; label: string }> = [
   { value: 'not_started', label: '未开始' },
   { value: 'in_progress', label: '生产中' },
   { value: 'pending_feedback', label: '待回传' },

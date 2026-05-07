@@ -52,7 +52,7 @@ describe('productionPlanAdapter', () => {
             ...line,
             productionInfo: {
               ...line.productionInfo,
-              feedbackStatus: 'completed',
+              feedbackStatus: 'completed' as const,
               factoryNote: 'current order line feedback'
             }
           }
@@ -123,6 +123,51 @@ describe('productionPlanAdapter', () => {
     expect(rows).toHaveLength(0)
   })
 
+  it('keeps full-custom order lines in production plan without a source product', () => {
+    const customTask = {
+      ...mockTasks[2],
+      id: 'task-factory-custom-001',
+      orderLineId: 'ol-zhang-factory-pending-001',
+      orderLineName: '山形胸针试产版',
+      status: 'todo' as const
+    }
+
+    const rows = buildProductionPlanRows({
+      tasks: [customTask],
+      purchases: purchasesMock,
+      orderLines: orderLinesMock,
+      products: mockProducts
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      taskId: 'task-factory-custom-001',
+      purchaseId: 'o-202604-001',
+      purchaseNo: 'PUR-202604-001',
+      orderLineId: 'ol-zhang-factory-pending-001',
+      orderLineName: '山形胸针试产版',
+      goodsNo: 'PIN-SH-007',
+      sourceProductVersion: 'v1',
+      categoryLabel: '其他',
+      stage: 'ready_to_produce'
+    })
+    expect(rows[0].sourceProductId).toBeUndefined()
+    expect(rows[0].sourceProductCode).toBeUndefined()
+
+    const detail = buildProductionPlanDetail({
+      taskId: 'task-factory-custom-001',
+      tasks: [customTask],
+      purchases: purchasesMock,
+      orderLines: orderLinesMock,
+      products: mockProducts
+    })
+
+    expect(detail).toBeTruthy()
+    expect(detail?.sourceProduct).toBeUndefined()
+    expect(detail?.fileGroups.map((group) => group.title)).toContain('设计文件')
+    expect(detail?.referenceImages).toEqual([])
+  })
+
   it('maps task and factory feedback into the expected display stages', () => {
     const factoryTask = mockTasks.find((item) => item.id === 'task-factory-001')
     const orderLine = orderLinesMock.find((item) => item.id === 'oi-ring-001')
@@ -133,43 +178,43 @@ describe('productionPlanAdapter', () => {
     const receivedTask = { ...factoryTask!, status: 'in_progress' as const }
     const readyItem = {
       ...orderLine!,
-      lineStatus: 'pending_factory_production',
-      productionStatus: 'pending_dispatch',
-      factoryStatus: 'not_assigned',
+      lineStatus: 'pending_factory_production' as const,
+      productionStatus: 'pending_dispatch' as const,
+      factoryStatus: 'not_assigned' as const,
       productionInfo: {
         ...orderLine!.productionInfo,
-        feedbackStatus: 'not_started'
+        feedbackStatus: 'not_started' as const
       }
     }
     const producingItem = {
       ...orderLine!,
-      lineStatus: 'in_production',
-      productionStatus: 'in_production',
-      factoryStatus: 'in_production',
+      lineStatus: 'in_production' as const,
+      productionStatus: 'in_production' as const,
+      factoryStatus: 'in_production' as const,
       productionInfo: {
         ...orderLine!.productionInfo,
-        feedbackStatus: 'in_progress'
+        feedbackStatus: 'in_progress' as const
       }
     }
     const pendingReportTask = { ...receivedTask, status: 'pending_confirm' as const }
     const pendingFeedbackItem = {
       ...orderLine!,
-      lineStatus: 'in_production',
-      productionStatus: 'in_production',
-      factoryStatus: 'in_production',
+      lineStatus: 'in_production' as const,
+      productionStatus: 'in_production' as const,
+      factoryStatus: 'in_production' as const,
       productionInfo: {
         ...orderLine!.productionInfo,
-        feedbackStatus: 'pending_feedback'
+        feedbackStatus: 'pending_feedback' as const
       }
     }
     const reportedTask = { ...receivedTask, status: 'done' as const }
     const issueItem = {
       ...orderLine!,
-      productionStatus: 'blocked',
-      factoryStatus: 'abnormal',
+      productionStatus: 'blocked' as const,
+      factoryStatus: 'abnormal' as const,
       productionInfo: {
         ...orderLine!.productionInfo,
-        feedbackStatus: 'issue'
+        feedbackStatus: 'issue' as const
       }
     }
     expect(getProductionPlanStage(factoryTask!, orderLine!)).toBe('in_production')
@@ -207,7 +252,7 @@ describe('productionPlanAdapter', () => {
     expect(detail?.timeline.length).toBeGreaterThan(0)
   })
 
-  it('returns undefined when linked task, order line, or source product is missing', () => {
+  it('returns undefined when linked task or order line is missing', () => {
     const purchasesWithoutOrderLines = purchasesMock.map((purchase) => ({ ...purchase, orderLines: [] }))
 
     expect(
@@ -238,6 +283,6 @@ describe('productionPlanAdapter', () => {
         orderLines: orderLinesMock,
         products: mockProducts.filter((item) => item.id !== orderLinesMock[0]?.sourceProduct?.sourceProductId)
       })
-    ).toBeUndefined()
+    ).toBeTruthy()
   })
 })

@@ -30,8 +30,8 @@ export type ProductionPlanRow = {
   orderLineId: string
   orderLineName: string
   goodsNo: string
-  sourceProductId: string
-  sourceProductCode: string
+  sourceProductId?: string
+  sourceProductCode?: string
   sourceProductVersion: string
   category: Product['category']
   categoryLabel: string
@@ -57,7 +57,7 @@ export type ProductionPlanDetail = {
   row: ProductionPlanRow
   task: Task
   orderLine: OrderLine
-  sourceProduct: Product
+  sourceProduct?: Product
   timeline: PurchaseTimelineRecord[]
   fileGroups: ProductionPlanFileGroup[]
   referenceImages: string[]

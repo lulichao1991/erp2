@@ -1,6 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppRouter } from '@/app/router'
 import { CustomerBasicSection, CustomerListTable, buildCustomerOverview } from '@/components/business/customer'
@@ -12,6 +12,25 @@ const renderRoute = (entry: string) =>
     <MemoryRouter initialEntries={[entry]}>
       <AppDataProvider>
         <AppRouter />
+      </AppDataProvider>
+    </MemoryRouter>
+  )
+
+const TestNavigator = () => {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate('/finance')}>
+      测试跳转财务
+    </button>
+  )
+}
+
+const renderRouteWithTestNavigation = (entry: string) =>
+  render(
+    <MemoryRouter initialEntries={[entry]}>
+      <AppDataProvider>
+        <AppRouter />
+        <TestNavigator />
       </AppDataProvider>
     </MemoryRouter>
   )
@@ -34,6 +53,12 @@ describe('router smoke', () => {
     renderRoute('/products/p-ring-001')
     expect(screen.getByRole('heading', { name: '款式详情' })).toBeInTheDocument()
     expect(screen.getAllByText('山形素圈戒指').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('2/2 启用').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('¥ 1,280 - ¥ 1,450').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('4/4 启用').length).toBeGreaterThan(0)
+    expect(screen.getByText('材质 / 工艺 / 特殊需求')).toBeInTheDocument()
+    expect(screen.getByText('参考文件')).toBeInTheDocument()
+    expect(screen.getAllByText('4 份').length).toBeGreaterThan(0)
   })
 
   it('renders full product edit form and keeps design version read-only', async () => {
@@ -384,9 +409,32 @@ describe('router smoke', () => {
     await user.click(pendantRow as HTMLElement)
 
     expect(screen.getAllByText('如意吊坠').length).toBeGreaterThan(0)
-    expect(screen.getByText('物流已创建')).toBeInTheDocument()
+    expect(screen.getAllByText('物流已创建').length).toBeGreaterThan(0)
     expect(screen.getByText('顺丰速运')).toBeInTheDocument()
     expect(screen.getByText('暂无售后记录')).toBeInTheDocument()
+  })
+
+  it('renders order-line detail route and missing detail empty state', () => {
+    renderRoute('/order-lines/oi-ring-001')
+
+    expect(screen.getAllByRole('heading', { name: '销售详情' }).length).toBeGreaterThan(0)
+    expect(screen.getByText('RING-SH-016 · 山形素圈戒指')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('顶部摘要')).toBeInTheDocument()
+    expect(screen.getByText('客户与购买入口')).toBeInTheDocument()
+    expect(screen.getByText('财务摘要')).toBeInTheDocument()
+    expect(screen.getByText('库存追溯')).toBeInTheDocument()
+    expect(screen.getByText('物流 / 售后')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '打开购买记录' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getByRole('link', { name: '返回销售中心' })).toHaveAttribute('href', '/order-lines')
+
+    cleanup()
+
+    renderRoute('/order-lines/not-found')
+
+    expect(screen.getAllByRole('heading', { name: '销售详情' }).length).toBeGreaterThan(0)
+    expect(screen.getByText('未找到销售')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '返回销售中心' })).toHaveAttribute('href', '/order-lines')
   })
 
   it('updates one order-line status from the detail drawer', async () => {
@@ -721,7 +769,7 @@ describe('router smoke', () => {
     expect(screen.getAllByText('如意吊坠').length).toBeGreaterThan(0)
     expect(screen.getByText('山形定制吊牌项链')).toBeInTheDocument()
     expect(screen.getByText('生产中')).toBeInTheDocument()
-    expect(screen.getByText('待财务确认')).toBeInTheDocument()
+    expect(screen.getAllByText('待财务确认').length).toBeGreaterThan(0)
     expect(screen.getByText('待设计')).toBeInTheDocument()
     expect(screen.getByText('山形开口手链')).toBeInTheDocument()
     expect(screen.getByText('待建模')).toBeInTheDocument()
@@ -1050,7 +1098,10 @@ describe('router smoke', () => {
     expect(secondLineCard).not.toBeNull()
     expect(thirdLineCard).not.toBeNull()
 
-    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用款式'), 'p-ring-001')
+    await user.type(within(firstLineCard as HTMLElement).getByLabelText('引用款式'), '山形')
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '预览山形素圈戒指' }))
+    expect(within(firstLineCard as HTMLElement).getByLabelText('来源款式预览')).toBeInTheDocument()
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '选择山形素圈戒指' }))
     expect(within(firstLineCard as HTMLElement).getByLabelText('款式名称')).toHaveValue('山形素圈戒指')
     expect(within(firstLineCard as HTMLElement).getByText(/来源款式：山形素圈戒指/)).toBeInTheDocument()
     expect(within(firstLineCard as HTMLElement).getByText('请先选择规格')).toBeInTheDocument()
@@ -1087,7 +1138,10 @@ describe('router smoke', () => {
     expect(screen.getAllByText('已调整').length).toBeGreaterThan(0)
     await user.click(screen.getAllByRole('button', { name: '关闭' })[0] as HTMLElement)
 
-    await user.selectOptions(within(secondLineCard as HTMLElement).getByLabelText('引用款式'), 'p-pendant-001')
+    await user.type(within(secondLineCard as HTMLElement).getByLabelText('引用款式'), '如意')
+    await user.click(within(secondLineCard as HTMLElement).getByRole('button', { name: '预览如意吊坠' }))
+    expect(within(secondLineCard as HTMLElement).getByLabelText('来源款式预览')).toBeInTheDocument()
+    await user.click(within(secondLineCard as HTMLElement).getByRole('button', { name: '选择如意吊坠' }))
     expect(within(secondLineCard as HTMLElement).getByLabelText('款式名称')).toHaveValue('如意吊坠')
     expect(within(secondLineCard as HTMLElement).getByText(/来源款式：如意吊坠/)).toBeInTheDocument()
 
@@ -1107,48 +1161,27 @@ describe('router smoke', () => {
 
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
 
-    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 3 条销售')
-    expect(logSpy).toHaveBeenCalledWith(
-      'purchaseDraft',
-      expect.objectContaining({
-        commonInfo: expect.objectContaining({ purchaseNo: expect.stringMatching(/^PUR-\d{6}-002$/), platformOrderNo: 'TB-202604-NEW' }),
-        customerShippingInfo: expect.objectContaining({ customerId: 'customer-new-001', customerName: '张三' }),
-        paymentInfo: expect.objectContaining({ pendingAmount: 6000, paymentStatus: '部分收款', canShip: false })
-      })
-    )
-    expect(logSpy).toHaveBeenCalledWith(
-      'orderLineDrafts',
-      expect.arrayContaining([
-        expect.objectContaining({
-          sourceProductId: 'p-ring-001',
-          sourceProductCode: 'PD-RING-001',
-          selectedSpecId: 'spec-ring-16',
-          productName: '山形素圈戒指',
-          productionTaskNo: firstLineGoodsNo,
-          versionNo: 'v3',
-          lineStatus: 'pending_design',
-          needsDesign: true,
-          needsModeling: false,
-          quoteResult: expect.objectContaining({ systemQuote: 2000 })
-        }),
-        expect.objectContaining({
-          sourceProductId: 'p-pendant-001',
-          selectedSpecId: 'spec-pendant-s',
-          productName: '如意吊坠',
-          quoteResult: expect.objectContaining({ systemQuote: 1480 })
-        }),
-        expect.objectContaining({ productName: '定制项链', quoteResult: undefined })
-      ])
-    )
+    expect(await screen.findByRole('heading', { name: '购买记录详情' })).toBeInTheDocument()
+    expect(logSpy).not.toHaveBeenCalled()
+    expect(screen.getByText(generatedPurchaseNoInput.value)).toBeInTheDocument()
+    expect(screen.getByText('TB-202604-NEW')).toBeInTheDocument()
+    expect(screen.getByText(firstLineGoodsNo)).toBeInTheDocument()
+    expect(screen.getAllByText('如意吊坠').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('定制项链').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('link', { name: '销售' }))
+    expect(screen.getByText(firstLineGoodsNo)).toBeInTheDocument()
+    expect(screen.getAllByText('定制项链').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('link', { name: '工作' }))
+    expect(screen.getByText(generatedPurchaseNoInput.value)).toBeInTheDocument()
+    expect(screen.getByText('销售：3 条')).toBeInTheDocument()
   })
 
   it('validates, duplicates and removes purchase draft order-line cards', async () => {
     const user = userEvent.setup()
-    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     renderRoute('/purchases/new')
-
-    await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条销售')
 
     await user.type(screen.getByLabelText('已收金额'), '100')
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
@@ -1163,19 +1196,17 @@ describe('router smoke', () => {
 
     await user.clear(screen.getByLabelText('已收金额'))
     await user.type(screen.getByLabelText('已收金额'), '500')
-    await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条销售')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
     const firstLineCard = screen.getByText('销售草稿 1').closest('.subtle-panel')
     expect(firstLineCard).not.toBeNull()
     expect(within(firstLineCard as HTMLElement).getByRole('button', { name: '删除销售' })).toBeDisabled()
 
-    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用款式'), 'p-ring-001')
-    await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条销售')
+    await user.type(within(firstLineCard as HTMLElement).getByLabelText('引用款式'), '山形')
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '选择山形素圈戒指' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
-    await user.selectOptions(within(firstLineCard as HTMLElement).getByLabelText('引用款式'), '')
+    await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '改为手动填写' }))
     await user.type(within(firstLineCard as HTMLElement).getByLabelText('款式名称'), '手动定制戒指')
     await user.click(within(firstLineCard as HTMLElement).getByRole('button', { name: '复制销售' }))
 
@@ -1189,7 +1220,9 @@ describe('router smoke', () => {
     expect(screen.queryByText('销售草稿 2')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '保存草稿' }))
-    expect(screen.getByRole('status')).toHaveTextContent('已生成购买记录草稿：1 笔购买记录 + 1 条销售')
+    expect(await screen.findByRole('heading', { name: '购买记录详情' })).toBeInTheDocument()
+    expect(screen.getAllByText('手动定制戒指').length).toBeGreaterThan(0)
+    expect(logSpy).not.toHaveBeenCalled()
   })
 
   it('renders lightweight customer center list from current mainline data', () => {
@@ -1202,7 +1235,7 @@ describe('router smoke', () => {
     expect(screen.getByText('张三')).toBeInTheDocument()
     expect(screen.getByText('13800001234')).toBeInTheDocument()
     expect(screen.getByText('zhangsan_jewelry')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '查看客户' })).toHaveAttribute('href', '/customers/customer-zhang-001')
+    expect(screen.getAllByRole('link', { name: '查看客户' })[0]).toHaveAttribute('href', '/customers/customer-zhang-001')
   })
 
   it('renders customer detail with purchase, order-line and after-sales history', () => {
@@ -1218,7 +1251,7 @@ describe('router smoke', () => {
     expect(screen.getByText('PDT-SH-S')).toBeInTheDocument()
     expect(screen.getByText('NECK-CUSTOM-042')).toBeInTheDocument()
     expect(screen.getByText('WAX-BR-001')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: '查看销售' })[0]).toHaveAttribute('href', '/order-lines')
+    expect(screen.getAllByRole('link', { name: '查看销售' })[0]).toHaveAttribute('href', '/order-lines/oi-ring-001')
     expect(screen.getByText('历史售后摘要')).toBeInTheDocument()
     expect(screen.getByText('客户反馈戒围可能偏紧')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回客户中心' })).toHaveAttribute('href', '/customers')
@@ -1258,8 +1291,8 @@ describe('router smoke', () => {
     expect(screen.getByText('待财务确认')).toBeInTheDocument()
     expect(screen.getByText('确认戒指最终圈号')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '返回销售中心' })).toHaveAttribute('href', '/order-lines')
-    expect(screen.getAllByRole('link', { name: 'RING-SH-016 · 山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines')
-    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: 'RING-SH-016 · 山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines/oi-ring-001')
+    expect(screen.getAllByRole('link', { name: 'PUR-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
     expect(screen.queryByText('返回订单')).not.toBeInTheDocument()
     expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
@@ -1271,9 +1304,9 @@ describe('router smoke', () => {
 
     expect(screen.getByRole('heading', { name: '任务详情' })).toBeInTheDocument()
     expect(screen.getByText('顶部任务概览')).toBeInTheDocument()
-    expect(screen.getAllByText('SO-202604-001').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('PUR-202604-001').length).toBeGreaterThan(0)
     expect(screen.getAllByRole('button', { name: '查看销售' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: 'PUR-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
     expect(screen.queryByText('返回订单')).not.toBeInTheDocument()
     expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
@@ -1300,7 +1333,7 @@ describe('router smoke', () => {
     expect(screen.getByText('复古小花耳钉')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '切换到待下发生产' }))
-    expect(screen.getByText('山形胸针')).toBeInTheDocument()
+    expect(screen.queryByText('山形胸针')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '切换到生产中' }))
     expect(screen.getByText('山形素圈戒指')).toBeInTheDocument()
@@ -1349,7 +1382,7 @@ describe('router smoke', () => {
     expect(producingCard).not.toBeNull()
     await user.click(within(producingCard as HTMLElement).getByRole('button', { name: /展开/ }))
     expect(within(producingCard as HTMLElement).getByRole('button', { name: '标记阻塞' })).toBeEnabled()
-    expect(within(producingCard as HTMLElement).getByRole('button', { name: '恢复生产' })).toBeDisabled()
+    expect(within(producingCard as HTMLElement).queryByRole('button', { name: '恢复生产' })).not.toBeInTheDocument()
 
     await user.click(within(producingCard as HTMLElement).getByRole('button', { name: '标记阻塞' }))
 
@@ -1357,7 +1390,7 @@ describe('router smoke', () => {
     const blockedCard = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
     expect(blockedCard).not.toBeNull()
     await expandWorkbenchCard(user, blockedCard as HTMLElement)
-    expect(within(blockedCard as HTMLElement).getByRole('button', { name: '标记阻塞' })).toBeDisabled()
+    expect(within(blockedCard as HTMLElement).queryByRole('button', { name: '标记阻塞' })).not.toBeInTheDocument()
     expect(within(blockedCard as HTMLElement).getByRole('button', { name: '恢复生产' })).toBeEnabled()
 
     await user.click(within(blockedCard as HTMLElement).getByRole('button', { name: '恢复生产' }))
@@ -1452,6 +1485,9 @@ describe('router smoke', () => {
     expect(screen.queryByText('张三')).not.toBeInTheDocument()
     expect(screen.queryByText('TB-9938201')).not.toBeInTheDocument()
     expect(screen.queryByText('8500')).not.toBeInTheDocument()
+    expect(screen.queryByText('财务备注')).not.toBeInTheDocument()
+    expect(screen.queryByText('定金')).not.toBeInTheDocument()
+    expect(screen.queryByText('尾款')).not.toBeInTheDocument()
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
@@ -1533,6 +1569,12 @@ describe('router smoke', () => {
     if (expandReturnButton) {
       await user.click(expandReturnButton)
     }
+    await user.click(within(returnRow as HTMLElement).getByRole('button', { name: '提交回传' }))
+    expect(within(returnRow as HTMLElement).getByRole('alert')).toHaveTextContent('总重必填')
+    expect(within(returnRow as HTMLElement).getByRole('alert')).toHaveTextContent('净金重必填')
+    expect(within(returnRow as HTMLElement).getByRole('alert')).toHaveTextContent('基础工费必填')
+    expect(within(returnRow as HTMLElement).getByRole('alert')).toHaveTextContent('成品图文件必填')
+    expect(within(returnRow as HTMLElement).getByRole('alert')).toHaveTextContent('结算单文件必填')
     await user.clear(within(returnRow as HTMLElement).getByLabelText('总重'))
     await user.type(within(returnRow as HTMLElement).getByLabelText('总重'), '5.2')
     await user.clear(within(returnRow as HTMLElement).getByLabelText('净金重'))
@@ -1548,6 +1590,8 @@ describe('router smoke', () => {
 
     expect(screen.getAllByText('工厂已回传').length).toBeGreaterThan(0)
     expect(screen.getByText('山形胸针试产版')).toBeInTheDocument()
+    expect(screen.getByText('成品图：pin-finished.jpg')).toBeInTheDocument()
+    expect(screen.getByText('结算单：pin-settlement.pdf')).toBeInTheDocument()
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
@@ -1623,6 +1667,44 @@ describe('router smoke', () => {
     expect(screen.getByText(/已复核/)).toBeInTheDocument()
   })
 
+  it('blocks finance settlement confirmation until payments and risks are cleared', async () => {
+    const user = userEvent.setup()
+    renderRoute('/finance')
+
+    await user.click(screen.getByRole('button', { name: '切换到补款 / 退款' }))
+    const reviewRow = screen.getByText('山形素圈戒指').closest('.workbench-task-card')
+    expect(reviewRow).not.toBeNull()
+    await user.click(within(reviewRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    await user.click(within(reviewRow as HTMLElement).getByRole('button', { name: '确认工厂结算' }))
+
+    expect(within(reviewRow as HTMLElement).getByRole('alert')).toHaveTextContent('尾款未收齐')
+    expect(within(reviewRow as HTMLElement).getByRole('alert')).toHaveTextContent('补 / 退款未复核')
+    expect(within(reviewRow as HTMLElement).getByRole('alert')).toHaveTextContent('收退款异常未解除')
+    expect(screen.getByRole('heading', { name: '补款 / 退款' })).toBeInTheDocument()
+    expect(within(reviewRow as HTMLElement).getByRole('button', { name: '确认工厂结算' })).not.toBeDisabled()
+  })
+
+  it('can resolve a manually marked finance abnormal line back to pending settlement', async () => {
+    const user = userEvent.setup()
+    renderRoute('/finance')
+
+    const pendantRow = screen.getByText('如意吊坠').closest('.workbench-task-card')
+    expect(pendantRow).not.toBeNull()
+    await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: /展开/ }))
+    await user.type(within(pendantRow as HTMLElement).getByLabelText('异常原因-oi-pendant-001'), '结算金额待复核')
+    await user.click(within(pendantRow as HTMLElement).getByRole('button', { name: '标记财务异常' }))
+
+    const abnormalRow = screen.getByText('如意吊坠').closest('.workbench-task-card')
+    expect(abnormalRow).not.toBeNull()
+    expect(screen.getByText('结算金额待复核')).toBeInTheDocument()
+    await user.click(within(abnormalRow as HTMLElement).getByRole('button', { name: '解除财务异常' }))
+
+    expect(screen.getByRole('heading', { name: '待工厂结算确认' })).toBeInTheDocument()
+    expect(screen.getByText('如意吊坠')).toBeInTheDocument()
+    expect(screen.queryByText('结算金额待复核')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '解除财务异常' })).not.toBeInTheDocument()
+  })
+
   it('confirms finance settlement without changing production ownership', async () => {
     const user = userEvent.setup()
     const { container } = renderRoute('/finance')
@@ -1637,6 +1719,8 @@ describe('router smoke', () => {
 
     expect(screen.getAllByText('财务已确认').length).toBeGreaterThan(0)
     expect(screen.getByText('如意吊坠')).toBeInTheDocument()
+    expect(screen.getByText('毛利 ¥280')).toBeInTheDocument()
+    expect(screen.getByText('毛利率 21.9%')).toBeInTheDocument()
     expect(screen.getAllByText('财务已锁定').length).toBeGreaterThan(0)
     expect(screen.getByText('财务已锁定，收退款、结算金额、备注和异常处理当前只读。')).toBeInTheDocument()
     expect(screen.getByLabelText('本次收款金额-oi-pendant-001')).toBeDisabled()
@@ -1824,7 +1908,7 @@ describe('router smoke', () => {
 
   it('records inventory inbound and movement actions locally', async () => {
     const user = userEvent.setup()
-    renderRoute('/inventory')
+    renderRouteWithTestNavigation('/inventory')
 
     await user.type(screen.getByLabelText('款式名称'), '设计部门未售样戒')
     await user.selectOptions(screen.getByLabelText('入库来源'), 'design_sample')
@@ -1854,6 +1938,7 @@ describe('router smoke', () => {
     await user.selectOptions(screen.getByLabelText('操作类型'), 'outbound')
     await user.clear(screen.getAllByLabelText('数量')[1] as HTMLElement)
     await user.type(screen.getAllByLabelText('数量')[1] as HTMLElement, '1')
+    await user.selectOptions(screen.getByLabelText('关联销售'), 'oi-ring-001')
     await user.type(screen.getAllByLabelText('备注')[1] as HTMLElement, '拍摄样戒领用出库')
     await user.click(screen.getByRole('button', { name: '登记流转' }))
 
@@ -1865,6 +1950,11 @@ describe('router smoke', () => {
     await user.type(screen.getByLabelText('流转记录搜索'), '拍摄')
     expect(screen.getAllByText('为后续拍摄预占').length).toBeGreaterThan(0)
     expect(screen.getAllByText('RING-SH-016 / 山形素圈戒指').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: '测试跳转财务' }))
+    await user.click(screen.getByRole('button', { name: '切换到待收款' }))
+    await user.click(screen.getAllByRole('button', { name: /RING-SH-016/ })[0])
+    expect(screen.getByText('FIFO库存领用成本：¥150')).toBeInTheDocument()
   })
 
   it('renders production plan list route without requiring factory role', () => {
@@ -1873,8 +1963,8 @@ describe('router smoke', () => {
     expect(screen.getByRole('heading', { name: '工厂生产计划' })).toBeInTheDocument()
     expect(screen.getByText('RING-SH-016')).toBeInTheDocument()
     expect(screen.getByText('购买记录 PUR-202604-001')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: '山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines')
-    expect(screen.getByRole('link', { name: '查看销售' })).toHaveAttribute('href', '/order-lines')
+    expect(screen.getAllByRole('link', { name: '山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines/oi-ring-001')
+    expect(screen.getByRole('link', { name: '查看销售' })).toHaveAttribute('href', '/order-lines/oi-ring-001')
     expect(screen.getByRole('link', { name: '查看购买记录' })).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
     expect(screen.queryByText('查看订单')).not.toBeInTheDocument()
@@ -1931,8 +2021,8 @@ describe('router smoke', () => {
     await user.click(screen.getByRole('button', { name: '查看全部引用记录' }))
 
     expect(screen.getByText('产品引用记录')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'RING-SH-016 · 山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines')
-    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: 'RING-SH-016 · 山形素圈戒指' })[0]).toHaveAttribute('href', '/order-lines/oi-ring-001')
+    expect(screen.getAllByRole('link', { name: 'PUR-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(screen.queryByText('订单商品')).not.toBeInTheDocument()
   })
 

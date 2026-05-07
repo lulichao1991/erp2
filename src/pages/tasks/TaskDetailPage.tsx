@@ -4,6 +4,7 @@ import { AppBreadcrumb } from '@/app/layout/AppBreadcrumb'
 import { TaskInfoCardGroup, TaskSummaryCard } from '@/components/business/task'
 import { EmptyState, PageContainer, PageHeader, SectionCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { getOrderLineDetailPath } from '@/services/orderLine/orderLineRoutes'
 import { getTaskPurchaseId } from '@/services/task/taskIdentity'
 import type { TaskStatus } from '@/types/task'
 
@@ -85,7 +86,7 @@ export const TaskDetailPage = () => {
               返回列表
             </button>
             {orderLine ? (
-              <button className="button secondary" onClick={() => navigate('/order-lines')}>
+              <button className="button secondary" onClick={() => navigate(getOrderLineDetailPath(orderLine.id))}>
                 查看销售
               </button>
             ) : null}
@@ -177,7 +178,7 @@ export const TaskDetailPage = () => {
                 阶段推进已迁移到销售主线，后续接入基于 OrderLine.lineStatus 的推进能力。当前可以查看销售或购买记录详情，由业务人员在主线页面继续跟进。
               </div>
               <div className="row wrap">
-                <button type="button" className="button secondary" onClick={() => navigate('/order-lines')}>
+                <button type="button" className="button secondary" onClick={() => navigate(getOrderLineDetailPath(task.orderLineId))}>
                   查看销售
                 </button>
                 <button type="button" className="button secondary" onClick={() => navigate(`/purchases/${purchaseId}`)}>

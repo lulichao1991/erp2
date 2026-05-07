@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/app/layout/AppLayout'
 import { OrderLineListPage } from '@/pages/orderLines/OrderLineListPage'
+import { OrderLineDetailPage } from '@/pages/orderLines/OrderLineDetailPage'
 import { ProductCreatePage } from '@/pages/products/ProductCreatePage'
 import { ProductDetailPage } from '@/pages/products/ProductDetailPage'
 import { ProductEditPage } from '@/pages/products/ProductEditPage'
@@ -26,6 +27,7 @@ export const AppRouter = () => (
     <Route element={<AppLayout />}>
       <Route path="/" element={<DashboardPage />} />
       <Route path="/order-lines" element={<OrderLineListPage />} />
+      <Route path="/order-lines/:orderLineId" element={<OrderLineDetailPage />} />
       <Route path="/purchases" element={<Navigate to="/purchases/new" replace />} />
       <Route path="/purchases/new" element={<PurchaseCreatePage />} />
       <Route path="/purchases/:purchaseId" element={<PurchaseDetailPage />} />

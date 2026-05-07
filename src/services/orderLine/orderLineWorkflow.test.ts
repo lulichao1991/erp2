@@ -33,6 +33,7 @@ import {
   markFinanceAbnormal,
   markProductionBlocked,
   recordWaxFileReady,
+  resolveFinanceAbnormal,
   resumeProduction,
   returnFactoryFeedback,
   requestDesignRevision,
@@ -47,7 +48,7 @@ describe('orderLineWorkflow', () => {
   it('uses current lineStatus as the workflow source', () => {
     const line = {
       ...orderLinesMock[1],
-      lineStatus: 'pending_finance_confirmation'
+      lineStatus: 'pending_finance_confirmation' as const
     }
 
     expect(getOrderLineLineStatus(line)).toBe('pending_finance_confirmation')
@@ -72,10 +73,10 @@ describe('orderLineWorkflow', () => {
 
     expect(groups).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ value: 'pending_design', label: '待设计', count: 1 }),
-        expect.objectContaining({ value: 'pending_modeling', label: '待建模', count: 1 }),
+        expect.objectContaining({ value: 'pending_design', label: '待设计', count: 2 }),
+        expect.objectContaining({ value: 'pending_modeling', label: '待建模', count: 2 }),
         expect.objectContaining({ value: 'in_production', label: '生产中', count: 1 }),
-        expect.objectContaining({ value: 'pending_finance_confirmation', label: '待财务确认', count: 1 })
+        expect.objectContaining({ value: 'pending_finance_confirmation', label: '待财务确认', count: 2 })
       ])
     )
   })
@@ -112,7 +113,7 @@ describe('orderLineWorkflow', () => {
   })
 
   it('advances design and modeling through the shared workflow actions', () => {
-    const designStarted = startDesign({ ...orderLinesMock[0], lineStatus: 'pending_design', assignedDesignerId: undefined })
+    const designStarted = startDesign({ ...orderLinesMock[0], lineStatus: 'pending_design' as const, assignedDesignerId: undefined })
     expect(designStarted).toMatchObject({
       lineStatus: 'pending_design',
       assignedDesignerId: 'designer-current',
@@ -133,7 +134,7 @@ describe('orderLineWorkflow', () => {
       modelingStatus: 'not_required'
     })
 
-    const modelingStarted = startModeling({ ...orderLinesMock[0], lineStatus: 'pending_modeling', assignedModelerId: undefined })
+    const modelingStarted = startModeling({ ...orderLinesMock[0], lineStatus: 'pending_modeling' as const, assignedModelerId: undefined })
     expect(modelingStarted).toMatchObject({
       lineStatus: 'pending_modeling',
       assignedModelerId: 'modeler-current',
@@ -147,7 +148,7 @@ describe('orderLineWorkflow', () => {
   })
 
   it('advances production, factory return and finance through shared workflow actions', () => {
-    const reviewed = approveProductionReview({ ...orderLinesMock[0], lineStatus: 'pending_merchandiser_review' })
+    const reviewed = approveProductionReview({ ...orderLinesMock[0], lineStatus: 'pending_merchandiser_review' as const, financeStatus: 'pending' as const })
     expect(reviewed).toMatchObject({
       lineStatus: 'pending_factory_production',
       productionStatus: 'pending_dispatch'
@@ -217,7 +218,7 @@ describe('orderLineWorkflow', () => {
       modelingStatus: undefined,
       productionStatus: 'not_started' as const,
       factoryStatus: 'not_assigned' as const,
-      financeStatus: 'not_required' as const,
+      financeStatus: 'pending' as const,
       factoryPlannedDueDate: '2026-12-31',
       factoryId: currentFactoryId
     }
@@ -300,9 +301,9 @@ describe('orderLineWorkflow', () => {
     const designRevision = requestDesignRevision(
       {
         ...orderLinesMock[0],
-        lineStatus: 'pending_merchandiser_review',
-        productionStatus: 'pending_dispatch',
-        factoryStatus: 'pending_acceptance'
+        lineStatus: 'pending_merchandiser_review' as const,
+        productionStatus: 'pending_dispatch' as const,
+        factoryStatus: 'pending_acceptance' as const
       },
       '设计稿需要调整'
     )
@@ -318,9 +319,9 @@ describe('orderLineWorkflow', () => {
     const modelingRevision = requestModelingRevision(
       {
         ...orderLinesMock[0],
-        lineStatus: 'pending_merchandiser_review',
-        productionStatus: 'pending_dispatch',
-        factoryStatus: 'pending_acceptance'
+        lineStatus: 'pending_merchandiser_review' as const,
+        productionStatus: 'pending_dispatch' as const,
+        factoryStatus: 'pending_acceptance' as const
       },
       '建模文件需要调整'
     )
@@ -351,9 +352,9 @@ describe('orderLineWorkflow', () => {
   it('handles finance abnormal and manual lock without touching production state', () => {
     const line = {
       ...orderLinesMock[1],
-      lineStatus: 'pending_finance_confirmation',
-      productionStatus: 'completed',
-      factoryStatus: 'returned'
+      lineStatus: 'pending_finance_confirmation' as const,
+      productionStatus: 'completed' as const,
+      factoryStatus: 'returned' as const
     }
 
     expect(markFinanceAbnormal(line, '尾款待核对', '待联系客户')).toMatchObject({
@@ -373,6 +374,29 @@ describe('orderLineWorkflow', () => {
       financeLocked: true,
       financeNote: '主管锁定'
     })
+  })
+
+  it('returns finance abnormal lines to pending confirmation without touching production state', () => {
+    const abnormalLine = markFinanceAbnormal(
+      {
+        ...orderLinesMock[1],
+        lineStatus: 'pending_finance_confirmation' as const,
+        productionStatus: 'completed' as const,
+        factoryStatus: 'returned' as const
+      },
+      '尾款待核对'
+    )
+    const resolvedLine = resolveFinanceAbnormal(abnormalLine, '异常已复核')
+
+    expect(resolvedLine).toMatchObject({
+      lineStatus: 'pending_finance_confirmation',
+      productionStatus: 'completed',
+      factoryStatus: 'returned',
+      financeStatus: 'pending',
+      financeNote: '异常已复核',
+      financeLocked: false
+    })
+    expect(resolvedLine.financeAbnormalReason).toBeUndefined()
   })
 
   it('centralizes production blocked, resume and completion actions', () => {
@@ -513,6 +537,51 @@ describe('orderLineWorkflow', () => {
     expect(returnFactoryFeedback(line)).toBe(line)
   })
 
+  it('routes billable factory returns to finance even when the factory page does not set finance status', () => {
+    const returned = {
+      ...orderLinesMock[0],
+      lineStatus: 'factory_returned' as const,
+      productionStatus: 'completed' as const,
+      factoryStatus: 'returned' as const,
+      financeStatus: 'not_required' as const
+    }
+
+    expect(approveFactoryReturn(returned)).toMatchObject({
+      lineStatus: 'pending_finance_confirmation',
+      productionStatus: 'completed',
+      factoryStatus: 'returned',
+      financeStatus: 'pending'
+    })
+  })
+
+  it('does not create finance work for explicit non-billable factory returns', () => {
+    const returned = {
+      ...orderLinesMock[0],
+      lineStatus: 'factory_returned' as const,
+      productionStatus: 'completed' as const,
+      factoryStatus: 'returned' as const,
+      financeStatus: 'not_required' as const,
+      lineSalesAmount: undefined,
+      allocatedDepositAmount: undefined,
+      allocatedFinalPaymentAmount: undefined,
+      factorySettlementAmount: undefined,
+      materialCost: undefined,
+      mainStoneCost: undefined,
+      sideStoneCost: undefined,
+      laborCost: undefined,
+      extraLaborCost: undefined,
+      quote: undefined,
+      productionData: undefined
+    }
+
+    expect(approveFactoryReturn(returned)).toMatchObject({
+      lineStatus: 'ready_to_ship',
+      productionStatus: 'completed',
+      factoryStatus: 'returned',
+      financeStatus: 'not_required'
+    })
+  })
+
   it('returns factory feedback to production when completion review is rejected', () => {
     const rejected = returnFactoryFeedback({
       ...orderLinesMock[0],
@@ -549,7 +618,7 @@ describe('orderLineWorkflow', () => {
     expect(
       getOrderLineV2WorkflowStep({
         ...orderLinesMock[0],
-        lineStatus: 'factory_returned'
+        lineStatus: 'factory_returned' as const
       })
     ).toMatchObject({
       stageLabel: '完工待审核',
@@ -562,8 +631,8 @@ describe('orderLineWorkflow', () => {
     expect(
       getOrderLineV2WorkflowStep({
         ...orderLinesMock[0],
-        lineStatus: 'pending_finance_confirmation',
-        financeStatus: 'confirmed',
+        lineStatus: 'pending_finance_confirmation' as const,
+        financeStatus: 'confirmed' as const,
         financeLocked: true
       })
     ).toMatchObject({
@@ -576,17 +645,17 @@ describe('orderLineWorkflow', () => {
   it('ignores removed legacy status fields when current workflow fields exist', () => {
     const line = {
       ...orderLinesMock[1],
-      lineStatus: 'pending_finance_confirmation',
-      designStatus: 'completed',
-      modelingStatus: 'not_required',
-      factoryStatus: 'returned',
+      lineStatus: 'pending_finance_confirmation' as const,
+      designStatus: 'completed' as const,
+      modelingStatus: 'not_required' as const,
+      factoryStatus: 'returned' as const,
       designInfo: {
         ...orderLinesMock[1].designInfo,
         designStatus: 'pending'
       },
       productionInfo: {
         ...orderLinesMock[1].productionInfo,
-        feedbackStatus: 'completed',
+        feedbackStatus: 'completed' as const,
         factoryStatus: 'abnormal'
       }
     }

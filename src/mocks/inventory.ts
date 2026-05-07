@@ -117,6 +117,56 @@ export const inventoryItemsMock: InventoryItem[] = [
     receivedAt: '2026-04-18 15:00',
     keeperName: '周库管',
     remark: '其他渠道入库，用于临时补料。'
+  },
+  {
+    id: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    name: '赵女士现货山形纪念戒',
+    category: 'ring',
+    sourceType: 'stock_purchase',
+    sourceLabel: '现货库存销售',
+    sourcePaymentRecordId: 'finance-payment-zhao-ring-full-001',
+    productId: 'p-ring-001',
+    productName: '山形素圈戒指',
+    orderLineId: 'oi-ring-118',
+    purchaseId: 'o-202603-118',
+    customerId: 'customer-zhao-001',
+    material: '18K金',
+    size: '10号',
+    craftRequirements: '库存现货，发货前复核圈号和表面抛光',
+    weight: 3.6,
+    valuationAmount: 980,
+    quantity: 1,
+    availableQuantity: 0,
+    warehouseLocation: 'F-现货出库-01',
+    ownerDepartment: 'warehouse',
+    condition: 'new',
+    status: 'outbound',
+    receivedAt: '2026-03-20 10:00',
+    keeperName: '周库管',
+    remark: '现货已占用并出库，关联赵女士购买记录和销售货号。'
+  },
+  {
+    id: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    name: '废弃蜡版样件',
+    category: 'other',
+    sourceType: 'other',
+    sourceLabel: '设计打样报废',
+    productName: '山形开口手镯蜡版',
+    material: '蜡版',
+    size: '58mm',
+    craftRequirements: '蜡版变形，已报废，不进入销售生产状态。',
+    weight: 1.1,
+    quantity: 0,
+    availableQuantity: 0,
+    warehouseLocation: 'Z-报废留档-01',
+    ownerDepartment: 'warehouse',
+    condition: 'new',
+    status: 'scrapped',
+    receivedAt: '2026-04-19 15:30',
+    keeperName: '周库管',
+    remark: '用于覆盖 scrapped 库存场景；只影响库存台账和批次，不推进任何 OrderLine。'
   }
 ]
 
@@ -207,6 +257,94 @@ export const inventoryMovementsMock: InventoryMovement[] = [
     toStatus: 'in_stock',
     toLocation: 'D-辅石-08',
     note: '其他渠道辅石入库。'
+  },
+  {
+    id: 'inventory-movement-spot-ring-zhao-inbound-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-03-20 10:00',
+    toStatus: 'in_stock',
+    toLocation: 'F-现货出库-01',
+    note: '线下现货戒指入库。'
+  },
+  {
+    id: 'inventory-movement-spot-ring-zhao-reserve-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    type: 'reserve',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-03-28 14:30',
+    fromStatus: 'in_stock',
+    toStatus: 'reserved',
+    fromLocation: 'F-现货出库-01',
+    toLocation: 'F-现货出库-01',
+    relatedOrderLineId: 'oi-ring-118',
+    note: '赵女士购买后占用现货戒指。'
+  },
+  {
+    id: 'inventory-movement-spot-ring-zhao-outbound-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    type: 'outbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-03-28 16:20',
+    fromStatus: 'reserved',
+    toStatus: 'outbound',
+    fromLocation: 'F-现货出库-01',
+    toLocation: '顺丰揽收',
+    relatedOrderLineId: 'oi-ring-118',
+    fifoCostAmount: 980,
+    fifoLayers: [
+      {
+        batchId: 'inventory-batch-spot-ring-zhao-001',
+        quantity: 1,
+        unitCostAmount: 980,
+        costAmount: 980,
+        receivedAt: '2026-03-20 10:00'
+      }
+    ],
+    note: '赵女士现货戒指出库，按 FIFO 计入商品行成本。'
+  },
+  {
+    id: 'inventory-movement-scrapped-wax-inbound-001',
+    inventoryItemId: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-19 15:30',
+    toStatus: 'in_stock',
+    toLocation: 'A-设计样品-临时',
+    note: '蜡版样件临时入库，等待质检。'
+  },
+  {
+    id: 'inventory-movement-scrapped-wax-scrap-001',
+    inventoryItemId: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    type: 'scrap',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-20 10:10',
+    fromStatus: 'in_stock',
+    toStatus: 'scrapped',
+    fromLocation: 'A-设计样品-临时',
+    toLocation: 'Z-报废留档-01',
+    fifoCostAmount: 0,
+    fifoLayers: [
+      {
+        batchId: 'inventory-batch-scrapped-wax-001',
+        quantity: 1,
+        unitCostAmount: 0,
+        costAmount: 0,
+        receivedAt: '2026-04-19 15:30'
+      }
+    ],
+    note: '蜡版变形报废；库存动作不推进销售状态。'
   }
 ]
 
@@ -265,5 +403,27 @@ export const inventoryBatchesMock: InventoryBatch[] = [
     unitCostAmount: 80,
     totalCostAmount: 80,
     sourceMovementId: 'inventory-movement-other-stone-001'
+  },
+  {
+    id: 'inventory-batch-spot-ring-zhao-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    receivedAt: '2026-03-20 10:00',
+    quantity: 1,
+    remainingQuantity: 0,
+    unitCostAmount: 980,
+    totalCostAmount: 980,
+    sourceMovementId: 'inventory-movement-spot-ring-zhao-inbound-001'
+  },
+  {
+    id: 'inventory-batch-scrapped-wax-001',
+    inventoryItemId: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    receivedAt: '2026-04-19 15:30',
+    quantity: 1,
+    remainingQuantity: 0,
+    unitCostAmount: 0,
+    totalCostAmount: 0,
+    sourceMovementId: 'inventory-movement-scrapped-wax-inbound-001'
   }
 ]

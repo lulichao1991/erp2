@@ -3,6 +3,7 @@ import type {
   OrderLineFactoryStatus,
   OrderLineFinanceStatus,
   OrderLineLineStatus,
+  OrderLineProductionFeedbackStatus,
   OrderLineWorkflowDesignStatus,
   OrderLineWorkflowModelingStatus,
   OrderLineWorkflowProductionStatus
@@ -79,7 +80,7 @@ export const financeWorkflowStatusLabelMap: Record<OrderLineFinanceStatus, strin
   abnormal: '财务异常'
 }
 
-const feedbackStatusToFactoryStatus: Record<string, OrderLineFactoryStatus> = {
+const feedbackStatusToFactoryStatus: Record<OrderLineProductionFeedbackStatus, OrderLineFactoryStatus> = {
   not_started: 'not_assigned',
   in_progress: 'in_production',
   pending_feedback: 'in_production',
@@ -155,7 +156,7 @@ export const getOrderLineFactoryStatus = (line: OrderLine): OrderLineFactoryStat
     return line.factoryStatus as OrderLineFactoryStatus
   }
 
-  const feedbackFactoryStatus = line.productionInfo?.feedbackStatus ? feedbackStatusToFactoryStatus[String(line.productionInfo.feedbackStatus)] : undefined
+  const feedbackFactoryStatus = line.productionInfo?.feedbackStatus ? feedbackStatusToFactoryStatus[line.productionInfo.feedbackStatus] : undefined
   return feedbackFactoryStatus || 'not_assigned'
 }
 
@@ -174,7 +175,22 @@ export const getOrderLineFinanceStatus = (line: OrderLine): OrderLineFinanceStat
   return 'not_required'
 }
 
-export const buildOrderLineStatusPatch = (status: OrderLineLineStatus | string): Pick<OrderLine, 'lineStatus'> => ({ lineStatus: status })
+const requiresFinanceConfirmationAfterFactoryReturn = (line: OrderLine) =>
+  (line.lineSalesAmount ?? 0) > 0 ||
+  (line.quote?.systemQuote ?? 0) > 0 ||
+  (line.allocatedDepositAmount ?? 0) > 0 ||
+  (line.allocatedFinalPaymentAmount ?? 0) > 0 ||
+  (line.factorySettlementAmount ?? 0) > 0 ||
+  (line.productionData?.baseLaborCost ?? 0) > 0 ||
+  (line.productionData?.extraLaborCost ?? 0) > 0 ||
+  (line.productionData?.totalLaborCost ?? 0) > 0 ||
+  (line.materialCost ?? 0) > 0 ||
+  (line.mainStoneCost ?? 0) > 0 ||
+  (line.sideStoneCost ?? 0) > 0 ||
+  (line.laborCost ?? 0) > 0 ||
+  (line.extraLaborCost ?? 0) > 0
+
+export const buildOrderLineStatusPatch = (status: OrderLineLineStatus): Pick<OrderLine, 'lineStatus'> => ({ lineStatus: status })
 
 const formatWorkflowTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
 
@@ -323,16 +339,38 @@ export const approveFactoryReturn = (line: OrderLine): OrderLine => {
     return line
   }
 
+  const basePatch = {
+    productionStatus: 'completed' as const,
+    factoryStatus: 'returned' as const,
+    productionInfo: {
+      ...line.productionInfo,
+      feedbackStatus: 'completed' as const
+    }
+  }
+
+  if (line.financeStatus === 'confirmed' || line.financeLocked) {
+    return {
+      ...line,
+      lineStatus: 'ready_to_ship',
+      ...basePatch,
+      financeStatus: 'confirmed'
+    }
+  }
+
+  if (line.financeStatus === 'not_required' && !requiresFinanceConfirmationAfterFactoryReturn(line)) {
+    return {
+      ...line,
+      lineStatus: 'ready_to_ship',
+      ...basePatch,
+      financeStatus: 'not_required'
+    }
+  }
+
   return {
     ...line,
     lineStatus: 'pending_finance_confirmation',
-    productionStatus: 'completed',
-    factoryStatus: 'returned',
-    financeStatus: 'pending',
-    productionInfo: {
-      ...line.productionInfo,
-      feedbackStatus: 'completed'
-    }
+    ...basePatch,
+    financeStatus: line.financeStatus === 'abnormal' ? 'abnormal' : 'pending'
   }
 }
 
@@ -435,6 +473,14 @@ export const markFinanceAbnormal = (line: OrderLine, abnormalReason = '财务标
   financeStatus: 'abnormal',
   financeAbnormalReason: abnormalReason,
   financeNote: financeNote || line.financeNote,
+  financeLocked: false
+})
+
+export const resolveFinanceAbnormal = (line: OrderLine, financeNote?: string): OrderLine => ({
+  ...line,
+  financeStatus: 'pending',
+  financeAbnormalReason: undefined,
+  financeNote: financeNote || line.financeNote || '财务异常已解除，重新进入待确认。',
   financeLocked: false
 })
 

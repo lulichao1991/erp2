@@ -228,8 +228,8 @@ export const buildFinanceCostCard = (line: OrderLine, paymentRecords: FinancePay
   }
 }
 
-export const calculateFinanceSummary = (line: OrderLine) => {
-  const costCard = buildFinanceCostCard(line)
+export const calculateFinanceSummary = (line: OrderLine, paymentRecords: FinancePaymentRecord[] = [], inventoryItems: InventoryItem[] = [], inventoryMovements: InventoryMovement[] = []) => {
+  const costCard = buildFinanceCostCard(line, paymentRecords, inventoryItems, inventoryMovements)
 
   return {
     salesAmount: costCard.salesAmount,

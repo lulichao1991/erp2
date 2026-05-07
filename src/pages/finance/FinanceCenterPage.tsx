@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { EmptyState, PageContainer, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
 import { financePaymentRecordsMock } from '@/mocks/finance-payment-records'
-import { inventoryItemsMock, inventoryMovementsMock } from '@/mocks/inventory'
 import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildFinanceRows,
@@ -15,7 +14,7 @@ import {
   type FinanceTab
 } from '@/services/orderLine/orderLineFinance'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
-import { confirmFinance, lockFinance as lockFinanceWorkflow, markFinanceAbnormal } from '@/services/orderLine/orderLineWorkflow'
+import { confirmFinance, lockFinance as lockFinanceWorkflow, markFinanceAbnormal, resolveFinanceAbnormal } from '@/services/orderLine/orderLineWorkflow'
 import type { FinancePaymentMethod, FinancePaymentRecord, FinancePaymentRecordType } from '@/types/finance'
 import type { OrderLine } from '@/types/order-line'
 
@@ -27,6 +26,11 @@ type FinanceDraft = {
   paymentMethod: FinancePaymentMethod
   paymentReason: string
   paymentNote: string
+}
+
+type FinanceValidationResult = {
+  valid: boolean
+  messages: string[]
 }
 
 const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
@@ -94,15 +98,66 @@ const getFinanceDashboardSummary = (rows: FinanceRow[]) => ({
   pendingSettlementCount: rows.filter((row) => row.line.financeStatus === 'pending').length
 })
 
+const validateFinanceSettlement = (row: FinanceRow, draft: FinanceDraft): FinanceValidationResult => {
+  const messages: string[] = []
+  const settlementInput = draft.factorySettlementAmount.trim()
+  const settlementAmount = Number(settlementInput)
+
+  if (!settlementInput) {
+    messages.push('工厂结算金额必填')
+  } else if (!Number.isFinite(settlementAmount)) {
+    messages.push('工厂结算金额必须是数字')
+  } else if (settlementAmount < 0) {
+    messages.push('工厂结算金额不能小于 0')
+  }
+
+  if (row.pendingAmount > 0) {
+    messages.push('尾款未收齐')
+  }
+
+  if (row.pendingPaymentReviewCount > 0) {
+    messages.push('补 / 退款未复核')
+  }
+
+  if (row.paymentRiskLabels.length > 0) {
+    messages.push('收退款异常未解除')
+  }
+
+  const nonPaymentRisks = row.riskLabels.filter((risk) => !row.paymentRiskLabels.includes(risk))
+  if (nonPaymentRisks.length > 0) {
+    messages.push('工厂回传 / 成本风险未解除')
+  }
+
+  return {
+    valid: messages.length === 0,
+    messages
+  }
+}
+
 export const FinanceCenterPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<FinanceTab>('settlement')
   const [drafts, setDrafts] = useState<Record<string, FinanceDraft>>({})
+  const [financeErrors, setFinanceErrors] = useState<Record<string, string[]>>({})
   const [expandedLineId, setExpandedLineId] = useState<string>('')
   const [paymentRecords, setPaymentRecords] = useState<FinancePaymentRecord[]>(() => structuredClone(financePaymentRecordsMock))
 
-  const rows = useMemo(() => buildFinanceRows(appData.orderLines, appData.purchases, paymentRecords, inventoryItemsMock, inventoryMovementsMock), [appData.orderLines, appData.purchases, paymentRecords])
-  const visibleRows = useMemo(() => filterFinanceRowsByTab(rows, activeTab), [activeTab, rows])
+  const rows = useMemo(
+    () => buildFinanceRows(appData.orderLines, appData.purchases, paymentRecords, appData.inventoryItems, appData.inventoryMovements),
+    [appData.inventoryItems, appData.inventoryMovements, appData.orderLines, appData.purchases, paymentRecords]
+  )
+  const rowsByTab = useMemo(
+    () =>
+      financeTabs.reduce(
+        (groupedRows, tab) => ({
+          ...groupedRows,
+          [tab.value]: filterFinanceRowsByTab(rows, tab.value)
+        }),
+        {} as Record<FinanceTab, FinanceRow[]>
+      ),
+    [rows]
+  )
+  const visibleRows = rowsByTab[activeTab] ?? []
   const financeSummary = useMemo(() => getFinanceDashboardSummary(rows), [rows])
   const canConfirmFinance = canPerformAction(appData.currentUserRole, 'finance_confirm')
 
@@ -114,6 +169,10 @@ export const FinanceCenterPage = () => {
         ...getDraft(line),
         ...patch
       }
+    }))
+    setFinanceErrors((current) => ({
+      ...current,
+      [line.id]: []
     }))
   }
 
@@ -153,6 +212,10 @@ export const FinanceCenterPage = () => {
     }
 
     setPaymentRecords((current) => [...current, nextRecord])
+    setFinanceErrors((current) => ({
+      ...current,
+      [line.id]: []
+    }))
     setDrafts((current) => ({
       ...current,
       [line.id]: {
@@ -184,8 +247,12 @@ export const FinanceCenterPage = () => {
               reason
             }
           : record
-      )
+        )
     )
+    setFinanceErrors((current) => ({
+      ...current,
+      [line.id]: []
+    }))
     setDrafts((current) => ({
       ...current,
       [line.id]: {
@@ -202,6 +269,10 @@ export const FinanceCenterPage = () => {
 
     const reviewedAt = formatCurrentTime()
 
+    setFinanceErrors((current) => ({
+      ...current,
+      [row.line.id]: []
+    }))
     setPaymentRecords((current) =>
       current.map((record) =>
         record.orderLineId === row.line.id && isAdjustmentPaymentRecord(record) && record.reviewStatus !== 'reviewed'
@@ -243,6 +314,10 @@ export const FinanceCenterPage = () => {
         }
       })
     )
+    setFinanceErrors((current) => ({
+      ...current,
+      [line.id]: []
+    }))
     setDrafts((current) => ({
       ...current,
       [line.id]: {
@@ -259,17 +334,37 @@ export const FinanceCenterPage = () => {
 
     const line = row.line
     const draft = getDraft(line)
+    const validation = validateFinanceSettlement(row, draft)
+
+    if (!validation.valid) {
+      setExpandedLineId(line.id)
+      setFinanceErrors((current) => ({
+        ...current,
+        [line.id]: validation.messages
+      }))
+      return
+    }
+
     const factorySettlementAmount = toNumberOrUndefined(draft.factorySettlementAmount) ?? row.factorySettlementAmount
-    const summary = calculateFinanceSummary({
-      ...line,
-      factorySettlementAmount
-    })
+    const summary = calculateFinanceSummary(
+      {
+        ...line,
+        factorySettlementAmount
+      },
+      paymentRecords,
+      appData.inventoryItems,
+      appData.inventoryMovements
+    )
     patchLine(line.id, confirmFinance(line, {
       factorySettlementAmount,
       estimatedGrossProfit: summary.estimatedGrossProfit,
       estimatedGrossProfitRate: summary.estimatedGrossProfitRate,
       financeConfirmedAt: formatCurrentTime(),
       financeNote: draft.financeNote || '财务已确认工厂结算。'
+    }))
+    setFinanceErrors((current) => ({
+      ...current,
+      [line.id]: []
     }))
     setActiveTab('confirmed')
   }
@@ -283,6 +378,21 @@ export const FinanceCenterPage = () => {
     const draft = getDraft(line)
     patchLine(line.id, markFinanceAbnormal(line, draft.abnormalReason || '财务标记异常，等待复核。', draft.financeNote || line.financeNote))
     setActiveTab('abnormal')
+  }
+
+  const resolveAbnormal = (row: FinanceRow) => {
+    if (row.isLocked || row.line.financeStatus !== 'abnormal') {
+      return
+    }
+
+    const line = row.line
+    const draft = getDraft(line)
+    patchLine(line.id, resolveFinanceAbnormal(line, draft.financeNote || line.financeNote))
+    setFinanceErrors((current) => ({
+      ...current,
+      [line.id]: []
+    }))
+    setActiveTab('settlement')
   }
 
   const lockFinance = (line: OrderLine) => {
@@ -346,7 +456,7 @@ export const FinanceCenterPage = () => {
               onClick={() => setActiveTab(tab.value)}
             >
               <span className="stat-card-label">{tab.label}</span>
-              <span className="stat-card-value">{filterFinanceRowsByTab(rows, tab.value).length}</span>
+              <span className="stat-card-value">{rowsByTab[tab.value]?.length ?? 0}</span>
             </button>
           ))}
         </div>
@@ -363,9 +473,11 @@ export const FinanceCenterPage = () => {
               onResolveRefundException={resolveRefundException}
               onConfirmSettlement={confirmSettlement}
               onMarkAbnormal={markAbnormal}
+              onResolveAbnormal={resolveAbnormal}
               onLock={lockFinance}
               expandedLineId={expandedLineId}
               onToggleLine={(lineId) => setExpandedLineId((current) => (current === lineId ? '' : lineId))}
+              financeErrors={financeErrors}
               canEdit={canConfirmFinance}
             />
           ) : (
@@ -387,9 +499,11 @@ const FinanceTable = ({
   onResolveRefundException,
   onConfirmSettlement,
   onMarkAbnormal,
+  onResolveAbnormal,
   onLock,
   expandedLineId,
   onToggleLine,
+  financeErrors,
   canEdit
 }: {
   rows: FinanceRow[]
@@ -401,9 +515,11 @@ const FinanceTable = ({
   onResolveRefundException: (row: FinanceRow) => void
   onConfirmSettlement: (row: FinanceRow) => void
   onMarkAbnormal: (row: FinanceRow) => void
+  onResolveAbnormal: (row: FinanceRow) => void
   onLock: (line: OrderLine) => void
   expandedLineId: string
   onToggleLine: (lineId: string) => void
+  financeErrors: Record<string, string[]>
   canEdit: boolean
 }) => (
   <div className="workbench-task-list">
@@ -412,6 +528,7 @@ const FinanceTable = ({
       const draft = getDraft(line)
       const isExpanded = expandedLineId === line.id
       const isReadOnly = !canEdit || row.isLocked
+      const validationMessages = financeErrors[line.id] ?? []
 
       return (
         <article key={line.id} className={`workbench-task-card${isExpanded ? ' expanded' : ''}`}>
@@ -498,6 +615,11 @@ const FinanceTable = ({
                   <div className="row wrap">{row.riskLabels.length > 0 ? row.riskLabels.map((risk) => <RiskTag key={risk} value={risk} />) : <StatusTag value="无异常" />}</div>
                   {row.isLocked ? <div className="text-caption">财务已锁定，收退款、结算金额、备注和异常处理当前只读。</div> : null}
                   {line.financeAbnormalReason ? <div className="text-caption">{line.financeAbnormalReason}</div> : null}
+                  {validationMessages.length > 0 ? (
+                    <div className="danger-alert" role="alert">
+                      财务确认前需处理：{validationMessages.join('、')}
+                    </div>
+                  ) : null}
                   <div className="field-grid three spacer-top">
                     <label className="field-control">
                       <span className="field-label">本次收 / 退款金额</span>
@@ -555,6 +677,11 @@ const FinanceTable = ({
                 <button type="button" className="button ghost small" onClick={() => onMarkAbnormal(row)} disabled={isReadOnly}>
                   标记财务异常
                 </button>
+                {line.financeStatus === 'abnormal' ? (
+                  <button type="button" className="button secondary small" onClick={() => onResolveAbnormal(row)} disabled={isReadOnly}>
+                    解除财务异常
+                  </button>
+                ) : null}
                 <button type="button" className="button secondary small" onClick={() => onLock(line)} disabled={isReadOnly}>
                   {row.isLocked ? '财务已锁定' : '锁定财务数据'}
                 </button>

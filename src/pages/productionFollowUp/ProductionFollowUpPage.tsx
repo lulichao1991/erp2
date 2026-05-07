@@ -5,6 +5,8 @@ import { useAppData } from '@/hooks/useAppData'
 import { canPerformAction } from '@/services/access/roleCapabilities'
 import {
   buildProductionFollowUpRows,
+  canReturnProductionToCustomerService,
+  canReturnProductionToDesignOrModeling,
   filterProductionFollowUpRowsByTab,
   productionFollowUpTabs,
   type ProductionFollowUpRow,
@@ -374,27 +376,41 @@ const ProductionFollowUpTable = ({
                   </>
                 ) : (
                   <>
-                    <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit || !actionState.canApproveProductionReview}>
-                      标记资料已齐
-                    </button>
-                    <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit || !actionState.canDispatchToFactory}>
-                      下发生产
-                    </button>
-                    <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit || !actionState.canStartFactoryProduction}>
-                      标记生产中
-                    </button>
-                    <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit || !actionState.canMarkProductionBlocked}>
-                      标记阻塞
-                    </button>
-                    <button type="button" className="button ghost small" onClick={() => onResumeProduction(line)} disabled={!canEdit || !actionState.canResumeProduction}>
-                      恢复生产
-                    </button>
-                    <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
-                      退回客服补资料
-                    </button>
-                    <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
-                      退回设计/建模修改
-                    </button>
+                    {actionState.canApproveProductionReview ? (
+                      <button type="button" className="button secondary small" onClick={() => onMaterialsReady(line)} disabled={!canEdit}>
+                        标记资料已齐
+                      </button>
+                    ) : null}
+                    {actionState.canDispatchToFactory ? (
+                      <button type="button" className="button secondary small" onClick={() => onDispatchProduction(line)} disabled={!canEdit}>
+                        下发生产
+                      </button>
+                    ) : null}
+                    {actionState.canStartFactoryProduction ? (
+                      <button type="button" className="button secondary small" onClick={() => onMarkInProduction(line)} disabled={!canEdit}>
+                        标记生产中
+                      </button>
+                    ) : null}
+                    {actionState.canMarkProductionBlocked ? (
+                      <button type="button" className="button ghost small" onClick={() => onMarkBlocked(line)} disabled={!canEdit}>
+                        标记阻塞
+                      </button>
+                    ) : null}
+                    {actionState.canResumeProduction ? (
+                      <button type="button" className="button ghost small" onClick={() => onResumeProduction(line)} disabled={!canEdit}>
+                        恢复生产
+                      </button>
+                    ) : null}
+                    {canReturnProductionToCustomerService(line) ? (
+                      <button type="button" className="button ghost small" onClick={() => onReturnToCustomerService(line)} disabled={!canEdit}>
+                        退回客服补资料
+                      </button>
+                    ) : null}
+                    {canReturnProductionToDesignOrModeling(line) ? (
+                      <button type="button" className="button ghost small" onClick={() => onReturnToDesignOrModeling(line)} disabled={!canEdit}>
+                        退回设计/建模修改
+                      </button>
+                    ) : null}
                   </>
                 )}
               </div>

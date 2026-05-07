@@ -3,6 +3,9 @@ import type { OrderLine, OrderLineUploadedFile } from '@/types/order-line'
 import { buildQuoteResult } from '@/utils/quote/buildQuoteResult'
 
 const purchaseId = 'o-202604-001'
+const linPurchaseId = 'o-202604-002'
+const zhaoPurchaseId = 'o-202603-118'
+const internalPurchaseId = 'purchase-internal-rd-001'
 const ringProduct = mockProducts[0]
 const pendantProduct = mockProducts[1]
 
@@ -625,6 +628,388 @@ const completionReviewOrderLine: OrderLine = {
   promisedDate: '2026-05-01'
 }
 
+const linCustomRingDesignOrderLine: OrderLine = {
+  id: 'ol-lin-custom-ring-design-001',
+  lineNo: 1,
+  productionTaskNo: 'LIN-RING-CUSTOM-001',
+  purchaseId: linPurchaseId,
+  customerId: 'customer-lin-001',
+  name: '林小姐纪念戒',
+  category: 'ring',
+  versionNo: 'custom-v1',
+  quantity: 1,
+  lineStatus: 'pending_design',
+  designStatus: 'pending',
+  modelingStatus: 'pending',
+  productionStatus: 'not_started',
+  factoryStatus: 'not_assigned',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-chen',
+  currentOwner: '陈设计',
+  priority: 'high',
+  isUrgent: false,
+  requiresDesign: true,
+  requiresModeling: true,
+  requiresWax: true,
+  isReferencedProduct: false,
+  selectedSpecValue: '定制戒指 12号',
+  selectedMaterial: '18K金',
+  selectedProcess: '手工錾刻',
+  selectedSpecialOptions: ['纪念文字', '出蜡确认'],
+  actualRequirements: {
+    material: '18K金',
+    process: '手工錾刻',
+    engraveText: 'L&Y',
+    specialNotes: ['戒臂需融入山线元素', '先出设计草图再建模'],
+    remark: '全定制戒指，无来源款式模板，需设计确认后进入建模。'
+  },
+  designInfo: {
+    assignedDesigner: '陈设计',
+    requiresRemodeling: true,
+    designDeadline: '2026-04-28',
+    designNote: '等待首版设计稿。'
+  },
+  outsourceInfo: {
+    outsourceStatus: 'not_required',
+    supplierName: '待定',
+    plannedDeliveryDate: '2026-05-08',
+    outsourceNote: '设计和建模完成后再评估工厂。'
+  },
+  productionInfo: {
+    feedbackStatus: 'not_started',
+    factoryNote: '未进入生产。'
+  },
+  lineSalesAmount: 3200,
+  allocatedDepositAmount: 1800,
+  allocatedFinalPaymentAmount: 1400,
+  quote: {
+    basePrice: 2600,
+    priceAdjustments: [
+      { type: 'process', ruleKey: '手工錾刻', delta: 420 },
+      { type: 'special', ruleKey: '出蜡确认', delta: 180 }
+    ],
+    systemQuote: 3200,
+    status: 'ready',
+    warnings: []
+  },
+  expectedDate: '2026-05-08',
+  promisedDate: '2026-05-10'
+}
+
+const linCustomPendantModelingOrderLine: OrderLine = {
+  id: 'ol-lin-custom-pendant-modeling-001',
+  lineNo: 2,
+  productionTaskNo: 'LIN-PDT-CUSTOM-002',
+  purchaseId: linPurchaseId,
+  customerId: 'customer-lin-001',
+  name: '星月纪念吊坠',
+  category: 'pendant',
+  versionNo: 'custom-v1',
+  quantity: 1,
+  lineStatus: 'pending_modeling',
+  designStatus: 'completed',
+  modelingStatus: 'pending',
+  productionStatus: 'not_started',
+  factoryStatus: 'not_assigned',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-wang',
+  assignedModelerId: 'modeler-lin',
+  currentOwner: '林建模',
+  priority: 'normal',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: true,
+  requiresWax: true,
+  isReferencedProduct: false,
+  selectedSpecValue: '吊坠 18mm',
+  selectedMaterial: '足银',
+  selectedProcess: '珐琅',
+  selectedSpecialOptions: ['出蜡确认'],
+  actualRequirements: {
+    material: '足银',
+    process: '珐琅',
+    specialNotes: ['月牙边缘保留手工纹理', '蜡版需拍照给客户确认'],
+    remark: '设计稿已确认，等待建模出蜡。'
+  },
+  designInfo: {
+    assignedDesigner: '王设计',
+    requiresRemodeling: true,
+    designDeadline: '2026-04-26',
+    designNote: '设计已确认，转建模。'
+  },
+  designFiles: [
+    {
+      id: 'design-file-lin-pendant-001',
+      name: '星月吊坠设计确认稿.pdf',
+      url: 'data:text/plain;charset=utf-8,lin-pendant-design'
+    }
+  ],
+  designCompletedAt: '2026-04-26 18:30',
+  outsourceInfo: {
+    outsourceStatus: 'pending',
+    supplierName: '待定',
+    plannedDeliveryDate: '2026-05-09',
+    outsourceNote: '待蜡版确认后下发。'
+  },
+  productionInfo: {
+    feedbackStatus: 'not_started',
+    factoryNote: '未进入生产。'
+  },
+  lineSalesAmount: 1880,
+  allocatedDepositAmount: 1200,
+  allocatedFinalPaymentAmount: 680,
+  quote: {
+    basePrice: 1560,
+    priceAdjustments: [
+      { type: 'process', ruleKey: '珐琅', delta: 180 },
+      { type: 'special', ruleKey: '出蜡确认', delta: 140 }
+    ],
+    systemQuote: 1880,
+    status: 'ready',
+    warnings: []
+  },
+  expectedDate: '2026-05-09',
+  promisedDate: '2026-05-11'
+}
+
+const zhaoSpotRingOrderLine: OrderLine = {
+  id: 'oi-ring-118',
+  lineNo: 1,
+  productionTaskNo: 'RING-ZH-118',
+  purchaseId: zhaoPurchaseId,
+  customerId: 'customer-zhao-001',
+  name: '山形纪念戒',
+  category: 'ring',
+  versionNo: 'v2',
+  quantity: 1,
+  lineStatus: 'ready_to_ship',
+  designStatus: 'not_required',
+  modelingStatus: 'not_required',
+  productionStatus: 'completed',
+  factoryStatus: 'returned',
+  financeStatus: 'confirmed',
+  financeConfirmedAt: '2026-03-28 15:30',
+  financeLocked: true,
+  currentOwner: '周库管',
+  priority: 'normal',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: false,
+  requiresWax: false,
+  isReferencedProduct: true,
+  productId: ringProduct.id,
+  sourceProduct: {
+    sourceProductId: ringProduct.id,
+    sourceProductCode: ringProduct.code,
+    sourceProductName: ringProduct.name,
+    sourceProductVersion: 'v2',
+    category: ringProduct.category,
+    sourceSpecValue: '10号',
+    defaultMaterial: '18K金',
+    defaultProcess: '镜面抛光',
+    snapshotAt: '2026-03-28 14:20'
+  },
+  selectedSpecValue: '10号',
+  selectedMaterial: '18K金',
+  selectedProcess: '镜面抛光',
+  selectedSpecialOptions: ['现货改圈'],
+  actualRequirements: {
+    material: '18K金',
+    process: '镜面抛光',
+    specialNotes: ['库存现货占用后出库', '发货前复核圈号'],
+    remark: '现货戒指，库存占用并出库后等待发货。'
+  },
+  productionInfo: {
+    feedbackStatus: 'completed',
+    actualMaterial: '18K金',
+    totalWeight: '3.6g',
+    netWeight: '3.5g',
+    laborCostDetail: '120',
+    factoryShippedAt: '2026-03-28 15:00',
+    qualityResult: '现货复检通过',
+    factoryNote: '库存现货复检完成。'
+  },
+  productionData: {
+    shippedAt: '2026-03-28 15:00',
+    completedAt: '2026-03-28 15:00',
+    totalWeight: 3.6,
+    netMetalWeight: 3.5,
+    actualMaterial: '18K金',
+    baseLaborCost: 120,
+    totalLaborCost: 120,
+    factoryNote: '现货复检通过。',
+    finishedImageUrls: ['zhao-ring-front.jpg'],
+    settlementFileUrls: ['zhao-ring-stock-outbound.pdf']
+  },
+  lineSalesAmount: 1680,
+  allocatedDepositAmount: 1680,
+  allocatedFinalPaymentAmount: 0,
+  materialCost: 980,
+  laborCost: 120,
+  logisticsCost: 18,
+  factorySettlementAmount: 120,
+  financeNote: '现货全款已确认，等待仓库发货。',
+  expectedDate: '2026-03-29',
+  promisedDate: '2026-03-30'
+}
+
+const financeAbnormalOrderLine: OrderLine = {
+  id: 'ol-zhang-finance-abnormal-001',
+  lineNo: 9,
+  productionTaskNo: 'FIN-ABN-009',
+  purchaseId,
+  customerId: 'customer-zhang-001',
+  name: '山形尾戒财务异常',
+  category: 'ring',
+  versionNo: 'v1',
+  quantity: 1,
+  lineStatus: 'pending_finance_confirmation',
+  designStatus: 'completed',
+  modelingStatus: 'not_required',
+  productionStatus: 'completed',
+  factoryStatus: 'returned',
+  financeStatus: 'abnormal',
+  merchandiserId: 'merchandiser-li',
+  factoryId: 'factory-suzhou-gold-001',
+  productionSentAt: '2026-04-24 13:20',
+  factoryPlannedDueDate: '2026-04-27',
+  productionCompletedAt: '2026-04-27 18:10',
+  currentOwner: '财务',
+  priority: 'high',
+  isUrgent: false,
+  requiresDesign: false,
+  requiresModeling: false,
+  requiresWax: false,
+  isReferencedProduct: true,
+  productId: ringProduct.id,
+  sourceProduct: {
+    sourceProductId: ringProduct.id,
+    sourceProductCode: ringProduct.code,
+    sourceProductName: ringProduct.name,
+    sourceProductVersion: ringProduct.version,
+    category: ringProduct.category,
+    sourceSpecValue: '12号',
+    defaultMaterial: '18K金',
+    defaultProcess: '手工抛光',
+    snapshotAt: '2026-04-24 13:00'
+  },
+  selectedSpecValue: '12号',
+  selectedMaterial: '18K金',
+  selectedProcess: '手工抛光',
+  actualRequirements: {
+    material: '18K金',
+    process: '手工抛光',
+    remark: '用于覆盖财务异常：客户补款流水待复核，工厂结算金额需二次确认。'
+  },
+  productionInfo: {
+    feedbackStatus: 'completed',
+    actualMaterial: '18K金',
+    totalWeight: '2.8g',
+    netWeight: '2.7g',
+    laborCostDetail: '180',
+    factoryShippedAt: '2026-04-27 18:10',
+    qualityResult: '通过',
+    factoryNote: '工厂回传结算金额与跟单预估不一致。'
+  },
+  productionData: {
+    shippedAt: '2026-04-27 18:10',
+    completedAt: '2026-04-27 17:40',
+    totalWeight: 2.8,
+    netMetalWeight: 2.7,
+    actualMaterial: '18K金',
+    baseLaborCost: 180,
+    extraLaborCost: 90,
+    extraLaborCostNote: '临时修边加收',
+    totalLaborCost: 270,
+    factoryNote: '工厂加收修边费用，待财务确认。',
+    settlementFileUrls: ['finance-abnormal-settlement.pdf']
+  },
+  lineSalesAmount: 1380,
+  allocatedDepositAmount: 600,
+  allocatedFinalPaymentAmount: 780,
+  materialCost: 520,
+  laborCost: 180,
+  extraLaborCost: 90,
+  factorySettlementAmount: 270,
+  financeAbnormalReason: '工厂结算加收 90 元，客户补款流水待复核。',
+  financeNote: '财务异常 seed：待核对工厂结算和补款。',
+  expectedDate: '2026-04-28',
+  promisedDate: '2026-05-01'
+}
+
+const internalSampleCompletedOrderLine: OrderLine = {
+  id: 'ol-internal-sample-completed-001',
+  lineNo: 1,
+  productionTaskNo: 'RD-SAMPLE-001',
+  purchaseId: internalPurchaseId,
+  customerId: 'customer-internal-rd-001',
+  name: '内部研发山形耳骨夹',
+  category: 'other',
+  versionNo: 'rd-v1',
+  quantity: 1,
+  lineStatus: 'completed',
+  designStatus: 'completed',
+  modelingStatus: 'completed',
+  productionStatus: 'completed',
+  factoryStatus: 'returned',
+  financeStatus: 'not_required',
+  assignedDesignerId: 'designer-chen',
+  assignedModelerId: 'modeler-lin',
+  merchandiserId: 'merchandiser-wang',
+  factoryId: 'factory-suzhou-gold-001',
+  productionSentAt: '2026-05-01 10:30',
+  factoryPlannedDueDate: '2026-05-04',
+  productionCompletedAt: '2026-05-03 16:00',
+  currentOwner: '研发样品库',
+  priority: 'normal',
+  isUrgent: false,
+  requiresDesign: true,
+  requiresModeling: true,
+  requiresWax: true,
+  isReferencedProduct: false,
+  selectedSpecValue: '内部样品 1.8cm',
+  selectedMaterial: '银版',
+  selectedProcess: '手工抛光',
+  selectedSpecialOptions: ['研发样品'],
+  actualRequirements: {
+    material: '银版',
+    process: '手工抛光',
+    specialNotes: ['内部研发，不产生客户收款', '完成后转入样品库'],
+    remark: '内部新品打样完成，用于覆盖 internal purchase + completed OrderLine seed。'
+  },
+  designInfo: {
+    assignedDesigner: '陈设计',
+    requiresRemodeling: true,
+    designDeadline: '2026-05-01',
+    designNote: '研发样品设计已归档。'
+  },
+  productionInfo: {
+    feedbackStatus: 'completed',
+    actualMaterial: '银版',
+    totalWeight: '1.9g',
+    netWeight: '1.8g',
+    factoryShippedAt: '2026-05-03 16:00',
+    qualityResult: '内部评审通过',
+    factoryNote: '样品已完成并交研发样品库。'
+  },
+  productionData: {
+    shippedAt: '2026-05-03 16:00',
+    completedAt: '2026-05-03 15:30',
+    totalWeight: 1.9,
+    netMetalWeight: 1.8,
+    actualMaterial: '银版',
+    factoryNote: '内部研发样品，不进入客户财务确认。',
+    finishedImageUrls: ['rd-sample-earcuff.jpg']
+  },
+  lineSalesAmount: 0,
+  allocatedDepositAmount: 0,
+  allocatedFinalPaymentAmount: 0,
+  financeNote: '内部研发样品，无客户收款。',
+  expectedDate: '2026-05-04',
+  promisedDate: '2026-05-04',
+  finishedAt: '2026-05-04 10:00'
+}
+
 export const orderLinesMock: OrderLine[] = [
   ringOrderLine,
   pendantOrderLine,
@@ -633,5 +1018,10 @@ export const orderLinesMock: OrderLine[] = [
   earringReviewOrderLine,
   broochBlockedOrderLine,
   factoryPendingOrderLine,
-  completionReviewOrderLine
+  completionReviewOrderLine,
+  financeAbnormalOrderLine,
+  linCustomRingDesignOrderLine,
+  linCustomPendantModelingOrderLine,
+  zhaoSpotRingOrderLine,
+  internalSampleCompletedOrderLine
 ]

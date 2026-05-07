@@ -75,5 +75,51 @@ export const financePaymentRecordsMock: FinancePaymentRecord[] = [
     recordType: 'deposit',
     occurredAt: '2026-04-25 10:15',
     note: '试产胸针定金分摊。'
+  },
+  {
+    id: 'finance-payment-abnormal-supplement-001',
+    orderLineId: 'ol-zhang-finance-abnormal-001',
+    purchaseId: 'o-202604-001',
+    amount: 90,
+    method: 'transfer',
+    recordType: 'supplement',
+    reviewStatus: 'pending',
+    occurredAt: '2026-04-27 19:00',
+    reason: '工厂临时修边加收，待客户和财务复核。',
+    note: '财务异常 seed：补款待复核。'
+  },
+  {
+    id: 'finance-payment-lin-ring-deposit-001',
+    orderLineId: 'ol-lin-custom-ring-design-001',
+    purchaseId: 'o-202604-002',
+    amount: 1800,
+    method: 'transfer',
+    recordType: 'deposit',
+    occurredAt: '2026-04-26 09:10',
+    note: '林小姐纪念戒定金分摊。'
+  },
+  {
+    id: 'finance-payment-lin-pendant-deposit-001',
+    orderLineId: 'ol-lin-custom-pendant-modeling-001',
+    purchaseId: 'o-202604-002',
+    amount: 1200,
+    method: 'transfer',
+    recordType: 'deposit',
+    occurredAt: '2026-04-26 09:10',
+    note: '林小姐星月吊坠定金分摊。'
+  },
+  {
+    id: 'finance-payment-zhao-ring-full-001',
+    orderLineId: 'oi-ring-118',
+    purchaseId: 'o-202603-118',
+    amount: 1680,
+    method: 'cash',
+    recordType: 'final_payment',
+    reviewStatus: 'reviewed',
+    reviewedAt: '2026-03-28 15:30',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    occurredAt: '2026-03-28 14:20',
+    note: '赵女士现货戒指全款，关联库存资产。'
   }
 ]

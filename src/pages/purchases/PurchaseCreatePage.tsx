@@ -1,14 +1,19 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
+  buildPurchaseDraftPersistencePayload,
   PurchaseDraftCommonSection,
   PurchaseDraftCustomerSection,
   PurchaseDraftOrderLinesSection,
   PurchaseDraftPaymentSection,
+  type PurchaseDraftSavePayload,
   usePurchaseDraftForm
 } from '@/components/business/purchase'
 import { PageContainer, PageHeader } from '@/components/common'
+import { useAppData } from '@/hooks/useAppData'
 
 export const PurchaseCreatePage = () => {
+  const navigate = useNavigate()
+  const appData = useAppData()
   const {
     purchaseDraft,
     orderLineDrafts,
@@ -25,6 +30,12 @@ export const PurchaseCreatePage = () => {
     toggleOrderLineSpecialOption,
     saveDraft
   } = usePurchaseDraftForm()
+  const handlePersistDraft = (payload: PurchaseDraftSavePayload) => {
+    const existingCustomer = appData.getCustomer(payload.purchaseDraft.customerShippingInfo.customerId)
+    const persistencePayload = buildPurchaseDraftPersistencePayload(payload, { existingCustomer })
+    const savedPurchase = appData.createPurchaseWithOrderLines(persistencePayload)
+    navigate(`/purchases/${savedPurchase.id}`)
+  }
 
   return (
     <PageContainer>
@@ -36,7 +47,7 @@ export const PurchaseCreatePage = () => {
             <Link to="/order-lines" className="button secondary">
               返回销售中心
             </Link>
-            <button type="button" className="button primary" onClick={saveDraft}>
+            <button type="button" className="button primary" onClick={() => saveDraft(handlePersistDraft)}>
               保存草稿
             </button>
           </div>

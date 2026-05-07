@@ -26,7 +26,7 @@ import type { AfterSalesCase, AfterSalesCaseStatus, AfterSalesCaseType, Logistic
 
 export type OrderLineCenterFilters = {
   keyword: string
-  status: 'all' | OrderLineLineStatus | string
+  status: 'all' | OrderLineLineStatus
   owner: string
   category: 'all' | ProductCategory | string
   urgent: 'all' | 'yes' | 'no'
@@ -35,7 +35,7 @@ export type OrderLineCenterFilters = {
   factory: string
   purchase: string
   customer: string
-  quickView: 'all' | OrderLineLineStatus | string
+  quickView: 'all' | OrderLineLineStatus
 }
 
 export type OrderLineRow = {
@@ -84,11 +84,11 @@ export type OrderLineOutsourceDraft = {
   productionTaskNo: string
   plannedDeliveryDate: string
   outsourceNote: string
-  outsourceStatus: OrderLineOutsourceStatus | string
+  outsourceStatus: OrderLineOutsourceStatus
 }
 
 export type OrderLineProductionDraft = {
-  feedbackStatus: OrderLineProductionFeedbackStatus | string
+  feedbackStatus: OrderLineProductionFeedbackStatus
   actualMaterial: string
   totalWeight: string
   netWeight: string
@@ -120,7 +120,7 @@ export type OrderLineAfterSalesDraft = {
   remark: string
 }
 
-export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus | string) => void
+export type OrderLineStatusUpdateHandler = (lineId: string, nextStatus: OrderLineLineStatus) => void
 export type OrderLineDetailsUpdateHandler = (lineId: string, draft: OrderLineDetailsDraft) => void
 export type OrderLineDesignModelingUpdateHandler = (lineId: string, draft: OrderLineDesignModelingDraft) => void
 export type OrderLineOutsourceUpdateHandler = (lineId: string, draft: OrderLineOutsourceDraft) => void
@@ -288,11 +288,11 @@ export const buildOrderLineStatusLog = ({
 }: {
   line: OrderLine
   purchase?: Purchase
-  nextStatus: OrderLineLineStatus | string
+  nextStatus: OrderLineLineStatus
   operatorName?: string
 }): OrderLineLog => {
   const fromStatus = getOrderLineLineStatus(line)
-  const toStatus = String(nextStatus)
+  const toStatus = nextStatus
 
   return {
     id: `log-${line.id}-${Date.now()}`,

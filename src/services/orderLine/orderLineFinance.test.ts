@@ -227,6 +227,23 @@ describe('orderLineFinance', () => {
     expect(summary.estimatedGrossProfitRate).toBe(31.3)
   })
 
+  it('uses payment records and inventory movements when confirming a finance summary', () => {
+    const pendant = orderLinesMock.find((line) => line.id === 'oi-pendant-001')!
+    const summary = calculateFinanceSummary(
+      {
+        ...pendant,
+        factorySettlementAmount: 560
+      },
+      financePaymentRecordsMock,
+      inventoryItemsMock,
+      inventoryMovementsMock
+    )
+
+    expect(summary.factorySettlementAmount).toBe(560)
+    expect(summary.estimatedGrossProfit).toBe(280)
+    expect(summary.estimatedGrossProfitRate).toBe(21.9)
+  })
+
   it('places v2 finance action results in confirmed and abnormal tabs', () => {
     const pendingLine = {
       ...orderLinesMock.find((line) => line.id === 'oi-pendant-001')!,

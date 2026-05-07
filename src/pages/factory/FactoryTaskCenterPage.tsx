@@ -32,12 +32,40 @@ type FactoryReturnDraft = {
   settlementFileName: string
 }
 
+type FactoryReturnValidationResult = {
+  valid: boolean
+  messages: string[]
+}
+
 const formatCurrentTime = () => new Date().toISOString().slice(0, 16).replace('T', ' ')
 
 const toDraftValue = (value?: number) => (typeof value === 'number' ? String(value) : '')
 const toNumberOrUndefined = (value: string) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) && value.trim() !== '' ? parsed : undefined
+}
+const getNumberValidationMessage = (label: string, value: string, options: { required?: boolean; positive?: boolean } = {}) => {
+  const trimmed = value.trim()
+
+  if (!trimmed) {
+    return options.required ? `${label}必填` : ''
+  }
+
+  const parsed = Number(trimmed)
+
+  if (!Number.isFinite(parsed)) {
+    return `${label}必须是数字`
+  }
+
+  if (options.positive && parsed <= 0) {
+    return `${label}必须大于 0`
+  }
+
+  if (!options.positive && parsed < 0) {
+    return `${label}不能小于 0`
+  }
+
+  return ''
 }
 
 const createReturnDraft = (line: OrderLine): FactoryReturnDraft => ({
@@ -60,10 +88,45 @@ const createReturnDraft = (line: OrderLine): FactoryReturnDraft => ({
 const getRequirementSummary = (line: OrderLine) =>
   [line.actualRequirements?.material || line.selectedMaterial, line.selectedSpecValue, line.actualRequirements?.process || line.selectedProcess].filter(Boolean).join(' / ') || '待补充'
 
+const validateFactoryReturnDraft = (draft: FactoryReturnDraft): FactoryReturnValidationResult => {
+  const messages = [
+    getNumberValidationMessage('总重', draft.totalWeight, { required: true, positive: true }),
+    getNumberValidationMessage('净金重', draft.netMetalWeight, { required: true, positive: true }),
+    getNumberValidationMessage('主石数量', draft.mainStoneQuantity),
+    getNumberValidationMessage('辅石颗数', draft.sideStoneCount),
+    getNumberValidationMessage('基础工费', draft.baseLaborCost, { required: true }),
+    getNumberValidationMessage('附加工费', draft.extraLaborCost)
+  ].filter(Boolean)
+  const totalWeight = toNumberOrUndefined(draft.totalWeight)
+  const netMetalWeight = toNumberOrUndefined(draft.netMetalWeight)
+
+  if (!draft.actualMaterial.trim()) {
+    messages.push('实际材质必填')
+  }
+
+  if (!draft.finishedImageName.trim()) {
+    messages.push('成品图文件必填')
+  }
+
+  if (!draft.settlementFileName.trim()) {
+    messages.push('结算单文件必填')
+  }
+
+  if (typeof totalWeight === 'number' && typeof netMetalWeight === 'number' && netMetalWeight > totalWeight) {
+    messages.push('净金重不能大于总重')
+  }
+
+  return {
+    valid: messages.length === 0,
+    messages
+  }
+}
+
 export const FactoryTaskCenterPage = () => {
   const appData = useAppData()
   const [activeTab, setActiveTab] = useState<FactoryTaskTab>('pending_acceptance')
   const [drafts, setDrafts] = useState<Record<string, FactoryReturnDraft>>({})
+  const [returnErrors, setReturnErrors] = useState<Record<string, string[]>>({})
   const [expandedLineId, setExpandedLineId] = useState<string>('')
   const [expandedReturnLineId, setExpandedReturnLineId] = useState<string>('')
 
@@ -80,6 +143,7 @@ export const FactoryTaskCenterPage = () => {
         ...patch
       }
     }))
+    setReturnErrors((current) => ({ ...current, [line.id]: [] }))
   }
 
   const patchLine = (lineId: string, patch: Partial<OrderLine>) => {
@@ -147,13 +211,26 @@ export const FactoryTaskCenterPage = () => {
 
   const resumeAbnormal = (line: OrderLine) => {
     patchLine(line.id, {
-      ...resumeProduction(line)
+      ...resumeProduction(line),
+      productionData: {
+        ...line.productionData,
+        factoryNote: line.productionData?.factoryNote || '工厂异常已恢复生产。'
+      }
     })
     setActiveTab('in_production')
   }
 
   const submitReturn = (line: OrderLine) => {
     const draft = getDraft(line)
+    const validation = validateFactoryReturnDraft(draft)
+
+    if (!validation.valid) {
+      setReturnErrors((current) => ({ ...current, [line.id]: validation.messages }))
+      setExpandedLineId(line.id)
+      setExpandedReturnLineId(line.id)
+      return
+    }
+
     const baseLaborCost = toNumberOrUndefined(draft.baseLaborCost)
     const extraLaborCost = toNumberOrUndefined(draft.extraLaborCost)
     const totalLaborCost = (baseLaborCost ?? 0) + (extraLaborCost ?? 0)
@@ -179,13 +256,14 @@ export const FactoryTaskCenterPage = () => {
       settlementFileUrls: draft.settlementFileName ? [draft.settlementFileName] : line.productionData?.settlementFileUrls
     }
 
+    const returnedLine = submitFactoryReturn(line)
+
     patchLine(line.id, {
-      ...submitFactoryReturn(line),
-      financeStatus: 'not_required',
+      ...returnedLine,
       productionCompletedAt: line.productionCompletedAt || returnedAt,
       productionData,
       productionInfo: {
-        ...submitFactoryReturn(line).productionInfo,
+        ...returnedLine.productionInfo,
         actualMaterial: productionData.actualMaterial,
         totalWeight: productionData.totalWeight ? `${productionData.totalWeight}g` : line.productionInfo?.totalWeight,
         netWeight: productionData.netMetalWeight ? `${productionData.netMetalWeight}g` : line.productionInfo?.netWeight,
@@ -197,6 +275,7 @@ export const FactoryTaskCenterPage = () => {
     })
     setActiveTab('returned')
     setExpandedReturnLineId('')
+    setReturnErrors((current) => ({ ...current, [line.id]: [] }))
   }
 
   return (
@@ -232,6 +311,7 @@ export const FactoryTaskCenterPage = () => {
             <FactoryTaskTable
               rows={visibleRows}
               getDraft={getDraft}
+              returnErrors={returnErrors}
               onDraftChange={updateDraft}
               onAccept={acceptTask}
               onStart={startProduction}
@@ -257,6 +337,7 @@ export const FactoryTaskCenterPage = () => {
 const FactoryTaskTable = ({
   rows,
   getDraft,
+  returnErrors,
   onDraftChange,
   onAccept,
   onStart,
@@ -272,6 +353,7 @@ const FactoryTaskTable = ({
 }: {
   rows: FactoryTaskRow[]
   getDraft: (line: OrderLine) => FactoryReturnDraft
+  returnErrors: Record<string, string[]>
   onDraftChange: (line: OrderLine, patch: Partial<FactoryReturnDraft>) => void
   onAccept: (line: OrderLine) => void
   onStart: (line: OrderLine) => void
@@ -289,6 +371,7 @@ const FactoryTaskTable = ({
     {rows.map((row) => {
       const line = row.line
       const draft = getDraft(line)
+      const validationMessages = returnErrors[line.id] ?? []
       const actionState = getOrderLineWorkflowActionState(line)
       const canShowReturnForm = actionState.canSubmitFactoryReturn || line.factoryStatus === 'returned'
       const isReturnExpanded = expandedReturnLineId === line.id
@@ -339,6 +422,11 @@ const FactoryTaskTable = ({
                           收起回传详情
                         </button>
                       </div>
+                      {validationMessages.length > 0 ? (
+                        <div className="danger-alert" role="alert">
+                          {validationMessages.join('；')}
+                        </div>
+                      ) : null}
                       <div className="factory-return-grid">
                         <FactoryInput label="总重" value={draft.totalWeight} onChange={(value) => onDraftChange(line, { totalWeight: value })} />
                         <FactoryInput label="净金重" value={draft.netMetalWeight} onChange={(value) => onDraftChange(line, { netMetalWeight: value })} />
@@ -356,6 +444,18 @@ const FactoryTaskTable = ({
                         <span className="field-label">工厂备注</span>
                         <textarea className="textarea" aria-label={`工厂备注-${line.id}`} value={draft.factoryNote} onChange={(event) => onDraftChange(line, { factoryNote: event.target.value })} />
                       </label>
+                      <div className="row wrap">
+                        {(draft.finishedImageName || line.productionData?.finishedImageUrls?.length) ? (
+                          <span className="tag version">
+                            成品图：{draft.finishedImageName || line.productionData?.finishedImageUrls?.join('、')}
+                          </span>
+                        ) : null}
+                        {(draft.settlementFileName || line.productionData?.settlementFileUrls?.length) ? (
+                          <span className="tag version">
+                            结算单：{draft.settlementFileName || line.productionData?.settlementFileUrls?.join('、')}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   ) : (
                     <div className="factory-return-summary">
@@ -363,6 +463,19 @@ const FactoryTaskTable = ({
                       <span className="muted-block">
                         {canShowReturnForm ? '展开后填写重量、工费、附件和工厂备注。' : '先接收任务并标记开始生产，完成后再填写重量、工费和附件。'}
                       </span>
+                      {line.productionData?.factoryNote ? <RiskFactoryNote value={line.productionData.factoryNote} abnormal={line.factoryStatus === 'abnormal'} /> : null}
+                      <div className="row wrap">
+                        {line.productionData?.finishedImageUrls?.map((file) => (
+                          <span key={file} className="tag version">
+                            成品图：{file}
+                          </span>
+                        ))}
+                        {line.productionData?.settlementFileUrls?.map((file) => (
+                          <span key={file} className="tag version">
+                            结算单：{file}
+                          </span>
+                        ))}
+                      </div>
                       {canShowReturnForm ? (
                         <button type="button" className="button secondary small" onClick={() => onToggleReturnDetails(line.id)}>
                           展开回传详情
@@ -398,6 +511,10 @@ const FactoryTaskTable = ({
       )
     })}
   </div>
+)
+
+const RiskFactoryNote = ({ value, abnormal }: { value: string; abnormal: boolean }) => (
+  <span className="text-caption">{abnormal ? `异常原因：${value}` : `工厂备注：${value}`}</span>
 )
 
 const FactoryInput = ({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) => (

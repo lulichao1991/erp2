@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FileList, InfoField, PageHeader, RiskTag, SectionCard, StatusTag } from '@/components/common'
+import { getOrderLineDetailPath } from '@/services/orderLine/orderLineRoutes'
 import type { OrderLineProductionFeedbackStatus } from '@/types/order-line'
 import type { ProductSpecRow } from '@/types/product'
 import type { ProductionPlanRow, ProductionPlanStage } from '@/types/productionPlan'
@@ -32,7 +33,7 @@ type ProductionOrderLineInfo = {
 }
 
 export type ProductionFeedbackValue = {
-  feedbackStatus?: OrderLineProductionFeedbackStatus | string
+  feedbackStatus?: OrderLineProductionFeedbackStatus
   totalWeight?: string
   qualityResult?: string
   factoryNote?: string
@@ -138,7 +139,7 @@ export const ProductionPlanSummaryCard = ({
   taskId: string
   taskTitle: string
   sourceProductName: string
-  sourceProductId: string
+  sourceProductId?: string
   feedbackStatus?: string
 }) => {
   const topMetaFields = [
@@ -184,7 +185,7 @@ export const ProductionPlanSummaryCard = ({
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">关联销售</span>
             <strong className="production-plan-trace-value">
-              <Link to="/order-lines">{row.orderLineName}</Link>
+              <Link to={getOrderLineDetailPath(row.orderLineId)}>{row.orderLineName}</Link>
             </strong>
             <span className="text-caption">货号 {row.goodsNo}</span>
           </li>
@@ -197,7 +198,7 @@ export const ProductionPlanSummaryCard = ({
           <li className="production-plan-trace-item">
             <span className="production-plan-trace-label">来源款式</span>
             <strong className="production-plan-trace-value">
-              <Link to={`/products/${sourceProductId}`}>{sourceProductName}</Link>
+              {sourceProductId ? <Link to={`/products/${sourceProductId}`}>{sourceProductName}</Link> : sourceProductName}
             </strong>
           </li>
           <li className="production-plan-trace-item">
@@ -471,7 +472,7 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
             </td>
             <td>
               <div className="production-plan-table-primary">
-                <Link to="/order-lines" className="production-plan-table-link">
+                <Link to={getOrderLineDetailPath(row.orderLineId)} className="production-plan-table-link">
                   {row.orderLineName}
                 </Link>
                 <span className="text-caption">货号 {row.goodsNo}</span>
@@ -492,7 +493,7 @@ export const ProductionPlanTable = ({ rows }: { rows: ProductionPlanRow[] }) => 
             </td>
             <td>
               <div className="row wrap">
-                <Link to="/order-lines" className="button ghost small">
+                <Link to={getOrderLineDetailPath(row.orderLineId)} className="button ghost small">
                   查看销售
                 </Link>
                 {row.purchaseId ? (
