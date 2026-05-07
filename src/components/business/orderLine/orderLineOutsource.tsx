@@ -4,7 +4,7 @@ import { DetailSection } from '@/components/business/orderLine/orderLineDetailSe
 import { getOutsourceStatusLabel, outsourceStatusOptions } from '@/components/business/orderLine/orderLineOptions'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
 import { buildOrderLineOutsourceDraft, type OrderLineOutsourceDraft } from '@/services/orderLine/orderLineWorkspace'
-import type { OrderLine } from '@/types/order-line'
+import type { OrderLine, OrderLineOutsourceStatus } from '@/types/order-line'
 
 export type OrderLineOutsourceUpdateHandler = (lineId: string, draft: OrderLineOutsourceDraft) => void
 
@@ -100,7 +100,7 @@ export const OrderLineOutsourceSection = ({
             </label>
             <label className="field-control">
               <span className="field-label">委外状态</span>
-              <select className="select" value={draft.outsourceStatus} onChange={(event) => updateDraft('outsourceStatus', event.target.value)}>
+              <select className="select" value={draft.outsourceStatus} onChange={(event) => updateDraft('outsourceStatus', event.target.value as OrderLineOutsourceStatus)}>
                 {outsourceStatusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}

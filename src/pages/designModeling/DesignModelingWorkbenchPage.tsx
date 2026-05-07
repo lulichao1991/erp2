@@ -11,7 +11,15 @@ import {
   type DesignModelingTab
 } from '@/services/orderLine/orderLineDesignModeling'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
-import { buildOrderLineStatusPatch } from '@/services/orderLine/orderLineWorkflow'
+import {
+  completeDesign as completeDesignWorkflow,
+  completeModeling as completeModelingWorkflow,
+  recordWaxFileReady,
+  requestDesignRevision,
+  requestModelingRevision,
+  startDesign,
+  startModeling
+} from '@/services/orderLine/orderLineWorkflow'
 import type { OrderLine, OrderLineUploadedFile } from '@/types/order-line'
 
 type RowDraft = {
@@ -79,18 +87,14 @@ export const DesignModelingWorkbenchPage = () => {
 
   const markDesignInProgress = (line: OrderLine) => {
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_design'),
-      assignedDesignerId: line.assignedDesignerId || 'designer-current',
-      designStatus: 'in_progress'
+      ...startDesign(line)
     })
   }
 
   const completeDesign = (line: OrderLine) => {
     const draft = getDraft(line)
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch(line.requiresModeling ? 'pending_modeling' : 'pending_merchandiser_review'),
-      designStatus: 'completed',
-      modelingStatus: line.requiresModeling ? 'pending' : line.modelingStatus,
+      ...completeDesignWorkflow(line),
       designNote: draft.designNote,
       designCompletedAt: line.designCompletedAt || formatCurrentTime()
     })
@@ -106,17 +110,14 @@ export const DesignModelingWorkbenchPage = () => {
 
   const markModelingInProgress = (line: OrderLine) => {
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_modeling'),
-      assignedModelerId: line.assignedModelerId || 'modeler-current',
-      modelingStatus: 'in_progress'
+      ...startModeling(line)
     })
   }
 
   const completeModeling = (line: OrderLine) => {
     const draft = getDraft(line)
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_merchandiser_review'),
-      modelingStatus: 'completed',
+      ...completeModelingWorkflow(line),
       modelingNote: draft.modelingNote,
       modelingCompletedAt: line.modelingCompletedAt || formatCurrentTime()
     })
@@ -127,18 +128,14 @@ export const DesignModelingWorkbenchPage = () => {
     const draft = getDraft(line)
     if (line.requiresDesign) {
       patchLine(line.id, {
-        ...buildOrderLineStatusPatch('pending_design'),
-        designStatus: 'revision_requested',
-        revisionReason: draft.revisionReason || '需要重新调整设计稿'
+        ...requestDesignRevision(line, draft.revisionReason || '需要重新调整设计稿')
       })
       setActiveTab('revision')
       return
     }
 
     patchLine(line.id, {
-      ...buildOrderLineStatusPatch('pending_modeling'),
-      modelingStatus: 'revision_requested',
-      revisionReason: draft.revisionReason || '需要重新调整建模文件'
+      ...requestModelingRevision(line, draft.revisionReason || '需要重新调整建模文件')
     })
     setActiveTab('revision')
   }
@@ -151,8 +148,10 @@ export const DesignModelingWorkbenchPage = () => {
     }
 
     patchLine(line.id, {
-      waxFiles: fileName ? [...(line.waxFiles ?? []), createMockFile(line.id, fileName, 'wax')] : line.waxFiles,
-      waxFactorySentAt: draft.waxFactorySentAt || line.waxFactorySentAt
+      ...recordWaxFileReady(line, {
+        waxFiles: fileName ? [...(line.waxFiles ?? []), createMockFile(line.id, fileName, 'wax')] : line.waxFiles,
+        waxFactorySentAt: draft.waxFactorySentAt || line.waxFactorySentAt
+      })
     })
   }
 

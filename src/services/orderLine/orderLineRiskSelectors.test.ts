@@ -86,8 +86,8 @@ describe('orderLineRiskSelectors', () => {
   it('detects missing factory returned weight', () => {
     const returnedLine = {
       ...orderLinesMock[1],
-      lineStatus: 'factory_returned',
-      factoryStatus: 'returned',
+      lineStatus: 'factory_returned' as const,
+      factoryStatus: 'returned' as const,
       productionData: {
         actualMaterial: '足银'
       }

@@ -7,6 +7,7 @@ import {
   getTaskTypeLabel
 } from '@/services/workflow/workflowMeta'
 import { getOrderLineGoodsNo } from '@/services/orderLine/orderLineIdentity'
+import { getOrderLineDetailPath } from '@/services/orderLine/orderLineRoutes'
 import { getOrderLineTaskGroups } from '@/services/orderLine/orderLineWorkflow'
 import { getTaskPurchaseId, getTaskPurchaseNo } from '@/services/task/taskIdentity'
 import type { OrderLine } from '@/types/order-line'
@@ -171,7 +172,7 @@ export const TaskTable = ({ tasks, orderLines = [] }: { tasks: Task[]; orderLine
               <td>{getCurrentTaskTypeLabel(task.type)}</td>
               <td>
                 <div className="stack" style={{ gap: 6 }}>
-                  <Link to="/order-lines">{orderLineLabel}</Link>
+                  <Link to={getOrderLineDetailPath(task.orderLineId)}>{orderLineLabel}</Link>
                   <span className="text-caption">{renderTaskPurchaseLink(task)}</span>
                 </div>
               </td>

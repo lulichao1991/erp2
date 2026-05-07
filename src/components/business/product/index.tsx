@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
-import type { Dispatch, KeyboardEvent, SetStateAction } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import {
   FileList,
   ImageGallery,
@@ -17,13 +16,52 @@ import {
   SummaryCard,
   VersionBadge
 } from '@/components/common'
+import { getOrderLineDetailPath } from '@/services/orderLine/orderLineRoutes'
 import type { ProductFieldOptionKey, ProductFieldOptions, ProductSizeParameterDefinition } from '@/services/product/productFieldOptions'
 import type { Product, ProductPriceRule, ProductReferenceRecord, ProductSpecRow, ProductVersionRecord } from '@/types/product'
+import { ProductOptionSelectorField } from './ProductOptionSelectorField'
 
 export { ProductAssetsFormSection, ProductDesignVersionFormSection, ProductPlatformListingSection } from './extendedSections'
 export { ProductFieldDictionaryDrawer } from './productFieldDictionary'
 
 const formatPrice = (value?: number) => (typeof value === 'number' ? `¥ ${value.toLocaleString('zh-CN')}` : '—')
+
+const getEnabledSpecs = (product: Product) => product.specs.filter((spec) => spec.status === 'enabled')
+
+const getEnabledPriceRules = (product: Product) => product.priceRules.filter((rule) => rule.enabled)
+
+const getProductFileCount = (product: Product) =>
+  product.assets.modelFiles.length + product.assets.craftFiles.length + product.assets.sizeFiles.length + product.assets.otherFiles.length
+
+const formatSpecCount = (product: Product) => `${getEnabledSpecs(product).length}/${product.specs.length} 启用`
+
+const formatRuleCount = (product: Product) => `${getEnabledPriceRules(product).length}/${product.priceRules.length} 启用`
+
+const formatSpecPriceRange = (product: Product) => {
+  const prices = getEnabledSpecs(product)
+    .map((spec) => spec.basePrice)
+    .filter((value): value is number => typeof value === 'number')
+
+  if (prices.length === 0) {
+    return '—'
+  }
+
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+
+  return min === max ? formatPrice(min) : `${formatPrice(min)} - ${formatPrice(max)}`
+}
+
+const formatRuleTypes = (product: Product) => {
+  const typeLabels: Record<ProductPriceRule['type'], string> = {
+    material: '材质',
+    process: '工艺',
+    special: '特殊需求',
+    other: '其他'
+  }
+
+  return Array.from(new Set(product.priceRules.map((rule) => typeLabels[rule.type]))).join(' / ') || '—'
+}
 
 const splitValues = (value: string) =>
   value
@@ -60,11 +98,6 @@ const buildSpecDraft = (product: Product): ProductSpecRow => {
 const mergeUniqueValues = (...groups: Array<string[] | undefined>) =>
   Array.from(new Set(groups.flatMap((group) => group ?? []).map((item) => item.trim()).filter(Boolean)))
 
-const toggleArrayValue = (values: string[], target: string) =>
-  values.includes(target) ? values.filter((item) => item !== target) : [...values, target]
-
-const buildSelectOptions = (defaults: string[], selected: string[]) => mergeUniqueValues(defaults, selected)
-
 const referenceRecordStatusLabel: Record<ProductReferenceRecord['status'], string> = {
   referenced: '已引用',
   adjusted: '已调整',
@@ -86,126 +119,6 @@ const getReferenceOrderLineLabel = (record: ProductReferenceRecord) =>
 
 const renderReferencePurchaseLink = (record: ProductReferenceRecord) =>
   record.purchaseId ? <Link to={`/purchases/${record.purchaseId}`}>{getReferencePurchaseLabel(record)}</Link> : getReferencePurchaseLabel(record)
-
-const ProductOptionSelectorField = ({
-  label,
-  values,
-  defaultOptions,
-  onChange,
-  onAddToGlobalDictionary,
-  fieldKey,
-  addLabel,
-  triggerPlaceholder
-}: {
-  label: string
-  values: string[]
-  defaultOptions: string[]
-  onChange: (next: string[]) => void
-  onAddToGlobalDictionary: (field: ProductFieldOptionKey, value: string) => void
-  fieldKey: ProductFieldOptionKey
-  addLabel: string
-  triggerPlaceholder: string
-}) => {
-  const [customValue, setCustomValue] = useState('')
-  const [open, setOpen] = useState(false)
-  const optionPool = buildSelectOptions(defaultOptions, values)
-
-  const handleAddCustom = () => {
-    const nextValues = mergeUniqueValues(values, splitValues(customValue))
-    onChange(nextValues)
-    setCustomValue('')
-  }
-
-  const handleAddToGlobalDictionary = () => {
-    const additions = splitValues(customValue)
-
-    if (additions.length === 0) {
-      return
-    }
-
-    onChange(mergeUniqueValues(values, additions))
-    additions.forEach((item) => onAddToGlobalDictionary(fieldKey, item))
-    setCustomValue('')
-  }
-
-  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      handleAddCustom()
-    }
-  }
-
-  return (
-    <div className="field-control multi-select-field">
-      <label className="field-label">{label}</label>
-      <button
-        type="button"
-        className={`select multi-select-trigger${open ? ' open' : ''}`}
-        aria-label={label}
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <div className="multi-select-trigger-values">
-          {values.length > 0 ? (
-            values.map((value) => (
-              <span key={value} className="multi-select-tag">
-                {value}
-              </span>
-            ))
-          ) : (
-            <span className="multi-select-placeholder">{triggerPlaceholder}</span>
-          )}
-        </div>
-        <span className="multi-select-caret">{open ? '▴' : '▾'}</span>
-      </button>
-      {open ? (
-        <div className="multi-select-panel">
-          <div className="multi-select-add-row">
-            <input
-              className="input"
-              aria-label={`${label}自定义补充`}
-              value={customValue}
-              onChange={(event) => setCustomValue(event.target.value)}
-              onKeyDown={handleInputKeyDown}
-              placeholder={addLabel}
-            />
-            <button
-              type="button"
-              className="button secondary small"
-              aria-label={`仅添加${label}到当前产品`}
-              onClick={handleAddCustom}
-              disabled={splitValues(customValue).length === 0}
-            >
-              仅当前产品
-            </button>
-            <button
-              type="button"
-              className="button primary small"
-              aria-label={`加入${label}到全局字典`}
-              onClick={handleAddToGlobalDictionary}
-              disabled={splitValues(customValue).length === 0}
-            >
-              加入全局字典
-            </button>
-          </div>
-          <div className="text-muted">加入全局字典后，本机后续新建或编辑其他产品时也能看到这个选项。</div>
-          <div className="multi-select-options">
-            {optionPool.map((option) => {
-              const selected = values.includes(option)
-
-              return (
-                <label key={option} className={`multi-select-option${selected ? ' active' : ''}`}>
-                  <input type="checkbox" checked={selected} onChange={() => onChange(toggleArrayValue(values, option))} />
-                  <span>{option}</span>
-                </label>
-              )
-            })}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  )
-}
 
 const optionSelectorProps = {
   styleTags: {
@@ -257,8 +170,9 @@ export const ProductQuickStats = ({ products }: { products: Product[] }) => {
     { label: '全部款式', value: products.length },
     { label: '可引用', value: products.filter((item) => item.isReferable).length },
     { label: '启用中', value: products.filter((item) => item.status === 'enabled').length },
-    { label: '单轴规格', value: products.filter((item) => item.specMode === 'single_axis').length },
+    { label: '规格版本', value: products.reduce((sum, item) => sum + item.specs.length, 0) },
     { label: '固定规则数', value: products.reduce((sum, item) => sum + item.priceRules.length, 0) },
+    { label: '生产文件', value: products.reduce((sum, item) => sum + getProductFileCount(item), 0) },
     { label: '平均参考价', value: `¥ ${averagePrice}` }
   ]
 
@@ -339,8 +253,9 @@ export const ProductTable = ({ products }: { products: Product[] }) => (
         <tr>
           <th>主图</th>
           <th>款式信息</th>
-          <th>默认材质</th>
-          <th>参考价格</th>
+          <th>规格 / 材质</th>
+          <th>报价规则</th>
+          <th>生产资料</th>
           <th>状态</th>
           <th>可引用</th>
           <th>版本</th>
@@ -368,8 +283,24 @@ export const ProductTable = ({ products }: { products: Product[] }) => (
                 </div>
               </div>
             </td>
-            <td>{product.defaultMaterial || '—'}</td>
-            <td className="price">{formatPrice(product.specs[0]?.basePrice)}</td>
+            <td>
+              <div className="stack" style={{ gap: 4 }}>
+                <span>{product.specName || '规格'} · {formatSpecCount(product)}</span>
+                <span className="text-caption">{[product.defaultMaterial, product.defaultProcess].filter(Boolean).join(' / ') || '—'}</span>
+              </div>
+            </td>
+            <td>
+              <div className="stack" style={{ gap: 4 }}>
+                <span className="price">{formatSpecPriceRange(product)}</span>
+                <span className="text-caption">规则 {formatRuleCount(product)}</span>
+              </div>
+            </td>
+            <td>
+              <div className="stack" style={{ gap: 4 }}>
+                <span>{product.productionReference.defaultLeadTimeDays ? `${product.productionReference.defaultLeadTimeDays} 天` : '—'}</span>
+                <span className="text-caption">文件 {getProductFileCount(product)} 份</span>
+              </div>
+            </td>
             <td>
               <StatusTag value={product.status === 'enabled' ? '启用' : product.status === 'draft' ? '草稿' : '禁用'} />
             </td>
@@ -437,6 +368,8 @@ export const ProductSummaryCard = ({ product }: { product: Product }) => (
       <div className="stack">
         <InfoField label="默认材质" value={product.defaultMaterial || '—'} />
         <InfoField label="默认工艺" value={product.defaultProcess || '—'} />
+        <InfoField label="规格版本" value={formatSpecCount(product)} />
+        <InfoField label="价格区间" value={formatSpecPriceRange(product)} />
         <InfoField label="最近更新" value={product.updatedAt} />
       </div>
     </div>
@@ -481,6 +414,9 @@ export const ProductParamConfigSection = ({ product }: { product: Product }) => 
       <InfoField label="规格模式" value={product.specMode === 'single_axis' ? '单轴规格' : '无规格'} />
       <InfoField label="规格名称" value={product.specName || '—'} />
       <InfoField label="规格展示" value={product.specDisplayType || '—'} />
+      <InfoField label="启用规格" value={formatSpecCount(product)} />
+      <InfoField label="基础价区间" value={formatSpecPriceRange(product)} />
+      <InfoField label="规格必选" value={product.isSpecRequired ? '是' : '否'} />
     </InfoGrid>
     <div className="spacer-top">
       <div className="table-shell">
@@ -515,7 +451,12 @@ export const ProductParamConfigSection = ({ product }: { product: Product }) => 
 
 export const ProductPriceRuleSection = ({ product }: { product: Product }) => (
   <SectionCard id="pricing" title="价格规则">
-    <div className="table-shell">
+    <InfoGrid columns={3}>
+      <InfoField label="启用规则" value={formatRuleCount(product)} />
+      <InfoField label="规则类型" value={formatRuleTypes(product)} />
+      <InfoField label="基础价区间" value={formatSpecPriceRange(product)} />
+    </InfoGrid>
+    <div className="table-shell spacer-top">
       <table className="table">
         <thead>
           <tr>
@@ -571,6 +512,7 @@ export const ProductProductionRefSection = ({ product }: { product: Product }) =
       <InfoField label="默认工期" value={product.productionReference.defaultLeadTimeDays ? `${product.productionReference.defaultLeadTimeDays} 天` : '—'} />
       <InfoField label="建议工期" value={product.productionReference.suggestedLeadTimeDays ? `${product.productionReference.suggestedLeadTimeDays} 天` : '—'} />
       <InfoField label="参考人工费" value={formatPrice(product.productionReference.referenceLaborCost)} />
+      <InfoField label="参考文件" value={`${getProductFileCount(product)} 份`} />
       <InfoField label="生产备注" value={product.productionReference.productionNotes?.join(' / ') || '—'} />
     </InfoGrid>
   </SectionCard>
@@ -613,7 +555,7 @@ export const ProductReferenceRecordSection = ({
           <div key={record.id} className="subtle-panel">
             <div className="row wrap" style={{ justifyContent: 'space-between' }}>
               <div className="row wrap">
-                <Link to="/order-lines" className="text-price">
+                <Link to={getOrderLineDetailPath(record.orderLineId)} className="text-price">
                   {getReferenceOrderLineLabel(record)}
                 </Link>
                 <VersionBadge value={record.sourceVersion} />
@@ -727,13 +669,13 @@ export const ProductReferenceRecordsDrawer = ({
             <div key={record.id} className="subtle-panel">
               <div className="row wrap" style={{ justifyContent: 'space-between' }}>
                 <div className="row wrap">
-                  <Link to="/order-lines" className="text-price">
+                  <Link to={getOrderLineDetailPath(record.orderLineId)} className="text-price">
                     {getReferenceOrderLineLabel(record)}
                   </Link>
                   <VersionBadge value={record.sourceVersion} />
                   {renderReferenceStatus(record.status)}
                 </div>
-                <Link to="/order-lines" className="button ghost small">
+                <Link to={getOrderLineDetailPath(record.orderLineId)} className="button ghost small">
                   查看销售
                 </Link>
               </div>

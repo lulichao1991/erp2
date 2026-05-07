@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { EmptyState, InfoField, InfoGrid, SectionCard, StatusTag } from '@/components/common'
 import { getOrderLineGoodsNo, getOrderLinePurchaseId } from '@/services/orderLine/orderLineIdentity'
+import { getOrderLineDetailPath } from '@/services/orderLine/orderLineRoutes'
 import { getOrderLineLineStatus, getOrderLineLineStatusLabel } from '@/services/orderLine/orderLineWorkflow'
 import type { Customer } from '@/types/customer'
 import type { OrderLine } from '@/types/order-line'
@@ -192,7 +193,7 @@ export const CustomerOrderLinesSection = ({ orderLines }: { orderLines: OrderLin
                 <td>{line.currentOwner || '待分配'}</td>
                 <td>{line.promisedDate || '—'}</td>
                 <td>
-                  <Link to="/order-lines" className="button ghost small">
+                  <Link to={getOrderLineDetailPath(line.id)} className="button ghost small">
                     查看销售
                   </Link>
                 </td>

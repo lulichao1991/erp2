@@ -1,4 +1,4 @@
-import type { InventoryItem, InventoryMovement } from '@/types/inventory'
+import type { InventoryBatch, InventoryItem, InventoryMovement } from '@/types/inventory'
 
 export const inventoryItemsMock: InventoryItem[] = [
   {
@@ -61,8 +61,8 @@ export const inventoryItemsMock: InventoryItem[] = [
     size: '42cm',
     craftRequirements: '通用链身，可用于多款吊坠搭配',
     weight: 2.6,
-    quantity: 5,
-    availableQuantity: 5,
+    quantity: 4,
+    availableQuantity: 4,
     warehouseLocation: 'C-常备链身-02',
     ownerDepartment: 'warehouse',
     condition: 'new',
@@ -70,6 +70,32 @@ export const inventoryItemsMock: InventoryItem[] = [
     receivedAt: '2026-04-20 09:30',
     keeperName: '周库管',
     remark: '库管常备货，后续可按销售领用。'
+  },
+  {
+    id: 'inventory-old-gold-necklace-001',
+    inventoryCode: 'INV-OG-202604-005',
+    name: '张三旧金抵扣料',
+    category: 'other',
+    sourceType: 'old_gold',
+    sourceLabel: '旧金抵扣入库',
+    sourcePaymentRecordId: 'finance-payment-necklace-old-gold-001',
+    orderLineId: 'ol-zhang-necklace-001',
+    purchaseId: 'o-202604-001',
+    customerId: 'customer-zhang-001',
+    material: '18K金',
+    size: '碎料',
+    craftRequirements: '客户旧金抵扣回收入库，待复核成色和熔料处置',
+    weight: 3.2,
+    valuationAmount: 1000,
+    quantity: 1,
+    availableQuantity: 1,
+    warehouseLocation: 'E-旧金待熔-01',
+    ownerDepartment: 'warehouse',
+    condition: 'returned',
+    status: 'in_stock',
+    receivedAt: '2026-04-22 15:35',
+    keeperName: '周库管',
+    remark: '财务按 ¥1000 抵扣，库存只做旧金资产追溯，不推进销售状态。'
   },
   {
     id: 'inventory-other-stone-001',
@@ -91,6 +117,56 @@ export const inventoryItemsMock: InventoryItem[] = [
     receivedAt: '2026-04-18 15:00',
     keeperName: '周库管',
     remark: '其他渠道入库，用于临时补料。'
+  },
+  {
+    id: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    name: '赵女士现货山形纪念戒',
+    category: 'ring',
+    sourceType: 'stock_purchase',
+    sourceLabel: '现货库存销售',
+    sourcePaymentRecordId: 'finance-payment-zhao-ring-full-001',
+    productId: 'p-ring-001',
+    productName: '山形素圈戒指',
+    orderLineId: 'oi-ring-118',
+    purchaseId: 'o-202603-118',
+    customerId: 'customer-zhao-001',
+    material: '18K金',
+    size: '10号',
+    craftRequirements: '库存现货，发货前复核圈号和表面抛光',
+    weight: 3.6,
+    valuationAmount: 980,
+    quantity: 1,
+    availableQuantity: 0,
+    warehouseLocation: 'F-现货出库-01',
+    ownerDepartment: 'warehouse',
+    condition: 'new',
+    status: 'outbound',
+    receivedAt: '2026-03-20 10:00',
+    keeperName: '周库管',
+    remark: '现货已占用并出库，关联赵女士购买记录和销售货号。'
+  },
+  {
+    id: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    name: '废弃蜡版样件',
+    category: 'other',
+    sourceType: 'other',
+    sourceLabel: '设计打样报废',
+    productName: '山形开口手镯蜡版',
+    material: '蜡版',
+    size: '58mm',
+    craftRequirements: '蜡版变形，已报废，不进入销售生产状态。',
+    weight: 1.1,
+    quantity: 0,
+    availableQuantity: 0,
+    warehouseLocation: 'Z-报废留档-01',
+    ownerDepartment: 'warehouse',
+    condition: 'new',
+    status: 'scrapped',
+    receivedAt: '2026-04-19 15:30',
+    keeperName: '周库管',
+    remark: '用于覆盖 scrapped 库存场景；只影响库存台账和批次，不推进任何 OrderLine。'
   }
 ]
 
@@ -131,5 +207,223 @@ export const inventoryMovementsMock: InventoryMovement[] = [
     toStatus: 'in_stock',
     toLocation: 'C-常备链身-02',
     note: '常备链身采购入库。'
+  },
+  {
+    id: 'inventory-movement-stock-chain-outbound-001',
+    inventoryItemId: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    type: 'outbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-25 17:20',
+    fromStatus: 'in_stock',
+    toStatus: 'in_stock',
+    fromLocation: 'C-常备链身-02',
+    toLocation: 'C-常备链身-02',
+    relatedOrderLineId: 'oi-pendant-001',
+    fifoCostAmount: 120,
+    fifoLayers: [
+      {
+        batchId: 'inventory-batch-stock-chain-001',
+        quantity: 1,
+        unitCostAmount: 120,
+        costAmount: 120,
+        receivedAt: '2026-04-20 09:30'
+      }
+    ],
+    note: '如意吊坠领用常备链身，按 FIFO 计入商品行成本。'
+  },
+  {
+    id: 'inventory-movement-old-gold-necklace-001',
+    inventoryItemId: 'inventory-old-gold-necklace-001',
+    inventoryCode: 'INV-OG-202604-005',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-22 15:35',
+    toStatus: 'in_stock',
+    toLocation: 'E-旧金待熔-01',
+    relatedOrderLineId: 'ol-zhang-necklace-001',
+    note: '客户旧金抵扣入库，关联财务收款流水 finance-payment-necklace-old-gold-001。'
+  },
+  {
+    id: 'inventory-movement-other-stone-001',
+    inventoryItemId: 'inventory-other-stone-001',
+    inventoryCode: 'INV-OT-202604-004',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-18 15:00',
+    toStatus: 'in_stock',
+    toLocation: 'D-辅石-08',
+    note: '其他渠道辅石入库。'
+  },
+  {
+    id: 'inventory-movement-spot-ring-zhao-inbound-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-03-20 10:00',
+    toStatus: 'in_stock',
+    toLocation: 'F-现货出库-01',
+    note: '线下现货戒指入库。'
+  },
+  {
+    id: 'inventory-movement-spot-ring-zhao-reserve-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    type: 'reserve',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-03-28 14:30',
+    fromStatus: 'in_stock',
+    toStatus: 'reserved',
+    fromLocation: 'F-现货出库-01',
+    toLocation: 'F-现货出库-01',
+    relatedOrderLineId: 'oi-ring-118',
+    note: '赵女士购买后占用现货戒指。'
+  },
+  {
+    id: 'inventory-movement-spot-ring-zhao-outbound-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    type: 'outbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-03-28 16:20',
+    fromStatus: 'reserved',
+    toStatus: 'outbound',
+    fromLocation: 'F-现货出库-01',
+    toLocation: '顺丰揽收',
+    relatedOrderLineId: 'oi-ring-118',
+    fifoCostAmount: 980,
+    fifoLayers: [
+      {
+        batchId: 'inventory-batch-spot-ring-zhao-001',
+        quantity: 1,
+        unitCostAmount: 980,
+        costAmount: 980,
+        receivedAt: '2026-03-20 10:00'
+      }
+    ],
+    note: '赵女士现货戒指出库，按 FIFO 计入商品行成本。'
+  },
+  {
+    id: 'inventory-movement-scrapped-wax-inbound-001',
+    inventoryItemId: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    type: 'inbound',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-19 15:30',
+    toStatus: 'in_stock',
+    toLocation: 'A-设计样品-临时',
+    note: '蜡版样件临时入库，等待质检。'
+  },
+  {
+    id: 'inventory-movement-scrapped-wax-scrap-001',
+    inventoryItemId: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    type: 'scrap',
+    quantity: 1,
+    operatorName: '周库管',
+    occurredAt: '2026-04-20 10:10',
+    fromStatus: 'in_stock',
+    toStatus: 'scrapped',
+    fromLocation: 'A-设计样品-临时',
+    toLocation: 'Z-报废留档-01',
+    fifoCostAmount: 0,
+    fifoLayers: [
+      {
+        batchId: 'inventory-batch-scrapped-wax-001',
+        quantity: 1,
+        unitCostAmount: 0,
+        costAmount: 0,
+        receivedAt: '2026-04-19 15:30'
+      }
+    ],
+    note: '蜡版变形报废；库存动作不推进销售状态。'
+  }
+]
+
+export const inventoryBatchesMock: InventoryBatch[] = [
+  {
+    id: 'inventory-batch-design-sample-ring-001',
+    inventoryItemId: 'inventory-design-sample-ring-001',
+    inventoryCode: 'INV-DS-202604-001',
+    receivedAt: '2026-04-23 18:20',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 0,
+    totalCostAmount: 0,
+    sourceMovementId: 'inventory-movement-design-sample-ring-001'
+  },
+  {
+    id: 'inventory-batch-return-ring-001',
+    inventoryItemId: 'inventory-return-ring-001',
+    inventoryCode: 'INV-RT-202604-002',
+    receivedAt: '2026-04-25 11:10',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 0,
+    totalCostAmount: 0,
+    sourceMovementId: 'inventory-movement-return-ring-001'
+  },
+  {
+    id: 'inventory-batch-stock-chain-001',
+    inventoryItemId: 'inventory-stock-chain-001',
+    inventoryCode: 'INV-ST-202604-003',
+    receivedAt: '2026-04-20 09:30',
+    quantity: 5,
+    remainingQuantity: 4,
+    unitCostAmount: 120,
+    totalCostAmount: 600,
+    sourceMovementId: 'inventory-movement-stock-chain-001'
+  },
+  {
+    id: 'inventory-batch-old-gold-necklace-001',
+    inventoryItemId: 'inventory-old-gold-necklace-001',
+    inventoryCode: 'INV-OG-202604-005',
+    receivedAt: '2026-04-22 15:35',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 1000,
+    totalCostAmount: 1000,
+    sourceMovementId: 'inventory-movement-old-gold-necklace-001'
+  },
+  {
+    id: 'inventory-batch-other-stone-001',
+    inventoryItemId: 'inventory-other-stone-001',
+    inventoryCode: 'INV-OT-202604-004',
+    receivedAt: '2026-04-18 15:00',
+    quantity: 1,
+    remainingQuantity: 1,
+    unitCostAmount: 80,
+    totalCostAmount: 80,
+    sourceMovementId: 'inventory-movement-other-stone-001'
+  },
+  {
+    id: 'inventory-batch-spot-ring-zhao-001',
+    inventoryItemId: 'inventory-spot-ring-zhao-001',
+    inventoryCode: 'INV-SP-202603-118',
+    receivedAt: '2026-03-20 10:00',
+    quantity: 1,
+    remainingQuantity: 0,
+    unitCostAmount: 980,
+    totalCostAmount: 980,
+    sourceMovementId: 'inventory-movement-spot-ring-zhao-inbound-001'
+  },
+  {
+    id: 'inventory-batch-scrapped-wax-001',
+    inventoryItemId: 'inventory-scrapped-wax-001',
+    inventoryCode: 'INV-SC-202604-006',
+    receivedAt: '2026-04-19 15:30',
+    quantity: 1,
+    remainingQuantity: 0,
+    unitCostAmount: 0,
+    totalCostAmount: 0,
+    sourceMovementId: 'inventory-movement-scrapped-wax-inbound-001'
   }
 ]

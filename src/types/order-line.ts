@@ -111,7 +111,7 @@ export type OrderLineOutsourceStatus =
   | 'rework'
 
 export type OrderLineOutsourceInfo = {
-  outsourceStatus?: OrderLineOutsourceStatus | string
+  outsourceStatus?: OrderLineOutsourceStatus
   supplierName?: string
   outsourcedAt?: string
   plannedDeliveryDate?: string
@@ -126,7 +126,7 @@ export type OrderLineProductionFeedbackStatus =
   | 'issue'
 
 export type OrderLineProductionInfo = {
-  feedbackStatus?: OrderLineProductionFeedbackStatus | string
+  feedbackStatus?: OrderLineProductionFeedbackStatus
   actualMaterial?: string
   totalWeight?: string
   netWeight?: string
@@ -174,12 +174,12 @@ export type OrderLine = {
   category?: ProductCategory
   versionNo?: string
   quantity: number
-  lineStatus?: OrderLineLineStatus | string
-  designStatus?: OrderLineWorkflowDesignStatus | string
-  modelingStatus?: OrderLineWorkflowModelingStatus | string
-  productionStatus?: OrderLineWorkflowProductionStatus | string
-  factoryStatus?: OrderLineFactoryStatus | string
-  financeStatus?: OrderLineFinanceStatus | string
+  lineStatus?: OrderLineLineStatus
+  designStatus?: OrderLineWorkflowDesignStatus
+  modelingStatus?: OrderLineWorkflowModelingStatus
+  productionStatus?: OrderLineWorkflowProductionStatus
+  factoryStatus?: OrderLineFactoryStatus
+  financeStatus?: OrderLineFinanceStatus
   assignedDesignerId?: string
   assignedModelerId?: string
   merchandiserId?: string

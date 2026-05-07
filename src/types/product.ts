@@ -17,6 +17,10 @@ export type ProductSizeField = {
 
 export type ProductSpecRowStatus = 'enabled' | 'disabled'
 
+/**
+ * 当前前端阶段的规格行同时承载 ProductVariant 能力：
+ * 规格值、基础价格、参考重量和尺寸参数都以 ProductSpecRow 为准。
+ */
 export type ProductSpecRow = {
   id: string
   productId: string

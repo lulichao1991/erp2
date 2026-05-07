@@ -41,7 +41,7 @@ describe('task timeline current-only flow', () => {
 
     expect(screen.getByRole('heading', { name: '任务中心' })).toBeInTheDocument()
     expect(screen.getByText('确认戒指最终圈号')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: 'PUR-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 
@@ -58,7 +58,7 @@ describe('task timeline current-only flow', () => {
     expect(screen.getByRole('heading', { name: '任务详情' })).toBeInTheDocument()
     expect(screen.getByText('任务相关时间线')).toBeInTheDocument()
     expect(screen.getByText('山形戒指进入生产')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'SO-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
+    expect(screen.getAllByRole('link', { name: 'PUR-202604-001' })[0]).toHaveAttribute('href', '/purchases/o-202604-001')
     expect(container.querySelector('a[href^="/orders"]')).toBeNull()
   })
 

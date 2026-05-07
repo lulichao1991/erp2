@@ -11,6 +11,7 @@ import {
 } from '@/components/business/productionPlan'
 import { EmptyState, FileList, ImageGallery, InfoField, InfoGrid, PageContainer, PageHeader, RecordTimeline, SectionCard } from '@/components/common'
 import { useAppData } from '@/hooks/useAppData'
+import { getOrderLineDetailPath } from '@/services/orderLine/orderLineRoutes'
 import { buildProductionPlanDetail } from '@/services/productionPlan/productionPlanAdapter'
 
 export const ProductionPlanDetailPage = () => {
@@ -33,7 +34,7 @@ export const ProductionPlanDetailPage = () => {
   if (!detail) {
     return (
       <PageContainer>
-        <EmptyState title="未找到生产计划" description="当前任务不存在、不是工厂任务，或其关联销售 / 来源款式 mock 数据不完整。" />
+        <EmptyState title="未找到生产计划" description="当前任务不存在、不是工厂任务，或其关联销售 mock 数据不完整。" />
       </PageContainer>
     )
   }
@@ -114,7 +115,7 @@ export const ProductionPlanDetailPage = () => {
             <button className="button secondary" onClick={() => navigate(`/tasks/${task.id}`)}>
               查看原任务
             </button>
-            <button className="button secondary" onClick={() => navigate('/order-lines')}>
+            <button className="button secondary" onClick={() => navigate(getOrderLineDetailPath(orderLine.id))}>
               查看销售
             </button>
             {row.purchaseId ? (
@@ -130,8 +131,8 @@ export const ProductionPlanDetailPage = () => {
           row={row}
           taskId={task.id}
           taskTitle={task.title}
-          sourceProductName={sourceProduct.name}
-          sourceProductId={sourceProduct.id}
+          sourceProductName={sourceProduct?.name || row.orderLineName}
+          sourceProductId={sourceProduct?.id}
           feedbackStatus={productionFeedback.feedbackStatus}
         />
         <div className="production-plan-detail-grid">

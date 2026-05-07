@@ -37,10 +37,17 @@ type ProductionPlanSource = {
   task: Task
   purchase: Purchase
   orderLine: OrderLine
-  sourceProduct: Product
+  sourceProduct?: Product
 }
 
-const buildProductionPlanFileGroups = (orderLine: OrderLine, sourceProduct: Product): ProductionPlanFileGroup[] => {
+const toOrderLineFiles = (files: OrderLine['designFiles']): ProductionPlanFile[] =>
+  (files ?? []).map((file) => ({
+    id: file.id,
+    name: file.name,
+    url: file.url
+  }))
+
+const buildProductionPlanFileGroups = (orderLine: OrderLine, sourceProduct?: Product): ProductionPlanFileGroup[] => {
   const actualRequirements = orderLine.actualRequirements as OrderLine['actualRequirements'] & {
     engraveImageFiles?: ProductAssetFile[]
     engravePltFiles?: ProductAssetFile[]
@@ -49,28 +56,49 @@ const buildProductionPlanFileGroups = (orderLine: OrderLine, sourceProduct: Prod
   const engravePltFiles = actualRequirements?.engravePltFiles ?? []
   const fileGroups: ProductionPlanFileGroup[] = []
 
-  if (sourceProduct.assets.modelFiles.length > 0) {
+  if (orderLine.designFiles?.length) {
+    fileGroups.push({
+      title: '设计文件',
+      files: toOrderLineFiles(orderLine.designFiles)
+    })
+  }
+
+  if (orderLine.modelingFiles?.length) {
+    fileGroups.push({
+      title: '建模文件',
+      files: toOrderLineFiles(orderLine.modelingFiles)
+    })
+  }
+
+  if (orderLine.waxFiles?.length) {
+    fileGroups.push({
+      title: '出蜡文件',
+      files: toOrderLineFiles(orderLine.waxFiles)
+    })
+  }
+
+  if (sourceProduct?.assets.modelFiles.length) {
     fileGroups.push({
       title: '建模文件',
       files: toProductionPlanFiles(sourceProduct.assets.modelFiles)
     })
   }
 
-  if (sourceProduct.assets.craftFiles.length > 0) {
+  if (sourceProduct?.assets.craftFiles.length) {
     fileGroups.push({
       title: '工艺图',
       files: toProductionPlanFiles(sourceProduct.assets.craftFiles)
     })
   }
 
-  if (sourceProduct.assets.sizeFiles.length > 0) {
+  if (sourceProduct?.assets.sizeFiles.length) {
     fileGroups.push({
       title: '尺寸图',
       files: toProductionPlanFiles(sourceProduct.assets.sizeFiles)
     })
   }
 
-  if (sourceProduct.assets.otherFiles.length > 0) {
+  if (sourceProduct?.assets.otherFiles.length) {
     fileGroups.push({
       title: '补充说明文件',
       files: toProductionPlanFiles(sourceProduct.assets.otherFiles)
@@ -126,8 +154,9 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
   const purchaseId = purchase.id
   const purchaseNo = purchase.purchaseNo
   const orderLineId = orderLine.id
-  const orderLineName = orderLine.name || task.orderLineName || sourceProduct.name
+  const orderLineName = orderLine.name || task.orderLineName || sourceProduct?.name || '未命名销售'
   const goodsNo = getOrderLineGoodsNo(orderLine)
+  const category = orderLine.category || sourceProduct?.category || 'other'
 
   return {
     taskId: task.id,
@@ -136,11 +165,11 @@ const buildProductionPlanRow = (source: ProductionPlanSource): ProductionPlanRow
     orderLineId,
     orderLineName,
     goodsNo,
-    sourceProductId: sourceProduct.id,
-    sourceProductCode: sourceProduct.code,
-    sourceProductVersion: orderLine.sourceProduct?.sourceProductVersion || sourceProduct.version,
-    category: sourceProduct.category,
-    categoryLabel: getProductionPlanCategoryLabel(sourceProduct.category),
+    sourceProductId: sourceProduct?.id,
+    sourceProductCode: orderLine.sourceProduct?.sourceProductCode || sourceProduct?.code,
+    sourceProductVersion: orderLine.sourceProduct?.sourceProductVersion || sourceProduct?.version || orderLine.versionNo || '自定义',
+    category,
+    categoryLabel: getProductionPlanCategoryLabel(category),
     specValue: orderLine.selectedSpecValue,
     material: orderLine.selectedMaterial || orderLine.actualRequirements?.material,
     process: orderLine.selectedProcess || orderLine.actualRequirements?.process,
@@ -222,7 +251,7 @@ const resolveProductionPlanSource = ({
   const orderLine = findOrderLine(task, purchase, orderLines)
   const sourceProduct = products.find((item) => item.id === orderLine?.sourceProduct?.sourceProductId)
 
-  if (!purchase || !orderLine || !sourceProduct) {
+  if (!purchase || !orderLine) {
     return undefined
   }
 
@@ -300,6 +329,6 @@ export const buildProductionPlanDetail = ({
     sourceProduct: source.sourceProduct,
     timeline: buildProductionTimeline(source),
     fileGroups: buildProductionPlanFileGroups(source.orderLine, source.sourceProduct),
-    referenceImages: source.sourceProduct.assets.detailImages
+    referenceImages: source.sourceProduct?.assets.detailImages ?? []
   }
 }
